@@ -239,3 +239,29 @@ Avoid catch-all files such as `helpers.ts`, `utils.ts`, or `constants.ts` at bro
 ## Definition Of Done
 
 A change is done when it is implemented, typed, validated, accessible, tested at the appropriate level, consistent with the design system, checked through the required development pipeline, and documented if it changes long-term project knowledge. The user should be able to continue from the repository state without needing hidden context from the conversation.
+
+## Hackathon Delivery Rules
+
+When building a hackathon slice, optimize for a believable end-to-end user journey that can be demonstrated from a clean checkout:
+
+- Prefer one focused SPA surface for interactive product flows. Use client state for tabs and local view changes; do not create a new server route for every panel.
+- Do not add Next middleware or proxy files for convenience. Authenticate and authorize protected pages, Server Actions, and API routes at their own boundaries.
+- Keep the first demo path short: landing screen, one primary action, visible result, and a useful recovery state.
+- Use realistic seeded/demo data behind an explicit demo flag. Never silently fake production data or hide unavailable integrations.
+- Build graceful fallbacks for maps, AI, payments, email, and storage so the main demo remains usable when an external service is unavailable.
+- Keep API contracts stable and documented. Return actionable user-safe errors and log diagnostic details only on the server.
+- Validate all external input with Zod at the boundary. Never trust browser state for identity, permissions, rewards, or impact totals.
+- Avoid speculative abstractions and dependency churn. Prefer a small vertical slice with focused tests over broad unfinished infrastructure.
+- Every interactive control needs a keyboard path, an accessible name, a visible loading state, an empty state, and an error state.
+- Before handoff, run lint, TypeScript, focused tests, a production build, and the React Doctor check for React/Next changes.
+- Document shortcuts and known limitations in feature notes so judging and follow-up work are not based on hidden assumptions.
+
+## Yangon Waste-Density Map Knowledge
+
+The primary geographic target is Yangon. Waste-density visualization must change with zoom level so the map remains useful at city, township, and report-detail scales:
+
+- Far zoom: show a heatmap that communicates broad waste-density hotspots across Yangon.
+- Medium zoom: show a hexbin density map to compare concentration between neighborhoods without marker overlap.
+- Close zoom: show clustered report markers that can expand into individual reports as the user zooms further.
+- Keep the zoom transitions visually continuous and explain the active layer with an accessible map legend.
+- Use aggregated counts for far and medium zoom levels; only expose report-level details at close zoom with the appropriate privacy and authorization checks.
