@@ -22,7 +22,7 @@ export type FeedbackStateProps = {
 
 const toneClassName = {
   neutral: "bg-muted text-muted-foreground",
-  success: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  success: "bg-teal-500/10 text-teal-700 dark:text-teal-300",
   error: "bg-destructive/10 text-destructive",
   warning: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
 };
