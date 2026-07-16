@@ -30,6 +30,6 @@ export async function submitRecyclingIntentAction(
       submittedByUserId: userId,
     },
     message:
-      "Thanks. This example action validated your recycling intent and is ready to connect to Prisma or Resend.",
+      "Thanks. This example action validated your recycling intent and is ready to connect to Prisma.",
   };
 }

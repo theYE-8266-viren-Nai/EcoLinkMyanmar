@@ -6,7 +6,6 @@ import type { ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { PostHogProvider } from "@/providers/posthog-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 
 export function RootProviders({ children }: { children: ReactNode }) {
@@ -18,7 +17,7 @@ export function RootProviders({ children }: { children: ReactNode }) {
     >
       <ThemeProvider>
         <TooltipProvider>
-          <PostHogProvider>{children}</PostHogProvider>
+          {children}
           <Toaster richColors />
         </TooltipProvider>
       </ThemeProvider>
