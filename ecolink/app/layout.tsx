@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { RootProviders } from "@/providers/root-providers";
 import "./globals.css";
+import "@clerk/ui/themes/shadcn.css";
 
 export const metadata: Metadata = {
   title: "EcoLink",

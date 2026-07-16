@@ -1,9 +1,13 @@
-import { SignIn } from "@clerk/nextjs";
+import { AuthLayout } from "@/components/auth/auth-layout";
+import { EcoLinkSignIn } from "@/components/auth/sign-in";
 
 export default function SignInPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted px-4 py-12">
-      <SignIn />
-    </main>
+    <AuthLayout
+      description="Access your recycling dashboard, rewards, and pickup activity."
+      title="Welcome back"
+    >
+      <EcoLinkSignIn />
+    </AuthLayout>
   );
 }

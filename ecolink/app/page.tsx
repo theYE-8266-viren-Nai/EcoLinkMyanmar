@@ -2,6 +2,7 @@ import { Leaf, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { RecyclingIntentForm } from "@/components/recycling-intent-form";
+import { SiteNavigation } from "@/components/layout/site-navigation";
 import { buttonVariants } from "@/components/ui/button";
 
 const foundationCards = [
@@ -13,6 +14,7 @@ const foundationCards = [
 export default function Home() {
   return (
     <main className="min-h-screen bg-background">
+      <SiteNavigation />
       <section className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-16 md:grid-cols-[1fr_420px] md:items-center md:py-24">
         <div className="space-y-8">
           <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm text-muted-foreground">
@@ -40,7 +42,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link className={buttonVariants()} href="/sign-up">
               Create account
             </Link>
