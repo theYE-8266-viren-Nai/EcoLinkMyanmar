@@ -7,29 +7,560 @@ datasource db {
   provider = "postgresql"
 }
 
-model UserProfile {
-  id          String   @id @default(cuid())
-  clerkUserId String   @unique
-  email       String   @unique
-  displayName String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  recyclingIntents RecyclingIntent[]
+enum OrganizationType {
+  RECYCLER
+  NGO
+  BUSINESS
+  GOVERNMENT
+  INTERNAL
 }
 
-model RecyclingIntent {
-  id            String   @id @default(cuid())
-  userProfileId String?
-  name          String
-  email         String
-  materialType  String
-  pickupWindow  String
-  notes         String?
-  createdAt     DateTime @default(now())
+enum VerificationStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
 
-  userProfile UserProfile? @relation(fields: [userProfileId], references: [id], onDelete: SetNull)
+enum MembershipRole {
+  OWNER
+  ADMIN
+  OPERATOR
+  VIEWER
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+enum RecyclingRequestStatus {
+  DRAFT
+  SUBMITTED
+  MATCHED
+  SCHEDULED
+  COLLECTED
+  VERIFIED
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+enum PickupStatus {
+  SCHEDULED
+  EN_ROUTE
+  ARRIVED
+  COLLECTED
+  FAILED
+  CANCELLED
+}
+
+enum RewardEntryType {
+  EARNED
+  SPENT
+  ADJUSTED
+  EXPIRED
+  REFUNDED
+}
+
+enum RewardSourceType {
+  RECYCLING_REQUEST
+  REWARD_REDEMPTION
+  ADMIN_ADJUSTMENT
+  CAMPAIGN
+}
+
+enum RewardOfferStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  EXPIRED
+  ARCHIVED
+}
+
+enum RewardRedemptionStatus {
+  PENDING
+  FULFILLED
+  CANCELLED
+  REFUNDED
+}
+
+enum ContentStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CampaignStatus {
+  DRAFT
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum CampaignParticipationStatus {
+  REGISTERED
+  WAITLISTED
+  CHECKED_IN
+  CANCELLED
+}
+
+enum ImpactScopeType {
+  USER
+  ORGANIZATION
+  RECYCLING_REQUEST
+  COMMUNITY_CAMPAIGN
+}
+
+enum NotificationType {
+  REQUEST_UPDATE
+  PICKUP_UPDATE
+  REWARD
+  CAMPAIGN
+  EDUCATION
+  SYSTEM
+}
+
+model UserProfile {
+  id                String    @id @default(uuid()) @db.Uuid
+  clerkUserId       String    @unique
+  displayName       String
+  email             String    @unique
+  phone             String?
+  avatarUrl         String?
+  preferredLanguage String    @default("en")
+  defaultAddressId  String?   @db.Uuid
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  addresses                  Address[]                   @relation("UserAddresses")
+  defaultAddress             Address?                    @relation("DefaultAddress", fields: [defaultAddressId], references: [id], onDelete: SetNull)
+  recyclingRequests          RecyclingRequest[]          @relation("RequesterRecyclingRequests")
+  rewardLedgerEntries        RewardLedgerEntry[]         @relation("UserRewardLedgerEntries")
+  createdRewardLedgerEntries RewardLedgerEntry[]         @relation("RewardLedgerCreatedBy")
+  rewardRedemptions          RewardRedemption[]          @relation("UserRewardRedemptions")
+  organizationMemberships    OrganizationMembership[]    @relation("UserOrganizationMemberships")
+  sentInvitations            OrganizationMembership[]    @relation("MembershipInviter")
+  submittedVerifications     OrganizationVerification[]  @relation("VerificationSubmitter")
+  reviewedVerifications      OrganizationVerification[]  @relation("VerificationReviewer")
+  educationContent           EducationContent[]          @relation("EducationAuthor")
+  campaignParticipants       CampaignParticipant[]       @relation("CampaignParticipants")
+  notifications              Notification[]              @relation("UserNotifications")
+  auditLogs                  AuditLog[]                  @relation("AuditActor")
 
   @@index([email])
+  @@index([deletedAt])
+}
+
+model Address {
+  id            String    @id @default(uuid()) @db.Uuid
+  userProfileId String    @db.Uuid
+  label         String
+  line1         String
+  line2         String?
+  city          String
+  township      String?
+  region        String?
+  postalCode    String?
+  latitude      Decimal?  @db.Decimal(9, 6)
+  longitude     Decimal?  @db.Decimal(9, 6)
+  instructions  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  userProfile       UserProfile        @relation("UserAddresses", fields: [userProfileId], references: [id], onDelete: Cascade)
+  defaultForUsers   UserProfile[]      @relation("DefaultAddress")
+  recyclingRequests RecyclingRequest[] @relation("RequestAddress")
+
+  @@index([userProfileId])
+  @@index([city])
+  @@index([deletedAt])
+}
+
+model Organization {
+  id                 String             @id @default(uuid()) @db.Uuid
+  name               String
+  slug               String             @unique
+  organizationType   OrganizationType
+  verificationStatus VerificationStatus @default(DRAFT)
+  description        String?
+  websiteUrl         String?
+  contactEmail       String?
+  contactPhone       String?
+  logoUrl            String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  deletedAt          DateTime?
+
+  memberships        OrganizationMembership[]   @relation("OrganizationMemberships")
+  verifications      OrganizationVerification[] @relation("OrganizationVerifications")
+  acceptedMaterials  OrganizationAcceptedMaterial[]
+  recyclingRequests  RecyclingRequest[]         @relation("AssignedOrganizationRequests")
+  pickups            Pickup[]                   @relation("OrganizationPickups")
+  rewardOffers       RewardOffer[]              @relation("OrganizationRewardOffers")
+  educationContent   EducationContent[]         @relation("OrganizationEducationContent")
+  communityCampaigns CommunityCampaign[]        @relation("OrganizationCampaigns")
+
+  @@index([organizationType])
+  @@index([verificationStatus])
+  @@index([deletedAt])
+}
+
+model OrganizationMembership {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  userProfileId  String           @db.Uuid
+  role           MembershipRole
+  status         MembershipStatus @default(INVITED)
+  invitedById    String?          @db.Uuid
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization     Organization @relation("OrganizationMemberships", fields: [organizationId], references: [id], onDelete: Cascade)
+  userProfile      UserProfile  @relation("UserOrganizationMemberships", fields: [userProfileId], references: [id], onDelete: Cascade)
+  invitedBy        UserProfile? @relation("MembershipInviter", fields: [invitedById], references: [id], onDelete: SetNull)
+  assignedPickups  Pickup[]     @relation("AssignedMemberPickups")
+
+  @@unique([organizationId, userProfileId])
+  @@index([role])
+  @@index([status])
+  @@index([invitedById])
+}
+
+model OrganizationVerification {
+  id                  String             @id @default(uuid()) @db.Uuid
+  organizationId      String             @db.Uuid
+  submittedById       String             @db.Uuid
+  reviewedById        String?            @db.Uuid
+  status              VerificationStatus @default(SUBMITTED)
+  documentStoragePath String
+  notes               String?
+  reviewNotes         String?
+  submittedAt         DateTime           @default(now())
+  reviewedAt          DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  organization Organization @relation("OrganizationVerifications", fields: [organizationId], references: [id], onDelete: Cascade)
+  submittedBy  UserProfile  @relation("VerificationSubmitter", fields: [submittedById], references: [id], onDelete: Restrict)
+  reviewedBy   UserProfile? @relation("VerificationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([submittedAt])
+  @@index([reviewedById])
+}
+
+model MaterialCategory {
+  id                      String   @id @default(uuid()) @db.Uuid
+  name                    String
+  slug                    String   @unique
+  description             String?
+  acceptedExamples        String[]
+  rejectedExamples        String[]
+  preparationInstructions String?
+  defaultRewardRate       Int      @default(0)
+  isActive                Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  requestItems      RecyclingRequestItem[]
+  acceptedMaterials OrganizationAcceptedMaterial[]
+  impactRecords     ImpactRecord[]
+
+  @@index([isActive])
+}
+
+model OrganizationAcceptedMaterial {
+  id                 String   @id @default(uuid()) @db.Uuid
+  organizationId     String   @db.Uuid
+  materialCategoryId String   @db.Uuid
+  minimumWeightKg    Decimal? @db.Decimal(10, 2)
+  maximumWeightKg    Decimal? @db.Decimal(10, 2)
+  notes              String?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  materialCategory MaterialCategory @relation(fields: [materialCategoryId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, materialCategoryId])
+  @@index([isActive])
+  @@index([materialCategoryId])
+}
+
+model RecyclingRequest {
+  id                     String                 @id @default(uuid()) @db.Uuid
+  requesterId            String                 @db.Uuid
+  addressId              String                 @db.Uuid
+  status                 RecyclingRequestStatus @default(DRAFT)
+  preferredPickupDate    DateTime?
+  preferredPickupWindow  String?
+  notes                  String?
+  photoStoragePath       String?
+  estimatedWeightKg      Decimal?               @db.Decimal(10, 2)
+  confirmedWeightKg      Decimal?               @db.Decimal(10, 2)
+  assignedOrganizationId String?                 @db.Uuid
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  cancelledAt            DateTime?
+  completedAt            DateTime?
+  deletedAt              DateTime?
+
+  requester            UserProfile             @relation("RequesterRecyclingRequests", fields: [requesterId], references: [id], onDelete: Restrict)
+  address              Address                 @relation("RequestAddress", fields: [addressId], references: [id], onDelete: Restrict)
+  assignedOrganization Organization?           @relation("AssignedOrganizationRequests", fields: [assignedOrganizationId], references: [id], onDelete: SetNull)
+  items                RecyclingRequestItem[]
+  pickup               Pickup?
+  rewardLedgerEntries  RewardLedgerEntry[]     @relation("RecyclingRequestRewardEntries")
+
+  @@index([requesterId])
+  @@index([status])
+  @@index([assignedOrganizationId])
+  @@index([preferredPickupDate])
+  @@index([status, createdAt])
+  @@index([deletedAt])
+}
+
+model RecyclingRequestItem {
+  id                 String   @id @default(uuid()) @db.Uuid
+  recyclingRequestId String   @db.Uuid
+  materialCategoryId String   @db.Uuid
+  estimatedWeightKg  Decimal? @db.Decimal(10, 2)
+  confirmedWeightKg  Decimal? @db.Decimal(10, 2)
+  conditionNotes     String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  recyclingRequest RecyclingRequest @relation(fields: [recyclingRequestId], references: [id], onDelete: Cascade)
+  materialCategory MaterialCategory @relation(fields: [materialCategoryId], references: [id], onDelete: Restrict)
+
+  @@index([recyclingRequestId])
+  @@index([materialCategoryId])
+}
+
+model Pickup {
+  id                 String       @id @default(uuid()) @db.Uuid
+  recyclingRequestId String       @unique @db.Uuid
+  organizationId     String       @db.Uuid
+  assignedMemberId   String?      @db.Uuid
+  status             PickupStatus @default(SCHEDULED)
+  scheduledStartAt   DateTime
+  scheduledEndAt     DateTime
+  arrivedAt          DateTime?
+  completedAt        DateTime?
+  failureReason      String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  recyclingRequest RecyclingRequest       @relation(fields: [recyclingRequestId], references: [id], onDelete: Cascade)
+  organization     Organization           @relation("OrganizationPickups", fields: [organizationId], references: [id], onDelete: Restrict)
+  assignedMember   OrganizationMembership? @relation("AssignedMemberPickups", fields: [assignedMemberId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([assignedMemberId])
+  @@index([status])
+  @@index([organizationId, scheduledStartAt])
+}
+
+model RewardOffer {
+  id                String            @id @default(uuid()) @db.Uuid
+  organizationId    String?           @db.Uuid
+  title             String
+  description       String
+  pointsCost        Int
+  quantityAvailable Int?
+  startsAt          DateTime?
+  endsAt            DateTime?
+  status            RewardOfferStatus @default(DRAFT)
+  imageUrl          String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  deletedAt         DateTime?
+
+  organization Organization?       @relation("OrganizationRewardOffers", fields: [organizationId], references: [id], onDelete: SetNull)
+  redemptions  RewardRedemption[]  @relation("RewardOfferRedemptions")
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([pointsCost])
+  @@index([startsAt])
+  @@index([endsAt])
+  @@index([deletedAt])
+}
+
+model RewardLedgerEntry {
+  id                 String           @id @default(uuid()) @db.Uuid
+  userProfileId      String           @db.Uuid
+  entryType          RewardEntryType
+  points             Int
+  sourceType         RewardSourceType
+  sourceId           String?          @db.Uuid
+  recyclingRequestId String?          @db.Uuid
+  rewardRedemptionId String?          @unique @db.Uuid
+  description        String
+  createdAt          DateTime         @default(now())
+  createdById        String?          @db.Uuid
+
+  userProfile      UserProfile        @relation("UserRewardLedgerEntries", fields: [userProfileId], references: [id], onDelete: Restrict)
+  createdBy        UserProfile?       @relation("RewardLedgerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  recyclingRequest RecyclingRequest?  @relation("RecyclingRequestRewardEntries", fields: [recyclingRequestId], references: [id], onDelete: SetNull)
+  rewardRedemption RewardRedemption?  @relation("RedemptionLedgerEntry", fields: [rewardRedemptionId], references: [id], onDelete: SetNull)
+
+  @@index([userProfileId])
+  @@index([entryType])
+  @@index([createdAt])
+  @@index([userProfileId, createdAt])
+  @@index([sourceType, sourceId])
+  @@index([createdById])
+}
+
+model RewardRedemption {
+  id            String                 @id @default(uuid()) @db.Uuid
+  userProfileId String                 @db.Uuid
+  rewardOfferId String                 @db.Uuid
+  status        RewardRedemptionStatus @default(PENDING)
+  pointsSpent   Int
+  redeemedAt    DateTime               @default(now())
+  fulfilledAt   DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  userProfile UserProfile         @relation("UserRewardRedemptions", fields: [userProfileId], references: [id], onDelete: Restrict)
+  rewardOffer RewardOffer         @relation("RewardOfferRedemptions", fields: [rewardOfferId], references: [id], onDelete: Restrict)
+  ledgerEntry RewardLedgerEntry?  @relation("RedemptionLedgerEntry")
+
+  @@index([userProfileId])
+  @@index([rewardOfferId])
+  @@index([status])
+  @@index([redeemedAt])
+}
+
+model EducationContent {
+  id            String        @id @default(uuid()) @db.Uuid
+  authorId      String        @db.Uuid
+  organizationId String?      @db.Uuid
+  title         String
+  slug          String        @unique
+  summary       String
+  body          String
+  coverImageUrl String?
+  contentStatus ContentStatus @default(DRAFT)
+  publishedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+
+  author       UserProfile   @relation("EducationAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  organization Organization? @relation("OrganizationEducationContent", fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([contentStatus])
+  @@index([publishedAt])
+  @@index([deletedAt])
+}
+
+model CommunityCampaign {
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @db.Uuid
+  title          String
+  slug           String         @unique
+  description    String
+  startsAt       DateTime
+  endsAt         DateTime?
+  locationName   String?
+  address        String?
+  status         CampaignStatus @default(DRAFT)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization          @relation("OrganizationCampaigns", fields: [organizationId], references: [id], onDelete: Cascade)
+  participants CampaignParticipant[] @relation("CampaignParticipants")
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([startsAt])
+  @@index([deletedAt])
+}
+
+model CampaignParticipant {
+  id                  String                      @id @default(uuid()) @db.Uuid
+  campaignId          String                      @db.Uuid
+  userProfileId       String                      @db.Uuid
+  participationStatus CampaignParticipationStatus @default(REGISTERED)
+  checkedInAt         DateTime?
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+
+  campaign    CommunityCampaign @relation("CampaignParticipants", fields: [campaignId], references: [id], onDelete: Cascade)
+  userProfile UserProfile       @relation("CampaignParticipants", fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userProfileId])
+  @@index([participationStatus])
+  @@index([userProfileId])
+}
+
+model ImpactRecord {
+  id                 String          @id @default(uuid()) @db.Uuid
+  scopeType          ImpactScopeType
+  scopeId            String          @db.Uuid
+  materialCategoryId String?         @db.Uuid
+  weightKg           Decimal         @db.Decimal(12, 2)
+  co2eSavedKg        Decimal         @db.Decimal(12, 2)
+  landfillDivertedKg Decimal         @db.Decimal(12, 2)
+  calculationVersion String
+  recordedAt         DateTime        @default(now())
+  createdAt          DateTime        @default(now())
+
+  materialCategory MaterialCategory? @relation(fields: [materialCategoryId], references: [id], onDelete: SetNull)
+
+  @@index([scopeType, scopeId])
+  @@index([recordedAt])
+  @@index([materialCategoryId])
+}
+
+model Notification {
+  id               String           @id @default(uuid()) @db.Uuid
+  userProfileId    String           @db.Uuid
+  notificationType NotificationType
+  title            String
+  body             String
+  readAt           DateTime?
+  actionUrl        String?
+  createdAt        DateTime         @default(now())
+
+  userProfile UserProfile @relation("UserNotifications", fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@index([userProfileId])
+  @@index([readAt])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String?  @db.Uuid
+  action      String
+  entityType  String
+  entityId    String?  @db.Uuid
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  actorUser UserProfile? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId])
+  @@index([entityType, entityId])
+  @@index([action])
   @@index([createdAt])
 }
