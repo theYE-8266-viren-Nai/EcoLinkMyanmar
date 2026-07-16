@@ -1,39 +1,42 @@
 import { createBrowserClient, createServerClient } from "@supabase/ssr";
-import type { CookieOptions } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 function getSupabasePublicConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const publishableKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!url || !anonKey) {
+  if (!url || !publishableKey) {
     throw new Error("Missing Supabase public environment variables.");
   }
 
-  return { url, anonKey };
+  return { url, publishableKey };
 }
 
 export function createSupabaseBrowserClient() {
-  const { url, anonKey } = getSupabasePublicConfig();
+  const { url, publishableKey } = getSupabasePublicConfig();
 
-  return createBrowserClient(url, anonKey);
+  return createBrowserClient(url, publishableKey);
 }
 
 export async function createSupabaseServerClient() {
-  const { url, anonKey } = getSupabasePublicConfig();
+  const { url, publishableKey } = getSupabasePublicConfig();
   const cookieStore = await cookies();
 
-  return createServerClient(url, anonKey, {
+  return createServerClient(url, publishableKey, {
     cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
+      getAll() {
+        return cookieStore.getAll();
       },
-      set(name: string, value: string, options: CookieOptions) {
-        cookieStore.set({ name, value, ...options });
-      },
-      remove(name: string, options: CookieOptions) {
-        cookieStore.set({ name, value: "", ...options });
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        } catch {
+          // Server Components cannot set cookies. Proxy session refresh handles that path.
+        }
       },
     },
   });
