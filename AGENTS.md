@@ -143,16 +143,32 @@ Testing should match risk. At minimum:
 
 Do not write snapshot tests as a substitute for behavior. Prefer tests that explain what matters.
 
+## Development Pipeline
+
+Agents should use the `ecolink/` application as the execution root for day-to-day development work. Treat `npm` as the default package manager because `ecolink/package-lock.json` is the canonical lockfile in this repository.
+
+Run this pipeline in order whenever you change application code, configuration, or dependencies:
+
+1. Sync dependencies only when required, using `npm install` inside `ecolink/` after `package.json` or lockfile changes.
+2. Run `npm run lint` inside `ecolink/`.
+3. Run `npx tsc --noEmit` inside `ecolink/`.
+4. Run focused tests for the touched feature when tests exist or when the change affects validation, permissions, domain rules, or stateful UI.
+5. Run `npx -y react-doctor@latest . --verbose --diff` inside `ecolink/` after React, Next.js, Client Component, Server Component, hook, or rendering changes.
+6. Run `npm run build` inside `ecolink/` for route, configuration, dependency, environment, metadata, or production behavior changes, and before handoff when the impact is broad.
+
+If one step is not applicable, say why in the handoff. Do not claim completion while skipping a relevant validation step.
+
 ## Git Workflow
 
 Keep commits focused and readable. A good commit changes one coherent thing. Do not include generated artifacts, local environment files, dependency lockfile changes, or formatting churn unless they are required for the work.
 
 Before committing, run the relevant checks:
 
-- Type checking.
-- Linting.
-- Tests related to touched areas.
-- Build verification for routing or configuration changes.
+- `npm run lint` in `ecolink/`.
+- `npx tsc --noEmit` in `ecolink/`.
+- Focused tests related to touched areas.
+- `npx -y react-doctor@latest . --verbose --diff` in `ecolink/` when React or Next.js code changed.
+- `npm run build` in `ecolink/` for routing, configuration, dependency, or broad production-impact changes.
 
 Never rewrite user work or discard uncommitted changes unless explicitly instructed.
 
@@ -222,4 +238,4 @@ Avoid catch-all files such as `helpers.ts`, `utils.ts`, or `constants.ts` at bro
 
 ## Definition Of Done
 
-A change is done when it is implemented, typed, validated, accessible, tested at the appropriate level, consistent with the design system, and documented if it changes long-term project knowledge. The user should be able to continue from the repository state without needing hidden context from the conversation.
+A change is done when it is implemented, typed, validated, accessible, tested at the appropriate level, consistent with the design system, checked through the required development pipeline, and documented if it changes long-term project knowledge. The user should be able to continue from the repository state without needing hidden context from the conversation.
