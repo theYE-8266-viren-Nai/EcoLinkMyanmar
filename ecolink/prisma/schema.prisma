@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model UserProfile {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  email       String   @unique
+  displayName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  recyclingIntents RecyclingIntent[]
+}
+
+model RecyclingIntent {
+  id            String   @id @default(cuid())
+  userProfileId String?
+  name          String
+  email         String
+  materialType  String
+  pickupWindow  String
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  userProfile UserProfile? @relation(fields: [userProfileId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([createdAt])
+}
