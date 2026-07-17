@@ -1,7 +1,6 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
-
+import { getCurrentUser } from "@/lib/auth";
 import { recyclingIntentSchema } from "@/schemas/recycling-intent";
 import type { ActionResult } from "@/types/actions";
 import type { RecyclingIntentConfirmation } from "@/types/recycling";
@@ -19,7 +18,7 @@ export async function submitRecyclingIntentAction(
     };
   }
 
-  const { userId } = await auth();
+  const user = await getCurrentUser();
 
   return {
     ok: true,
@@ -27,9 +26,9 @@ export async function submitRecyclingIntentAction(
       email: parsed.data.email,
       materialType: parsed.data.materialType,
       pickupWindow: parsed.data.pickupWindow,
-      submittedByUserId: userId,
+      submittedByUserId: user?.id ?? null,
     },
     message:
-      "Thanks. This example action validated your recycling intent and is ready to connect to Prisma.",
+      "Thanks. This example action validated your recycling intent and is ready to connect to Supabase.",
   };
 }

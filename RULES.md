@@ -49,6 +49,10 @@ Build pages by composing focused components. Avoid monolithic components that ow
 
 Use Server Components by default. Use Client Components only for browser-only behavior, local state, event handlers, forms, animation, or interactive primitives.
 
+### Prefer SPA Surfaces For App Workflows
+
+For authenticated app workflows, prefer one focused SPA surface over creating a new route for every tab, filter, drawer, or panel. Add a new route only when the experience needs a distinct URL, server-rendered entry point, permission boundary, or independently shareable page.
+
 ### Always Validate Input
 
 Every external input must be validated:
@@ -66,19 +70,18 @@ TypeScript does not replace runtime validation.
 
 Use Zod for validation. Keep schemas near the feature they protect. Derive input types from schemas when useful.
 
-### Use Prisma
+### Use Supabase ORM
 
-Use Prisma for database access and migrations. Do not introduce another ORM or scatter raw SQL through the codebase. Raw SQL requires a documented reason and must be parameterized.
+Use Supabase client libraries for application database access. Data access must go through typed Supabase helpers, respect Row Level Security, and use the authenticated user's Supabase session when user-scoped data is involved. Raw SQL belongs in reviewed Supabase migrations, RLS policies, or carefully controlled service-role maintenance code.
 
-### Use Clerk
+### Use Supabase Auth
 
-Use Clerk for authentication. Never build custom authentication. Use EcoLink database roles and memberships for authorization.
+Use Supabase Auth for authentication. Never build custom authentication. Use Supabase `auth.users.id` as the identity source and EcoLink database profiles, memberships, and RLS policies for authorization.
 
 ### Never Expose Secrets
 
 Secrets must stay server-side:
 
-- Clerk secret keys.
 - Supabase service role keys.
 - Database URLs.
 - Resend API keys.
@@ -111,7 +114,7 @@ Page files should:
 
 Page files should not contain:
 
-- Complex Prisma queries.
+- Complex Supabase queries.
 - Long form implementations.
 - Business rule branching.
 - Authorization logic beyond simple route gating.
@@ -130,7 +133,7 @@ Components should not:
 
 - Fetch unrelated data.
 - Perform hidden mutations.
-- Import Prisma.
+- Import database clients directly.
 - Duplicate domain rules.
 - Depend on another feature's private internals.
 
@@ -141,7 +144,7 @@ Every Server Action must:
 - Authenticate the current user.
 - Authorize the operation.
 - Validate input with Zod.
-- Use Prisma for persistence.
+- Use Supabase for persistence.
 - Return a typed result.
 - Avoid leaking internal errors.
 - Trigger side effects only after successful state changes.
@@ -158,7 +161,7 @@ Do not rely only on placeholders. Do not duplicate validation rules between clie
 
 Database changes must:
 
-- Use Prisma migrations.
+- Use Supabase migrations with RLS policies for exposed tables.
 - Include indexes for expected query paths.
 - Preserve data during deploy.
 - Use enums for controlled states.

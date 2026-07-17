@@ -955,9 +955,8 @@
       "profileSchema": {
         "type": "object",
         "properties": {
-          "clerkUserId": {
-            "type": "string",
-            "minLength": 1
+          "authUserId": {
+            "$ref": "#/components/schemas/uuidSchema"
           },
           "email": {
             "type": "string",
@@ -991,7 +990,7 @@
           }
         },
         "required": [
-          "clerkUserId",
+          "authUserId",
           "email",
           "displayName",
           "preferredLanguage"

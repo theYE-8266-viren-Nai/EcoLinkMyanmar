@@ -6,8 +6,8 @@ import { SiteNavigation } from "@/components/layout/site-navigation";
 import { buttonVariants } from "@/components/ui/button";
 
 const foundationCards = [
-  { title: "Clerk", description: "Auth ready", Icon: ShieldCheck },
-  { title: "Prisma", description: "Postgres ready", Icon: Sparkles },
+  { title: "Supabase Auth", description: "Auth ready", Icon: ShieldCheck },
+  { title: "Supabase ORM", description: "RLS-backed data", Icon: Sparkles },
   { title: "Forms", description: "Zod validated", Icon: Leaf },
 ];
 

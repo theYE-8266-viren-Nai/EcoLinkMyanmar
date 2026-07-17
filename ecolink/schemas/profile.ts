@@ -3,7 +3,7 @@ import { z } from "zod";
 import { uuidSchema } from "@/schemas/db";
 
 export const profileSchema = z.object({
-  clerkUserId: z.string().trim().min(1),
+  authUserId: uuidSchema,
   email: z.email().trim(),
   displayName: z.string().trim().min(2).max(120),
   phone: z.string().trim().max(40).optional(),

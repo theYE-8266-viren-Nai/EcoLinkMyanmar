@@ -166,7 +166,7 @@ Secondary goals:
 
 MVP features:
 
-- Clerk authentication.
+- Supabase authentication.
 - User profile and address management.
 - Recycling request creation.
 - Material category guidance.

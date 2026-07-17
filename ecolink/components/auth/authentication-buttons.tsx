@@ -1,13 +1,41 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { EcoLinkUserButton } from "@/components/auth/user-button";
 import { buttonVariants } from "@/components/ui/button";
+import { createSupabaseBrowserClient } from "@/lib/supabase-client";
 
 export function AuthenticationButtons() {
-  const { isLoaded, isSignedIn } = useUser();
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    let isMounted = true;
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (!isMounted) {
+        return;
+      }
+
+      setIsSignedIn(Boolean(data.user));
+      setIsLoaded(true);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsSignedIn(Boolean(session?.user));
+      setIsLoaded(true);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   if (!isLoaded) {
     return (

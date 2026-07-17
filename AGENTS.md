@@ -4,7 +4,7 @@
 
 This file is the permanent operating guide for any AI coding agent working in the EcoLink repository. Treat it as the repository-level system prompt. Its job is to keep future work consistent, maintainable, accessible, secure, and aligned with EcoLink's mission: helping citizens turn waste into worth through responsible recycling, rewards, education, and community engagement.
 
-EcoLink is expected to be built with Next.js 16, React 19, TypeScript, Tailwind CSS v4, shadcn/ui, Clerk, Prisma, Supabase PostgreSQL, Supabase Storage, React Hook Form, Zod, Resend, PostHog, and Vercel. Do not introduce a competing framework, authentication provider, database ORM, form stack, analytics system, or hosting platform without a written architecture decision.
+EcoLink is expected to be built with Next.js 16, React 19, TypeScript, Tailwind CSS v4, shadcn/ui, Supabase Auth, Supabase PostgreSQL, Supabase Storage, Supabase client libraries, React Hook Form, Zod, Resend, PostHog, and Vercel. Do not introduce a competing framework, authentication provider, database ORM, form stack, analytics system, or hosting platform without a written architecture decision.
 
 ## Responsibilities
 
@@ -69,6 +69,8 @@ When adding a feature:
 5. Add loading, empty, error, and success states.
 6. Add tests around authorization, validation, and core outcomes.
 7. Update documentation if the feature changes architecture, product behavior, or data contracts.
+8. When it comes to using supabase or database, read the supabase skills.
+9. You can not modify old migration unless it failed. 
 
 ## File Organization
 
@@ -91,7 +93,7 @@ tests/
 
 Use `src/app` for Next.js routes, layouts, route handlers, and metadata. Keep route files thin. Route files should compose feature modules, not contain deep business logic.
 
-Use `src/lib` for infrastructure concerns such as Prisma client setup, Clerk helpers, Supabase clients, Resend integration, PostHog utilities, and reusable server-only helpers.
+Use `src/lib` for infrastructure concerns such as Supabase clients, Supabase auth helpers, Resend integration, PostHog utilities, and reusable server-only helpers.
 
 Use `src/types` sparingly. Prefer colocated feature types unless the type truly crosses the whole application.
 
@@ -111,7 +113,7 @@ TypeScript should be strict. Avoid weakening the compiler to move quickly. Use i
 
 Validation schemas should define input contracts. Derive TypeScript types from Zod schemas when the validated input type is reused. Keep database types, form input types, and view model types separate when they represent different concerns.
 
-Never trust client-provided user IDs, organization IDs, role names, prices, reward amounts, or status values. Derive identity and authorization from Clerk on the server.
+Never trust client-provided user IDs, organization IDs, role names, prices, reward amounts, or status values. Derive identity from Supabase Auth on the server and authorization from EcoLink database roles, memberships, and RLS policies.
 
 ## Performance Expectations
 
@@ -203,10 +205,10 @@ Keep data fetching close to the route or feature boundary. Convert database reco
 Server Actions are the preferred mutation boundary for form submissions and small workflow actions. Every Server Action must:
 
 - Run on the server.
-- Authenticate the current user through Clerk.
+- Authenticate the current user through Supabase Auth.
 - Authorize the action against the relevant user, organization, or role.
 - Validate input with Zod.
-- Use Prisma for database writes.
+- Use Supabase for database writes.
 - Return a typed result shape that the UI can handle.
 - Avoid leaking stack traces, secrets, or internal IDs in user-facing errors.
 
@@ -230,7 +232,7 @@ Avoid catch-all files such as `helpers.ts`, `utils.ts`, or `constants.ts` at bro
 - Do not use `any` to silence TypeScript.
 - Do not bypass Zod validation.
 - Do not trust client-side authorization.
-- Do not expose Supabase service role keys, Clerk secrets, Resend keys, or PostHog secrets.
+- Do not expose Supabase service role keys, Resend keys, or PostHog secrets.
 - Do not duplicate design tokens outside the Tailwind/theme layer.
 - Do not create large Client Components for mostly static views.
 - Do not add new dependencies without clear value and maintenance justification.

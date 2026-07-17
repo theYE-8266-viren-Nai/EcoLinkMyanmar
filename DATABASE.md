@@ -6,7 +6,7 @@ This document defines the planned data model for EcoLink. It is the source of tr
 
 EcoLink's database must support a multi-role recycling platform: citizens request recycling support, organizations collect and process materials, NGOs run education and community campaigns, businesses participate in sustainability programs, and administrators verify trust-sensitive activity.
 
-The planned database is Supabase PostgreSQL accessed through Prisma ORM. Prisma should be the application database access layer. Supabase direct access should be reserved for platform operations and carefully controlled services.
+The planned database is Supabase PostgreSQL accessed through typed Supabase clients. Supabase Auth identities, Row Level Security policies, and explicit Data API grants are part of the database contract.
 
 ## Responsibilities
 
@@ -21,7 +21,7 @@ The database design must:
 
 ## Naming Conventions
 
-Prisma models use PascalCase. Fields use camelCase. Enum values use uppercase snake case. Database table names may follow Prisma defaults unless a documented mapping is required.
+Application-facing database types should be generated from Supabase. Existing legacy Prisma-era tables use PascalCase and camelCase; new Supabase-native tables should prefer snake_case table and column names unless a migration must preserve an existing contract. Enum values use uppercase snake case.
 
 Preferred fields:
 
@@ -38,12 +38,12 @@ Avoid vague names such as `data`, `info`, `type`, or `status` without a domain p
 
 ### UserProfile
 
-Purpose: Stores EcoLink-specific profile data for a Clerk-authenticated user.
+Purpose: Stores EcoLink-specific profile data for a Supabase-authenticated user.
 
 Key fields:
 
 - `id`
-- `clerkUserId`
+- `authUserId`
 - `displayName`
 - `email`
 - `phone`
@@ -64,10 +64,10 @@ Relationships:
 
 Indexes:
 
-- Unique index on `clerkUserId`.
+- Unique index on `authUserId`.
 - Unique or filtered index on `email` where appropriate.
 
-Notes: Clerk remains the authentication source. The app profile stores domain preferences and application relationships.
+Notes: Supabase Auth remains the authentication source. The app profile stores domain preferences and application relationships. Legacy `clerkUserId` may exist only during migration and must not be used for new authorization.
 
 ### Address
 
@@ -163,7 +163,7 @@ Indexes:
 - Index on `role`.
 - Index on `status`.
 
-Notes: Membership is the source for organization dashboard permissions. Clerk identity alone is not enough.
+Notes: Membership is the source for organization dashboard permissions. Supabase identity alone is not enough.
 
 ### OrganizationVerification
 
@@ -657,7 +657,7 @@ For critical workflows, prefer explicit event timestamps:
 
 ## Migration Strategy
 
-Use Prisma migrations. Every schema change must be reviewed for:
+Use Supabase migrations. Every schema change must be reviewed for:
 
 - Data preservation.
 - Backward compatibility during deploy.
@@ -705,7 +705,7 @@ Design initial models so these can be added without replacing the core concepts.
 
 - Storing reward balances as the only source of truth.
 - Mutating historical ledger entries.
-- Mixing Clerk auth identity with EcoLink role membership.
+- Mixing Supabase auth identity with EcoLink role membership.
 - Making all organization users admins.
 - Building status transitions as free-form strings.
 - Storing private document URLs as public links.

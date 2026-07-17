@@ -79,7 +79,7 @@ Alternatives considered:
 
 Integration:
 
-TypeScript spans application code, validation types, Prisma types, component props, actions, and test utilities.
+TypeScript spans application code, validation types, Supabase database types, component props, actions, and test utilities.
 
 Best practices:
 
@@ -135,28 +135,28 @@ Best practices:
 - Build domain components on top of primitives.
 - Use consistent variants.
 
-## Clerk Authentication
+## Supabase Authentication
 
 Why chosen:
 
-Clerk provides robust authentication, session management, user identity, and auth UI patterns, allowing EcoLink to focus on domain workflows.
+Supabase Auth provides authentication, session management, and JWT claims that integrate directly with Supabase PostgreSQL Row Level Security.
 
 Alternatives considered:
 
 - Auth.js: flexible but requires more ownership.
-- Supabase Auth: integrated with Supabase but Clerk offers strong user-management tooling.
+- Clerk: strong user-management tooling but duplicates the Supabase identity layer needed for RLS.
 - Custom auth: not acceptable for this project.
 
 Integration:
 
-Clerk is the source of authentication identity. EcoLink maps Clerk users to `UserProfile` records and domain roles through organization memberships.
+Supabase Auth is the source of authentication identity. EcoLink maps `auth.users.id` to `UserProfile.authUserId` and domain roles through organization memberships.
 
 Best practices:
 
 - Authenticate on the server.
 - Authorize with EcoLink domain roles.
 - Never trust client-provided user IDs.
-- Keep Clerk secrets server-only.
+- Keep Supabase service-role keys server-only.
 
 ## Supabase PostgreSQL
 
@@ -172,13 +172,13 @@ Alternatives considered:
 
 Integration:
 
-Prisma connects to Supabase PostgreSQL. Supabase platform tools may support operations, but application reads and writes go through Prisma.
+Application reads and writes use typed Supabase clients against Supabase PostgreSQL. Row Level Security is part of the application authorization model, not only a database hardening layer.
 
 Best practices:
 
-- Use migrations.
+- Use Supabase migrations.
 - Index for real query paths.
-- Avoid direct SQL unless Prisma cannot express the operation.
+- Put schema SQL and RLS policy SQL in migrations.
 - Keep connection management aligned with Vercel runtime constraints.
 
 ## Supabase Storage
@@ -194,7 +194,7 @@ Alternatives considered:
 
 Integration:
 
-Store file metadata in PostgreSQL through Prisma where needed. Store binary files in Supabase Storage. Use private buckets for sensitive documents.
+Store file metadata in PostgreSQL through Supabase where needed. Store binary files in Supabase Storage. Use private buckets for sensitive documents.
 
 Best practices:
 
@@ -203,28 +203,29 @@ Best practices:
 - Use signed URLs for private files.
 - Never expose service role keys to the client.
 
-## Prisma ORM
+## Supabase Client Libraries
 
 Why chosen:
 
-Prisma provides type-safe database access, migrations, and clear data modeling. It helps keep database usage consistent across agents and developers.
+Supabase client libraries provide typed database access, storage, and auth session propagation that works with PostgreSQL Row Level Security.
 
 Alternatives considered:
 
-- Drizzle: excellent and lightweight, but Prisma is more familiar for schema-first workflows.
+- Prisma: strong schema-first ORM, but it bypasses Supabase RLS unless carefully paired with JWT-aware connections.
+- Drizzle: excellent and lightweight, but less directly integrated with Supabase Auth and generated API types.
 - Kysely: flexible SQL builder but more manual schema management.
 - Raw SQL: too error-prone as the default.
 
 Integration:
 
-Prisma owns schema and migrations. Feature data functions and services use Prisma for all database reads and writes.
+Supabase migrations own schema and RLS. Feature data functions and services use typed Supabase clients for database reads and writes.
 
 Best practices:
 
 - Keep queries scoped.
 - Use transactions for multi-step mutations.
-- Avoid N+1 queries.
-- Do not leak Prisma models directly into Client Components when sensitive.
+- Avoid N+1 query patterns.
+- Do not leak database rows directly into Client Components when sensitive.
 
 ## React Hook Form
 
@@ -351,7 +352,7 @@ Alternatives considered:
 
 Integration:
 
-Vercel hosts the Next.js application. Supabase, Clerk, Resend, and PostHog remain managed external services.
+Vercel hosts the Next.js application. Supabase, Resend, and PostHog remain managed external services.
 
 Best practices:
 
@@ -364,9 +365,9 @@ Best practices:
 
 The stack deliberately separates responsibilities:
 
-- Clerk handles authentication.
+- Supabase handles authentication.
 - EcoLink database handles domain authorization and profiles.
-- Prisma handles relational persistence.
+- Supabase handles relational persistence.
 - Supabase Storage handles files.
 - Server Actions handle mutations.
 - Zod handles runtime validation.
@@ -379,7 +380,7 @@ The stack deliberately separates responsibilities:
 
 - Adding a second ORM.
 - Adding a second auth provider.
-- Writing direct database access outside Prisma without a documented reason.
+- Writing direct database access outside typed Supabase helpers without a documented reason.
 - Treating Supabase Storage as public by default.
 - Using analytics for private data.
 - Adding UI libraries that conflict with shadcn/ui.
