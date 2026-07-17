@@ -30,8 +30,8 @@ function readEnvironmentReportConfig(config?: AiScannerConfig): AiScannerConfig 
   if (config) return config;
 
   return {
-    openRouterApiKey: process.env.OPENROUTER_API_KEY ?? "",
-    model: process.env.AI_ENVIRONMENT_REPORT_MODEL ?? process.env.AI_SCANNER_MODEL ?? "",
+    geminiApiKey: process.env.GEMINI_API_KEY ?? "",
+    model: process.env.AI_ENVIRONMENT_REPORT_MODEL ?? process.env.AI_SCANNER_MODEL ?? "gemini-3.1-flash-lite",
     maxUploadMb: Number(
       process.env.AI_ENVIRONMENT_REPORT_MAX_UPLOAD_MB ??
         process.env.AI_SCANNER_MAX_UPLOAD_MB ??
@@ -45,10 +45,10 @@ async function resolveEnvironmentImageRater(
 ) {
   if (rateEnvironmentImage) return rateEnvironmentImage;
 
-  const { rateEnvironmentImageWithOpenRouter } = await import(
+  const { rateEnvironmentImageWithGemini } = await import(
     "@/lib/services/environment-report-rating"
   );
-  return rateEnvironmentImageWithOpenRouter;
+  return rateEnvironmentImageWithGemini;
 }
 
 function getSingleFormValue(formData: FormData, field: string) {
@@ -86,7 +86,7 @@ export async function handleCreateEnvironmentReport(
 ) {
   try {
     const config = readEnvironmentReportConfig(dependencies.aiConfig);
-    if (!config.openRouterApiKey || !config.model || !Number.isFinite(config.maxUploadMb) || config.maxUploadMb <= 0) {
+    if (!config.geminiApiKey || !config.model || !Number.isFinite(config.maxUploadMb) || config.maxUploadMb <= 0) {
       throw new Error("Environment report AI configuration is invalid.");
     }
 

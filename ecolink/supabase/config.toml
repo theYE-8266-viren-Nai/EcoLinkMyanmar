@@ -1,0 +1,5 @@
+project_id = "ecolink"
+
+[auth.third_party.clerk]
+enabled = true
+domain = "env(CLERK_DOMAIN)"

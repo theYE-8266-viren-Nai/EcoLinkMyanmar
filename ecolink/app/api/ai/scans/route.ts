@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { AiScannerConfig } from "@/lib/services/ai-scanner-config";
 import { readSingleImageFromMultipartRequest } from "@/lib/services/uploaded-image";
 import {
-  analyzeImageWithOpenRouter,
+  analyzeImageWithGemini,
   type AiScannerInference,
 } from "@/lib/services/ai-scanner-inference";
 import {
@@ -28,18 +28,18 @@ export async function handleAiScanRequest(
 ) {
   try {
     const config = dependencies.config ?? {
-      openRouterApiKey: process.env.OPENROUTER_API_KEY ?? "",
-      model: process.env.AI_SCANNER_MODEL ?? "",
+      geminiApiKey: process.env.GEMINI_API_KEY ?? "",
+      model: process.env.AI_SCANNER_MODEL ?? "gemini-3.1-flash-lite",
       maxUploadMb: Number(process.env.AI_SCANNER_MAX_UPLOAD_MB ?? 10),
     };
 
-    if (!config.openRouterApiKey || !config.model || !Number.isFinite(config.maxUploadMb) || config.maxUploadMb <= 0) {
+    if (!config.geminiApiKey || !config.model || !Number.isFinite(config.maxUploadMb) || config.maxUploadMb <= 0) {
       throw new Error("AI scanner environment configuration is invalid.");
     }
 
     const file = await readImageFromRequest(request, config.maxUploadMb * 1024 * 1024);
 
-    const analyzeImage = dependencies.analyzeImage ?? analyzeImageWithOpenRouter;
+    const analyzeImage = dependencies.analyzeImage ?? analyzeImageWithGemini;
     const providerOutput = await analyzeImage(file, config);
 
     return NextResponse.json(normalizeAiScanResult(providerOutput), { status: 200 });
