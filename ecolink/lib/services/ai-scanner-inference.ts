@@ -11,14 +11,19 @@ Add warnings for contamination, blur, occlusion, uncertainty, or when the image 
 
 const RESPONSE_SCHEMA = {
   type: "object",
-  required: ["summary", "detections", "warnings"],
+  required: ["summary", "detections", "warnings", "categories", "isLegit"],
   properties: {
+    isLegit: { type: "boolean" },
     summary: { type: "object", required: ["primaryMaterialLabel", "estimatedBottleCount", "estimatedTotalWeightKg", "confidence"], properties: {
       primaryMaterialLabel: { type: ["string", "null"] }, estimatedBottleCount: { type: "number" }, estimatedTotalWeightKg: { type: "number" }, confidence: { type: "number" },
     } },
     detections: { type: "array", items: { type: "object", required: ["materialLabel", "itemType", "estimatedCount", "estimatedWeightKg", "confidence", "reasoning"], properties: {
       materialLabel: { type: "string" }, itemType: { type: "string" }, estimatedCount: { type: "number" }, estimatedWeightKg: { type: "number" }, confidence: { type: "number" }, reasoning: { type: "string" },
     } } },
+    categories: {
+      type: "array",
+      items: { type: "string", enum: ["waste-dump", "blocked-drain", 'water-drain', 'illegal-burning', 'chemical-spill'] },
+    },
     warnings: { type: "array", items: { type: "string" } },
   },
 };
