@@ -1,11 +1,15 @@
 "use client";
 
+import { Show, SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import { Bell, Check, House, MapPinned, QrCode, Recycle, RotateCcw, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
-import { useEcoLink } from "@/providers/ecolink-provider";
+import { syncCurrentProfile } from "@/actions/profile";
+import { useEcoLink } from "@/providers/ecolink-context";
+
+const DEMO_MODE = process.env.NEXT_PUBLIC_ECOLINK_DEMO_MODE !== "false";
 
 const NAV_ITEMS = [
   { href: "/", label: "Home", Icon: House },
@@ -28,9 +32,22 @@ export function EcoLinkMark({ compact = false }: { compact?: boolean }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { state, markAllNotificationsRead, resetDemo } = useEcoLink();
+  const { user } = useUser();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [memberCode, setMemberCode] = useState(state.user.memberCode);
   const unread = state.notifications.filter((item) => !item.read).length;
+  const displayName = user?.fullName ?? user?.firstName ?? state.user.displayName;
+  const initials = displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+
+  useEffect(() => {
+    if (DEMO_MODE || !user) return;
+    let cancelled = false;
+    void syncCurrentProfile().then((result) => {
+      if (!cancelled && result.ok) setMemberCode(result.profile.member_code);
+    });
+    return () => { cancelled = true; };
+  }, [user]);
 
   return (
     <div className="app-shell">
@@ -62,19 +79,27 @@ export function AppShell({ children }: { children: ReactNode }) {
               </section>
             ) : null}
           </div>
-          <div className="popover-anchor">
-            <button className="profile-button" type="button" aria-label="Open profile and member code" aria-expanded={profileOpen} onClick={() => { setProfileOpen((value) => !value); setNotificationsOpen(false); }}>
-              <span>MT</span><div><strong>{state.user.displayName}</strong><small>{state.user.memberCode}</small></div>
-            </button>
-            {profileOpen ? (
-              <section className="header-popover profile-panel" aria-label="Member profile">
-                <div className="popover-heading"><div><strong>{state.user.displayName}</strong><span>EcoLink member</span></div><button type="button" onClick={() => setProfileOpen(false)} aria-label="Close profile"><X size={18} /></button></div>
-                <div className="member-code-card"><QrCode size={52} /><span><small>Member code</small><strong>{state.user.memberCode}</strong></span></div>
-                <p>Show this code when dropping off recyclables at a partner center.</p>
-                <button className="profile-reset" type="button" onClick={() => { resetDemo(); setProfileOpen(false); }}><RotateCcw size={17} /> Reset demo data</button>
-              </section>
-            ) : null}
-          </div>
+          <Show when="signed-out">
+            <SignInButton mode="modal">
+              <button className="profile-button" type="button"><span>EL</span><div><strong>Sign in</strong><small>Access your EcoLink account</small></div></button>
+            </SignInButton>
+          </Show>
+          <Show when="signed-in">
+            <div className="popover-anchor">
+              <button className="profile-button" type="button" aria-label="Open profile and member code" aria-expanded={profileOpen} onClick={() => { setProfileOpen((value) => !value); setNotificationsOpen(false); }}>
+                <span>{initials}</span><div><strong>{displayName}</strong><small>{memberCode}</small></div>
+              </button>
+              {profileOpen ? (
+                <section className="header-popover profile-panel" aria-label="Member profile">
+                  <div className="popover-heading"><div><strong>{displayName}</strong><span>EcoLink member</span></div><button type="button" onClick={() => setProfileOpen(false)} aria-label="Close profile"><X size={18} /></button></div>
+                  <div className="member-code-card"><QrCode size={52} /><span><small>Member code</small><strong>{memberCode}</strong></span></div>
+                  <p>Show this code when dropping off recyclables at a partner center.</p>
+                  <div className="profile-account-row"><span>Account and sign out</span><UserButton /></div>
+                  <button className="profile-reset" type="button" onClick={() => { resetDemo(); setProfileOpen(false); }}><RotateCcw size={17} /> Reset demo data</button>
+                </section>
+              ) : null}
+            </div>
+          </Show>
         </div>
       </header>
       <div className="page-frame">{children}</div>

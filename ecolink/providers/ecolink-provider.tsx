@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import {
   INITIAL_STATE,
@@ -10,27 +10,10 @@ import {
   materialName,
   type EcoLinkState,
   type EnvironmentReport,
-  type MaterialSlug,
 } from "@/lib/ecolink-data";
+import { EcoLinkContext, type AddDropOffInput } from "@/providers/ecolink-context";
 
 const STORAGE_KEY = "ecolink-product-demo-v1";
-
-type AddDropOffInput = { memberCode: string; materialSlug: MaterialSlug; weightKg: number };
-
-type EcoLinkContextValue = {
-  state: EcoLinkState;
-  balance: number;
-  verifiedWeightKg: number;
-  addDropOff: (input: AddDropOffInput) => { points: number };
-  redeemReward: (rewardId: string) => { claimCode: string };
-  fulfillReward: (claimCode: string) => void;
-  contributeToCleanup: (points: number) => void;
-  addReport: (report: Omit<EnvironmentReport, "id" | "createdAt">) => void;
-  markAllNotificationsRead: () => void;
-  resetDemo: () => void;
-};
-
-const EcoLinkContext = createContext<EcoLinkContextValue | null>(null);
 
 function getBalance(state: EcoLinkState) {
   const earned = state.dropOffs.reduce((total, item) => total + item.points, 0);
@@ -77,10 +60,9 @@ export function EcoLinkProvider({ children }: { children: ReactNode }) {
   const redeemReward = useCallback((rewardId: string) => {
     const reward = PARTNER_REWARDS.find((item) => item.id === rewardId);
     if (!reward) throw new Error("This reward is no longer available.");
-    let claimCode = "";
+    if (getBalance(state) < reward.points) throw new Error("You do not have enough points for this reward.");
+    const claimCode = `ECO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     setState((current) => {
-      if (getBalance(current) < reward.points) throw new Error("You do not have enough points for this reward.");
-      claimCode = `ECO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
       return {
         ...current,
         redemptions: [{ id: crypto.randomUUID(), rewardId, claimCode, status: "reserved", createdAt: new Date().toISOString() }, ...current.redemptions],
@@ -88,7 +70,7 @@ export function EcoLinkProvider({ children }: { children: ReactNode }) {
       };
     });
     return { claimCode };
-  }, []);
+  }, [state]);
 
   const fulfillReward = useCallback((claimCode: string) => {
     setState((current) => {
@@ -143,10 +125,4 @@ export function EcoLinkProvider({ children }: { children: ReactNode }) {
   }), [state, addDropOff, redeemReward, fulfillReward, contributeToCleanup, addReport, markAllNotificationsRead, resetDemo]);
 
   return <EcoLinkContext.Provider value={value}>{children}</EcoLinkContext.Provider>;
-}
-
-export function useEcoLink() {
-  const context = useContext(EcoLinkContext);
-  if (!context) throw new Error("useEcoLink must be used inside EcoLinkProvider.");
-  return context;
 }

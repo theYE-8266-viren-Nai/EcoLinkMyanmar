@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { AppShell } from "@/components/ecolink/app-shell";
 import { PARTNER_CENTERS, materialName } from "@/lib/ecolink-data";
-import { useEcoLink } from "@/providers/ecolink-provider";
+import { useEcoLink } from "@/providers/ecolink-context";
 
 const DROP_OFF_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",

@@ -71,7 +71,7 @@ export default function RecyclePage() {
               <div className="center-list">{filteredCenters.map((center) => <button type="button" className={center.id === selectedCenter.id ? "center-list-item is-selected" : "center-list-item"} onClick={() => setSelectedCenterId(center.id)} key={center.id}><span><strong>{center.name}</strong><small>{center.township}</small></span><p>{center.materials.slice(0, 3).map((slug) => MATERIALS.find((material) => material.slug === slug)?.name).join(" / ")}</p></button>)}</div>
             </aside>
             <div className="map-canvas">
-              <iframe title="OpenStreetMap showing central Yangon" src="https://www.openstreetmap.org/export/embed.html?bbox=96.075%2C16.745%2C96.205%2C16.91&amp;layer=mapnik" loading="lazy"/>
+              <iframe title="OpenStreetMap showing central Yangon" src="https://www.openstreetmap.org/export/embed.html?bbox=96.075%2C16.745%2C96.205%2C16.91&amp;layer=mapnik" loading="lazy" sandbox="allow-scripts allow-popups"/>
               <button className="location-button" type="button" onClick={() => navigator.geolocation?.getCurrentPosition(() => undefined)}><LocateFixed size={17}/> Use my location</button>
             </div>
           </div>

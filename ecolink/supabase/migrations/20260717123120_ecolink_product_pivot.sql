@@ -1,5 +1,58 @@
 create extension if not exists pgcrypto;
 
+do $$
+begin
+  if to_regclass('public.recycling_centers') is not null then
+    execute 'drop policy if exists "Active centers are public" on public.recycling_centers';
+  end if;
+  if to_regclass('public.partner_reward_offers') is not null then
+    execute 'drop policy if exists "Active rewards are public" on public.partner_reward_offers';
+  end if;
+  if to_regclass('public.center_staff_assignments') is not null then
+    execute 'drop policy if exists "Staff can read their assignments" on public.center_staff_assignments';
+  end if;
+  if to_regclass('public.verified_drop_offs') is not null then
+    execute 'drop policy if exists "Members can read their drop-offs" on public.verified_drop_offs';
+  end if;
+  if to_regclass('public.point_ledger_entries') is not null then
+    execute 'drop policy if exists "Members can read their point ledger" on public.point_ledger_entries';
+  end if;
+  if to_regclass('public.partner_reward_redemptions') is not null then
+    execute 'drop policy if exists "Members can read their reward redemptions" on public.partner_reward_redemptions';
+  end if;
+  if to_regclass('public.user_notifications') is not null then
+    execute 'drop policy if exists "Members can read their notifications" on public.user_notifications';
+    execute 'drop policy if exists "Members can update their notifications" on public.user_notifications';
+  end if;
+end
+$$;
+
+drop policy if exists "Users can insert their own profile" on public.profiles;
+drop policy if exists "Users can read their own profile" on public.profiles;
+drop policy if exists "Users can update their own profile" on public.profiles;
+
+alter table public.profiles
+  drop constraint if exists user_profiles_auth_user_id_fkey;
+
+alter table public.profiles
+  drop constraint if exists profiles_auth_user_id_fkey;
+
+alter table public.profiles
+  alter column auth_user_id type text using auth_user_id::text;
+
+create or replace function public.request_user_id()
+returns text
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select nullif(auth.jwt()->>'sub', '')
+$$;
+
+revoke all on function public.request_user_id() from public, anon;
+grant execute on function public.request_user_id() to authenticated;
+
 alter table public.profiles
   add column if not exists member_code text;
 
@@ -138,7 +191,7 @@ to authenticated
 using (
   profile_id in (
     select id from public.profiles
-    where auth_user_id = (select auth.uid())::text
+    where auth_user_id = (select public.request_user_id())
   )
 );
 
@@ -148,13 +201,13 @@ to authenticated
 using (
   member_profile_id in (
     select id from public.profiles
-    where auth_user_id = (select auth.uid())::text
+    where auth_user_id = (select public.request_user_id())
   )
   or center_id in (
     select assignment.center_id
     from public.center_staff_assignments assignment
     join public.profiles profile on profile.id = assignment.profile_id
-    where profile.auth_user_id = (select auth.uid())::text
+    where profile.auth_user_id = (select public.request_user_id())
       and assignment.is_active
   )
 );
@@ -165,7 +218,7 @@ to authenticated
 using (
   profile_id in (
     select id from public.profiles
-    where auth_user_id = (select auth.uid())::text
+    where auth_user_id = (select public.request_user_id())
   )
 );
 
@@ -175,7 +228,7 @@ to authenticated
 using (
   profile_id in (
     select id from public.profiles
-    where auth_user_id = (select auth.uid())::text
+    where auth_user_id = (select public.request_user_id())
   )
 );
 
@@ -185,7 +238,7 @@ to authenticated
 using (
   profile_id in (
     select id from public.profiles
-    where auth_user_id = (select auth.uid())::text
+    where auth_user_id = (select public.request_user_id())
   )
 );
 
@@ -195,13 +248,13 @@ to authenticated
 using (
   profile_id in (
     select id from public.profiles
-    where auth_user_id = (select auth.uid())::text
+    where auth_user_id = (select public.request_user_id())
   )
 )
 with check (
   profile_id in (
     select id from public.profiles
-    where auth_user_id = (select auth.uid())::text
+    where auth_user_id = (select public.request_user_id())
   )
 );
 
@@ -223,13 +276,13 @@ declare
   awarded_points integer;
   points_per_kg integer;
 begin
-  if auth.uid() is null then
+  if public.request_user_id() is null then
     raise exception 'Authentication required';
   end if;
 
   select profile.id into staff_profile_id
   from public.profiles profile
-  where profile.auth_user_id = auth.uid()::text;
+  where profile.auth_user_id = public.request_user_id();
 
   select assignment.center_id into assigned_center_id
   from public.center_staff_assignments assignment
@@ -312,10 +365,10 @@ declare
   new_redemption_id uuid;
   new_claim_code text;
 begin
-  if auth.uid() is null then raise exception 'Authentication required'; end if;
+  if public.request_user_id() is null then raise exception 'Authentication required'; end if;
 
   select id into member_profile_id from public.profiles
-  where auth_user_id = auth.uid()::text;
+  where auth_user_id = public.request_user_id();
   if member_profile_id is null then raise exception 'Profile not found'; end if;
 
   select coalesce(sum(points), 0)::integer into available_points
@@ -364,9 +417,9 @@ declare
   redemption public.partner_reward_redemptions%rowtype;
   offer_center_id uuid;
 begin
-  if auth.uid() is null then raise exception 'Authentication required'; end if;
+  if public.request_user_id() is null then raise exception 'Authentication required'; end if;
   select id into staff_profile_id from public.profiles
-  where auth_user_id = auth.uid()::text;
+  where auth_user_id = public.request_user_id();
   select center_id into assigned_center_id from public.center_staff_assignments
   where profile_id = staff_profile_id and is_active order by created_at limit 1;
   if assigned_center_id is null then raise exception 'No active center assignment'; end if;
