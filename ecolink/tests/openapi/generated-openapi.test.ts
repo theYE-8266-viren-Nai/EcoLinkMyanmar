@@ -26,7 +26,7 @@ type OpenApiOperation = {
 let document: OpenApiDocument;
 
 beforeAll(async () => {
-  execFileSync("npm", ["run", "openapi:generate"], {
+  execFileSync(process.execPath, ["./scripts/generate-openapi.mjs"], {
     cwd: process.cwd(),
     stdio: "pipe",
   });

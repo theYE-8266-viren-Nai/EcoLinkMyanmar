@@ -91,7 +91,20 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      record_center_drop_off: {
+        Args: { member_code: string; material_slug: string; weight_kg: number };
+        Returns: Array<{ drop_off_id: string; points_awarded: number; center_id: string }>;
+      };
+      redeem_partner_reward: {
+        Args: { reward_id: string };
+        Returns: Array<{ redemption_id: string; claim_code: string }>;
+      };
+      fulfill_partner_reward: {
+        Args: { reward_claim_code: string };
+        Returns: string;
+      };
+    };
     Enums: {
       environment_waste_type:
         | "MIXED"

@@ -1,11 +1,13 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { RootProviders } from "@/providers/root-providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "EcoLink",
-  description: "Turn Waste into Worth.",
+  title: { default: "EcoLink Myanmar", template: "%s | EcoLink" },
+  description: "Myanmar recycling guidance, partner-center directions, rewards and community environmental reporting.",
 };
+
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#ffffff" };
 
 export default function RootLayout({
   children,

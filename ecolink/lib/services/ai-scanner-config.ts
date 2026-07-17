@@ -1,5 +1,5 @@
 export type AiScannerConfig = {
-  openRouterApiKey: string;
+  geminiApiKey: string;
   model: string;
   maxUploadMb: number;
 };

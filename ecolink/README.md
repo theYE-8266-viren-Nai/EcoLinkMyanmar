@@ -1,4 +1,21 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+EcoLink Myanmar is a Next.js product for recyclability guidance, Yangon partner-center discovery, community reporting, verified recycling points, notifications, and partner rewards.
+
+Demo routes:
+
+- `/` citizen impact dashboard
+- `/recycle` Gemini-assisted recyclability analyzer and center map
+- `/report` environmental issue reporting
+- `/rewards` reward redemption and cleanup contributions
+- `/admin` center-scoped staff portal
+
+Demo credentials:
+
+```text
+Staff code: ECO-STAFF
+Member code: ECO-MM-1048
+```
+
+See `VERCEL_DEPLOYMENT.md` for Supabase, Gemini, and Vercel production setup.
 
 ## Getting Started
 
