@@ -37,6 +37,7 @@ dev-server*.log
 
 # generated clients
 /lib/generated/prisma
+/.openapi-gen/
 
 # vercel
 .vercel
