@@ -26,6 +26,10 @@ Do not use `any` to bypass TypeScript. If an external boundary truly cannot be t
 
 Business rules must have one source of truth. Reward calculations, status transitions, organization permissions, file path rules, and material eligibility should live in named services or utilities and be reused.
 
+### Build Only the Requested Slice
+
+Implement the smallest complete behavior requested. Do not add speculative persistence, endpoints, fields, abstractions, or UI for possible future work. Expand the design only when a current requirement needs it.
+
 ### Keep Components Small
 
 Components should be easy to scan. As guidance:

@@ -17,7 +17,6 @@ Identify weaknesses and edge cases:
    - API errors (400, 401, 403, 404, 500)
    - Validation errors
    - Permission errors
-   - Rate limiting
    - Concurrent operations
 
 3. **Test internationalization**:
@@ -168,7 +167,6 @@ t('items', { count }) // Handles complex plural rules
   - 401: Redirect to login
   - 403: Show permission error
   - 404: Show not found state
-  - 429: Show rate limit message
   - 500: Show generic error, offer support
 
 **Graceful degradation**:
@@ -230,7 +228,6 @@ t('items', { count }) // Handles complex plural rules
 - Never trust client-side only
 - Validate and sanitize all inputs
 - Protect against injection attacks
-- Rate limiting
 
 **Constraint handling**:
 ```html

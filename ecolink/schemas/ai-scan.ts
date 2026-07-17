@@ -2,6 +2,37 @@ import { z } from "zod";
 
 const finiteNumber = z.number().finite();
 
+export const AiScanRequestBodySchema = z.object({
+  image: z
+    .file()
+    .mime(["image/jpeg", "image/png", "image/webp"])
+    .describe("JPEG, PNG, or WebP image up to the configured upload limit."),
+});
+
+export const AiScanSummaryResponseSchema = z.object({
+  primaryMaterialLabel: z.string().nullable(),
+  primaryMaterialSlug: z.string().nullable(),
+  estimatedBottleCount: finiteNumber,
+  estimatedTotalWeightKg: finiteNumber,
+  confidence: finiteNumber,
+});
+
+export const AiScanDetectionResponseSchema = z.object({
+  materialLabel: z.string(),
+  materialSlug: z.string().nullable(),
+  itemType: z.string(),
+  estimatedCount: finiteNumber,
+  estimatedWeightKg: finiteNumber,
+  confidence: finiteNumber,
+  reasoning: z.string(),
+});
+
+export const AiScanResponseSchema = z.object({
+  summary: AiScanSummaryResponseSchema,
+  detections: z.array(AiScanDetectionResponseSchema),
+  warnings: z.array(z.string()),
+});
+
 export const aiScanProviderOutputSchema = z.object({
   summary: z.object({
     primaryMaterialLabel: z.string().trim().min(1).nullable(),
