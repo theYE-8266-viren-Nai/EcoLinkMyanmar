@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 260" role="img" aria-label="EcoGuide bot">
+  <defs>
+    <radialGradient id="bodyGlow" cx="42%" cy="30%" r="72%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".58" stop-color="#dff6ec"/>
+      <stop offset="1" stop-color="#b6dfd0"/>
+    </radialGradient>
+    <linearGradient id="screen" x1="79" x2="239" y1="74" y2="134">
+      <stop offset="0" stop-color="#12305a"/>
+      <stop offset="1" stop-color="#06172d"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="145%">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#0b3558" flood-opacity=".22"/>
+    </filter>
+  </defs>
+  <path d="M110 54 C98 32 80 28 61 20" fill="none" stroke="#8ccf8b" stroke-width="8" stroke-linecap="round"/>
+  <path d="M210 54 C224 30 242 26 259 18" fill="none" stroke="#8ccf8b" stroke-width="8" stroke-linecap="round"/>
+  <path d="M41 18 C64 7 84 16 90 38 C66 48 48 39 41 18Z" fill="#9de08f"/>
+  <path d="M231 15 C252 5 271 12 278 32 C257 44 238 36 231 15Z" fill="#9de08f"/>
+  <g filter="url(#softShadow)">
+    <path d="M88 74 C95 39 122 24 160 24 C198 24 225 39 232 74 L250 164 C260 214 222 244 160 244 C98 244 60 214 70 164Z" fill="url(#bodyGlow)"/>
+    <path d="M59 126 C43 131 34 149 38 174 C42 199 57 214 72 209 L83 151 C81 134 73 122 59 126Z" fill="#c8efe2"/>
+    <path d="M261 126 C277 131 286 149 282 174 C278 199 263 214 248 209 L237 151 C239 134 247 122 261 126Z" fill="#c8efe2"/>
+    <rect x="82" y="64" width="156" height="82" rx="36" fill="url(#screen)"/>
+    <ellipse cx="125" cy="104" rx="13" ry="22" fill="#64e4ff"/>
+    <ellipse cx="195" cy="104" rx="13" ry="22" fill="#64e4ff"/>
+    <path d="M145 124 C153 132 167 132 175 124" fill="none" stroke="#63e5ff" stroke-width="6" stroke-linecap="round"/>
+    <path d="M129 167 L113 182 L127 197 L137 187 L147 204 L169 204 L159 187 L169 177 L146 177 L151 166Z" fill="#67c96a"/>
+    <path d="M178 166 L194 181 L180 196 L170 186 L160 204 L138 204 L148 187 L138 177 L161 177 L156 166Z" fill="#86de73" opacity=".92"/>
+    <path d="M153 152 L174 152 L184 171 L173 178 L164 163 L153 179 L141 171Z" fill="#ffffff"/>
+    <path d="M141 171 L153 179 L164 163 M173 178 L184 171 L174 152" fill="none" stroke="#67c96a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
     root: process.cwd(),
   },
   allowedDevOrigins: ["10.100.100.112"],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "img.youtube.com",
+      },
+    ],
+  },
   async redirects() {
     return [
       {

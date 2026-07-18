@@ -2,13 +2,15 @@
 
 import BottomNavigation from "@mui/material/BottomNavigation";
 import BottomNavigationAction from "@mui/material/BottomNavigationAction";
-import { Bell, Bot, Check, CircleGauge, House, MapPinned, QrCode, Recycle, RotateCcw, X } from "lucide-react";
+import { Bell, Check, CircleGauge, House, MapPinned, QrCode, Recycle, RotateCcw, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { syncCurrentProfile } from "@/actions/profile";
 import { EcoLinkUserButton } from "@/components/auth/user-button";
+import { FaqAssistantScreen } from "@/features/faq-assistant/components/faq-assistant-screen";
 import { useSupabaseUser } from "@/hooks/use-supabase-user";
 import { useEcoLink } from "@/providers/ecolink-context";
 
@@ -18,7 +20,6 @@ const NAV_ITEMS = [
   { href: "/", label: "Home", Icon: House },
   { href: "/dashboard", label: "Impact", Icon: CircleGauge },
   { href: "/recycle", label: "Recycle", Icon: MapPinned },
-  { href: "/assistant", label: "Guide", Icon: Bot },
   { href: "/report", label: "Report", Icon: Recycle },
 ] as const;
 
@@ -40,6 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user } = useSupabaseUser();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [memberCode, setMemberCode] = useState(state.user.memberCode);
   const unread = state.notifications.filter((item) => !item.read).length;
   const metadataName = typeof user?.user_metadata.full_name === "string" ? user.user_metadata.full_name : undefined;
@@ -54,6 +56,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     });
     return () => { cancelled = true; };
   }, [user]);
+
+  useEffect(() => {
+    if (!assistantOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAssistantOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [assistantOpen]);
 
   return (
     <div className="app-shell">
@@ -106,6 +117,36 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       <div className="page-frame">{children}</div>
+      <div className={assistantOpen ? "eco-bot-dock is-open" : "eco-bot-dock"}>
+        {assistantOpen ? (
+          <section className="eco-bot-panel" aria-label="EcoGuide assistant">
+            <div className="eco-bot-panel__bar">
+              <div>
+                <strong>EcoGuide</strong>
+                <span>Ask about recycling, points, reports, and rewards</span>
+              </div>
+              <button type="button" aria-label="Close EcoGuide assistant" onClick={() => setAssistantOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <FaqAssistantScreen mode="panel" />
+          </section>
+        ) : null}
+        <button
+          type="button"
+          className="eco-bot-launcher"
+          aria-label={assistantOpen ? "Close EcoGuide assistant" : "Open EcoGuide assistant"}
+          aria-expanded={assistantOpen}
+          onClick={() => {
+            setAssistantOpen((value) => !value);
+            setNotificationsOpen(false);
+            setProfileOpen(false);
+          }}
+        >
+          <Image alt="" aria-hidden="true" height={68} priority src="/eco-guide-bot.svg" width={84} />
+          <span>EcoGuide</span>
+        </button>
+      </div>
       <BottomNavigation
         aria-label="Mobile navigation"
         className="mobile-nav"
