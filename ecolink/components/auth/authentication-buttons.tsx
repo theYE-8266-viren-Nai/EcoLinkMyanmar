@@ -1,20 +1,16 @@
 "use client";
 
-import { Show, SignInButton, UserButton } from "@clerk/nextjs";
+import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { EcoLinkUserButton } from "@/components/auth/user-button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { useSupabaseUser } from "@/hooks/use-supabase-user";
 
 export function AuthenticationButtons() {
-  return (
-    <>
-      <Show when="signed-out">
-        <SignInButton mode="modal">
-          <Button type="button">Sign in</Button>
-        </SignInButton>
-      </Show>
-      <Show when="signed-in">
-        <UserButton />
-      </Show>
-    </>
-  );
+  const { isLoaded, user } = useSupabaseUser();
+
+  if (!isLoaded) return <Button disabled type="button">Checking</Button>;
+  if (user) return <EcoLinkUserButton />;
+
+  return <Link className={buttonVariants()} href="/sign-in">Sign in</Link>;
 }

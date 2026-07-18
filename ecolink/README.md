@@ -17,7 +17,7 @@ Member code: ECO-MM-1048
 
 See `VERCEL_DEPLOYMENT.md` for Supabase, Gemini, and Vercel production setup.
 
-Production authentication uses Clerk. Supabase trusts Clerk session tokens through its Third-Party Auth integration, while center assignments and all staff authorization remain enforced in PostgreSQL.
+Production authentication uses Supabase Auth. Center assignments and all staff authorization remain enforced in PostgreSQL through RLS policies and authenticated RPCs.
 
 ## Getting Started
 

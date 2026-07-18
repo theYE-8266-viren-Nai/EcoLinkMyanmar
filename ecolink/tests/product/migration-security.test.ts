@@ -7,8 +7,12 @@ const migration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260717123120_ecolink_product_pivot.sql"),
   "utf8",
 );
-const clerkMigration = readFileSync(
+const profileRpcMigration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260717133112_clerk_third_party_auth.sql"),
+  "utf8",
+);
+const supabaseAuthMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718120000_supabase_native_auth.sql"),
   "utf8",
 );
 
@@ -36,16 +40,17 @@ describe("EcoLink Supabase migration", () => {
     expect(migration).toContain("revoke all on function public.fulfill_partner_reward(text) from public, anon");
   });
 
-  it("uses the trusted Clerk JWT subject instead of UUID-only auth", () => {
+  it("uses the Supabase Auth user id for authorization", () => {
     expect(migration).toContain("select nullif(auth.jwt()->>'sub', '')");
     expect(migration).not.toContain("auth.uid()");
     expect(migration).toContain("alter column auth_user_id type text");
-    expect(clerkMigration).toContain("alter table public.profiles enable row level security");
+    expect(supabaseAuthMigration).toContain("select auth.uid()::text");
+    expect(profileRpcMigration).toContain("alter table public.profiles enable row level security");
   });
 
   it("requires an active center assignment for the staff dashboard", () => {
-    expect(clerkMigration).toContain("create or replace function public.get_current_staff_center()");
-    expect(clerkMigration).toContain("assignment.is_active");
-    expect(clerkMigration).toContain("revoke all on function public.get_current_staff_center() from public, anon");
+    expect(profileRpcMigration).toContain("create or replace function public.get_current_staff_center()");
+    expect(profileRpcMigration).toContain("assignment.is_active");
+    expect(profileRpcMigration).toContain("revoke all on function public.get_current_staff_center() from public, anon");
   });
 });

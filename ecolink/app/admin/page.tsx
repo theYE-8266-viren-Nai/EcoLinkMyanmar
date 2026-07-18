@@ -1,21 +1,22 @@
 "use client";
 
-import { UserButton, useAuth } from "@clerk/nextjs";
 import { ArrowLeft, CheckCircle2, ClipboardCheck, Gift, KeyRound, LogOut, PackageCheck, QrCode, Scale, Search, ShieldCheck, TicketCheck, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { fulfillPartnerReward, getStaffCenterAssignment, recordCenterDropOff } from "@/actions/center-operations";
+import { EcoLinkUserButton } from "@/components/auth/user-button";
 import { EcoLinkMark } from "@/components/ecolink/app-shell";
+import { useSupabaseUser } from "@/hooks/use-supabase-user";
 import { DEMO_MEMBER_CODE, MATERIALS, PARTNER_CENTERS, PARTNER_REWARDS, STAFF_ACCESS_CODE, STAFF_CENTER_ID, calculatePoints, type MaterialSlug } from "@/lib/ecolink-data";
 import { useEcoLink } from "@/providers/ecolink-context";
-import { fulfillPartnerReward, getStaffCenterAssignment, recordCenterDropOff } from "@/actions/center-operations";
 
 const SESSION_KEY = "ecolink-demo-staff-session";
 const DEMO_MODE = process.env.NEXT_PUBLIC_ECOLINK_DEMO_MODE !== "false";
 
 export default function AdminPage() {
   const { state, balance, addDropOff, fulfillReward } = useEcoLink();
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, user } = useSupabaseUser();
   const [active, setActive] = useState(false);
   const [productionCenterId, setProductionCenterId] = useState<string>();
   const [accessError, setAccessError] = useState<string>();
@@ -41,7 +42,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (DEMO_MODE || !isLoaded || !isSignedIn) return;
+    if (DEMO_MODE || !isLoaded || !user) return;
     let cancelled = false;
     void getStaffCenterAssignment().then((result) => {
       if (cancelled) return;
@@ -50,7 +51,7 @@ export default function AdminPage() {
       setActive(true);
     });
     return () => { cancelled = true; };
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, user]);
 
   function signIn(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -71,16 +72,16 @@ export default function AdminPage() {
   }
 
   if (!DEMO_MODE && !active) return (
-    <main className="admin-login-page"><section className="admin-login-brand"><Link href="/"><EcoLinkMark/></Link><div><p>Citizen website</p><h1>Partner center portal</h1><span>Center staff verify drop-offs and fulfill rewards in a role-gated workspace.</span></div><Link className="back-link" href="/"><ArrowLeft size={17}/> Return to EcoLink</Link></section><section className="admin-login-panel"><div className="admin-login-card"><span className="admin-login-icon"><ShieldCheck size={25}/></span><p>Staff authentication</p><h2>{!isLoaded ? "Checking your session" : !isSignedIn ? "Sign in to continue" : accessError ? "Center access required" : "Checking center assignment"}</h2>{!isLoaded || (isSignedIn && !accessError) ? <p role="status">Verifying your Clerk session and center assignment...</p> : null}{!isSignedIn && isLoaded ? <Link className="button button--primary" href="/sign-in?redirect_url=/admin">Sign in with Clerk</Link> : null}{accessError ? <><p className="form-error" role="alert">{accessError}</p><div className="profile-account-row"><span>Switch account or sign out</span><UserButton /></div></> : null}<p className="security-caveat"><ShieldCheck size={18}/><span><strong>Center-scoped access.</strong> Every point and reward operation is checked against the center assigned to your account.</span></p></div></section></main>
+    <main className="admin-login-page"><section className="admin-login-brand"><Link href="/"><EcoLinkMark/></Link><div><p>Citizen website</p><h1>Partner center portal</h1><span>Center staff verify drop-offs and fulfill rewards in a role-gated workspace.</span></div><Link className="back-link" href="/"><ArrowLeft size={17}/> Return to EcoLink</Link></section><section className="admin-login-panel"><div className="admin-login-card"><span className="admin-login-icon"><ShieldCheck size={25}/></span><p>Staff authentication</p><h2>{!isLoaded ? "Checking your session" : !user ? "Sign in to continue" : accessError ? "Center access required" : "Checking center assignment"}</h2>{!isLoaded || (user && !accessError) ? <p role="status">Verifying your Supabase session and center assignment...</p> : null}{!user && isLoaded ? <Link className="button button--primary" href="/sign-in?redirect_url=/admin">Sign in with Supabase</Link> : null}{accessError ? <><p className="form-error" role="alert">{accessError}</p><div className="profile-account-row"><span>Switch account or sign out</span><EcoLinkUserButton /></div></> : null}<p className="security-caveat"><ShieldCheck size={18}/><span><strong>Center-scoped access.</strong> Every point and reward operation is checked against the center assigned to your account.</span></p></div></section></main>
   );
 
   if (!active) return (
-    <main className="admin-login-page"><section className="admin-login-brand"><Link href="/"><EcoLinkMark/></Link><div><p>Citizen website</p><h1>Partner center portal</h1><span>Center staff verify drop-offs and fulfill rewards in a separate, role-gated workspace.</span></div><Link className="back-link" href="/"><ArrowLeft size={17}/> Return to EcoLink</Link></section><section className="admin-login-panel"><div className="admin-login-card"><span className="admin-login-icon"><KeyRound size={25}/></span><p>Staff access</p><h2>Enter the center dashboard</h2><form onSubmit={signIn}><label><span>Staff access code</span><div className="input-with-icon"><ShieldCheck size={18}/><input value={accessCode} onChange={(event) => setAccessCode(event.target.value)} autoComplete="off" placeholder="Enter staff code"/></div></label>{message?.kind === "error" ? <p className="form-error" role="alert">{message.text}</p> : null}<button className="button button--primary" type="submit">Open staff dashboard</button></form><div className="demo-credentials"><div><strong>Demo credentials</strong><span>Use these to explore the full workflow.</span></div><dl><div><dt>Staff access code</dt><dd>{STAFF_ACCESS_CODE}</dd></div><div><dt>Member code</dt><dd>{DEMO_MEMBER_CODE}</dd></div></dl><button type="button" onClick={() => setAccessCode(STAFF_ACCESS_CODE)}><ClipboardCheck size={16}/> Fill staff access code</button></div><p className="security-caveat"><ShieldCheck size={18}/><span><strong>Center-scoped access.</strong> Production staff authenticate with Clerk and permissions tied to their assigned center.</span></p></div></section></main>
+    <main className="admin-login-page"><section className="admin-login-brand"><Link href="/"><EcoLinkMark/></Link><div><p>Citizen website</p><h1>Partner center portal</h1><span>Center staff verify drop-offs and fulfill rewards in a separate, role-gated workspace.</span></div><Link className="back-link" href="/"><ArrowLeft size={17}/> Return to EcoLink</Link></section><section className="admin-login-panel"><div className="admin-login-card"><span className="admin-login-icon"><KeyRound size={25}/></span><p>Staff access</p><h2>Enter the center dashboard</h2><form onSubmit={signIn}><label><span>Staff access code</span><div className="input-with-icon"><ShieldCheck size={18}/><input value={accessCode} onChange={(event) => setAccessCode(event.target.value)} autoComplete="off" placeholder="Enter staff code"/></div></label>{message?.kind === "error" ? <p className="form-error" role="alert">{message.text}</p> : null}<button className="button button--primary" type="submit">Open staff dashboard</button></form><div className="demo-credentials"><div><strong>Demo credentials</strong><span>Use these to explore the full workflow.</span></div><dl><div><dt>Staff access code</dt><dd>{STAFF_ACCESS_CODE}</dd></div><div><dt>Member code</dt><dd>{DEMO_MEMBER_CODE}</dd></div></dl><button type="button" onClick={() => setAccessCode(STAFF_ACCESS_CODE)}><ClipboardCheck size={16}/> Fill staff access code</button></div><p className="security-caveat"><ShieldCheck size={18}/><span><strong>Center-scoped access.</strong> Production staff authenticate with Supabase Auth and permissions tied to their assigned center.</span></p></div></section></main>
   );
 
   return (
     <main className="admin-page">
-        <header className="admin-header"><Link href="/"><EcoLinkMark compact/></Link><div><span className="status-dot"/><strong>{center.name}</strong><small>Active staff session</small></div>{DEMO_MODE ? <button className="button button--secondary" type="button" onClick={() => { window.sessionStorage.removeItem(SESSION_KEY); setActive(false); }}><LogOut size={17}/> Sign out</button> : <UserButton />}</header>
+        <header className="admin-header"><Link href="/"><EcoLinkMark compact/></Link><div><span className="status-dot"/><strong>{center.name}</strong><small>Active staff session</small></div>{DEMO_MODE ? <button className="button button--secondary" type="button" onClick={() => { window.sessionStorage.removeItem(SESSION_KEY); setActive(false); }}><LogOut size={17}/> Sign out</button> : <EcoLinkUserButton />}</header>
       <div className="admin-container">
         <div className="admin-title"><div><p>Partner center portal</p><h1>{center.name}</h1><span>{center.township} &middot; {center.hours}</span></div><Link className="back-link" href="/"><ArrowLeft size={17}/> Citizen website</Link></div>
         <p className="admin-notice"><ShieldCheck size={18}/>This portal is center-scoped. Staff can only write records for centers assigned to their account.</p>

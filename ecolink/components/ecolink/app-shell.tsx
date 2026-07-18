@@ -1,12 +1,13 @@
 "use client";
 
-import { Show, SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import { Bell, Check, House, MapPinned, QrCode, Recycle, RotateCcw, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { syncCurrentProfile } from "@/actions/profile";
+import { EcoLinkUserButton } from "@/components/auth/user-button";
+import { useSupabaseUser } from "@/hooks/use-supabase-user";
 import { useEcoLink } from "@/providers/ecolink-context";
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_ECOLINK_DEMO_MODE !== "false";
@@ -32,12 +33,13 @@ export function EcoLinkMark({ compact = false }: { compact?: boolean }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { state, markAllNotificationsRead, resetDemo } = useEcoLink();
-  const { user } = useUser();
+  const { user } = useSupabaseUser();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [memberCode, setMemberCode] = useState(state.user.memberCode);
   const unread = state.notifications.filter((item) => !item.read).length;
-  const displayName = user?.fullName ?? user?.firstName ?? state.user.displayName;
+  const metadataName = typeof user?.user_metadata.full_name === "string" ? user.user_metadata.full_name : undefined;
+  const displayName = metadataName ?? user?.email?.split("@")[0] ?? state.user.displayName;
   const initials = displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 
   useEffect(() => {
@@ -79,12 +81,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               </section>
             ) : null}
           </div>
-          <Show when="signed-out">
-            <SignInButton mode="modal">
-              <button className="profile-button" type="button"><span>EL</span><div><strong>Sign in</strong><small>Access your EcoLink account</small></div></button>
-            </SignInButton>
-          </Show>
-          <Show when="signed-in">
+          {!user ? (
+            <Link className="profile-button" href="/sign-in"><span>EL</span><div><strong>Sign in</strong><small>Access your EcoLink account</small></div></Link>
+          ) : (
             <div className="popover-anchor">
               <button className="profile-button" type="button" aria-label="Open profile and member code" aria-expanded={profileOpen} onClick={() => { setProfileOpen((value) => !value); setNotificationsOpen(false); }}>
                 <span>{initials}</span><div><strong>{displayName}</strong><small>{memberCode}</small></div>
@@ -94,12 +93,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <div className="popover-heading"><div><strong>{displayName}</strong><span>EcoLink member</span></div><button type="button" onClick={() => setProfileOpen(false)} aria-label="Close profile"><X size={18} /></button></div>
                   <div className="member-code-card"><QrCode size={52} /><span><small>Member code</small><strong>{memberCode}</strong></span></div>
                   <p>Show this code when dropping off recyclables at a partner center.</p>
-                  <div className="profile-account-row"><span>Account and sign out</span><UserButton /></div>
+                  <div className="profile-account-row"><span>Account and sign out</span><EcoLinkUserButton /></div>
                   <button className="profile-reset" type="button" onClick={() => { resetDemo(); setProfileOpen(false); }}><RotateCcw size={17} /> Reset demo data</button>
                 </section>
               ) : null}
             </div>
-          </Show>
+          )}
         </div>
       </header>
       <div className="page-frame">{children}</div>

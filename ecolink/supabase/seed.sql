@@ -23,8 +23,8 @@ on conflict (id) do update set
   stock = excluded.stock,
   updated_at = now();
 
--- Sign in through Clerk first so ensure_current_profile creates each profile.
--- Then assign the Clerk user IDs to the intended center with the statements below:
+-- Sign in through Supabase Auth first so ensure_current_profile creates each profile.
+-- Then assign the Supabase user IDs to the intended center with the statements below:
 -- update public.profiles set member_code = 'ECO-MM-1048' where email = 'member@example.com';
 -- insert into public.center_staff_assignments (center_id, profile_id, role)
 -- select '10000000-0000-0000-0000-000000000001', id, 'operator'
