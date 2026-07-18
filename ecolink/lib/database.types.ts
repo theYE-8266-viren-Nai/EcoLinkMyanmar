@@ -11,7 +11,10 @@ export type Database = {
           email: string;
           avatar_url: string | null;
           member_code: string | null;
+<<<<<<< HEAD
           preferred_language: string;
+=======
+>>>>>>> 966e585 (feat: add collector vehicles API and location tracking)
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
@@ -23,7 +26,10 @@ export type Database = {
           email: string;
           avatar_url?: string | null;
           member_code?: string | null;
+<<<<<<< HEAD
           preferred_language?: string;
+=======
+>>>>>>> 966e585 (feat: add collector vehicles API and location tracking)
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
@@ -34,6 +40,7 @@ export type Database = {
           email?: string;
           avatar_url?: string | null;
           member_code?: string | null;
+<<<<<<< HEAD
           preferred_language?: string;
           created_at?: string;
           updated_at?: string;
@@ -269,8 +276,11 @@ export type Database = {
           message?: string;
           href?: string | null;
           read_at?: string | null;
+=======
+>>>>>>> 966e585 (feat: add collector vehicles API and location tracking)
           created_at?: string;
         };
+        Relationships: [];
       };
       environment_reports: {
         Row: {
@@ -290,6 +300,12 @@ export type Database = {
             | "OTHER"
             | null;
           notes: string | null;
+          reporter_profile_id: string | null;
+          issue_type: string | null;
+          severity: string | null;
+          status: string;
+          photo_storage_path: string | null;
+          location: Json | null;
           observed_at: string;
           created_at: string;
         };
@@ -310,6 +326,11 @@ export type Database = {
             | "OTHER"
             | null;
           notes?: string | null;
+          reporter_profile_id?: string | null;
+          issue_type?: string | null;
+          severity?: string | null;
+          status?: string;
+          photo_storage_path?: string | null;
           observed_at?: string;
           created_at?: string;
         };
@@ -329,9 +350,119 @@ export type Database = {
             | "OTHER"
             | null;
           notes?: string | null;
+          reporter_profile_id?: string | null;
+          issue_type?: string | null;
+          severity?: string | null;
+          status?: string;
+          photo_storage_path?: string | null;
           observed_at?: string;
           created_at?: string;
         };
+        Relationships: [];
+      };
+      recycling_centers: {
+        Row: {
+          id: string;
+          slug: string;
+          name: string;
+          township: string;
+          address: string;
+          latitude: number;
+          longitude: number;
+          opening_hours: string;
+          accepted_materials: string[];
+          is_active: boolean;
+          location: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          name: string;
+          township: string;
+          address: string;
+          latitude: number;
+          longitude: number;
+          opening_hours: string;
+          accepted_materials?: string[];
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          slug?: string;
+          name?: string;
+          township?: string;
+          address?: string;
+          latitude?: number;
+          longitude?: number;
+          opening_hours?: string;
+          accepted_materials?: string[];
+          is_active?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      collector_vehicles: {
+        Row: {
+          id: string;
+          center_id: string;
+          public_label: string;
+          is_active: boolean;
+          is_public: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          center_id: string;
+          public_label: string;
+          is_active?: boolean;
+          is_public?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          center_id?: string;
+          public_label?: string;
+          is_active?: boolean;
+          is_public?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      collector_vehicle_locations: {
+        Row: {
+          vehicle_id: string;
+          latitude: number;
+          longitude: number;
+          heading: number;
+          speed_kph: number;
+          status: "collecting" | "en_route" | "returning" | "offline";
+          observed_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          vehicle_id: string;
+          latitude: number;
+          longitude: number;
+          heading?: number;
+          speed_kph?: number;
+          status?: "collecting" | "en_route" | "returning" | "offline";
+          observed_at: string;
+          updated_at?: string;
+        };
+        Update: {
+          latitude?: number;
+          longitude?: number;
+          heading?: number;
+          speed_kph?: number;
+          status?: "collecting" | "en_route" | "returning" | "offline";
+          observed_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
@@ -351,6 +482,23 @@ export type Database = {
       fulfill_partner_reward: {
         Args: { reward_claim_code: string };
         Returns: string;
+      };
+      get_public_waste_map: {
+        Args: {
+          min_lng: number;
+          min_lat: number;
+          max_lng: number;
+          max_lat: number;
+          requested_zoom: number;
+          observed_since: string;
+          requested_waste_type?: string | null;
+        };
+        Returns: Array<{
+          mode: string;
+          feature_id: string;
+          geometry: Json;
+          properties: Json;
+        }>;
       };
     };
     Enums: {

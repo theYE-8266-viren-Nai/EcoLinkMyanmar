@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Check, House, MapPinned, QrCode, Recycle, RotateCcw, X } from "lucide-react";
+import { Bell, Check, CircleGauge, House, MapPinned, QrCode, Recycle, RotateCcw, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -13,7 +13,8 @@ import { useEcoLink } from "@/providers/ecolink-context";
 const DEMO_MODE = process.env.NEXT_PUBLIC_ECOLINK_DEMO_MODE !== "false";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Home", Icon: House },
+  { href: "/", label: "Map", Icon: House },
+  { href: "/impact", label: "Impact", Icon: CircleGauge },
   { href: "/recycle", label: "Recycle", Icon: MapPinned },
   { href: "/report", label: "Report", Icon: Recycle },
 ] as const;
