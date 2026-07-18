@@ -6,9 +6,11 @@ import {
   CarFront,
   ChevronRight,
   CircleGauge,
+  House,
   Layers3,
   LocateFixed,
   MapPin,
+  MapPinned,
   Navigation,
   PanelBottomOpen,
   Recycle,
@@ -71,6 +73,13 @@ const MOBILE_PANEL_TABS = [
   label: string;
   Icon: typeof Layers3;
 }>;
+
+const HOME_BOTTOM_NAV_ITEMS = [
+  { href: "/", label: "Home", Icon: House },
+  { href: "/impact", label: "Impact", Icon: CircleGauge },
+  { href: "/recycle", label: "Recycle", Icon: MapPinned },
+  { href: "/report", label: "Report", Icon: Recycle },
+] as const;
 
 function centersToFeatureCollection(centers: RecyclingCenterMapItem[]): MapFeatureCollection {
   return {
@@ -262,22 +271,22 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
     mapRef.current = map;
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
 
-    map.on("load", () => {
+    const handleLoad = () => {
       addMapSourcesAndLayers(map, centers);
       setMapReady(true);
       setMapUnavailable(false);
-    });
-    map.on("error", (event) => {
+    };
+    const handleError = (event: mapboxgl.ErrorEvent) => {
       console.error("Mapbox rendering error", event.error);
       setMapError("The map could not load its basemap. Center information is still available.");
-    });
+    };
 
-    map.on("click", "center-points", (event) => {
+    const handleCenterClick = (event: mapboxgl.MapLayerMouseEvent) => {
       const id = String(event.features?.[0]?.properties?.id ?? "");
       const center = centers.find((item) => item.id === id);
       if (center) setSelected({ kind: "center", center });
-    });
-    map.on("click", "collector-points", (event) => {
+    };
+    const handleCollectorClick = (event: mapboxgl.MapLayerMouseEvent) => {
       const properties = event.features?.[0]?.properties;
       if (!properties) return;
       setSelected({
@@ -295,8 +304,8 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           isDemo: properties.isDemo === true || properties.isDemo === "true",
         },
       });
-    });
-    map.on("click", "waste-report-points", (event) => {
+    };
+    const handleWasteReportClick = (event: mapboxgl.MapLayerMouseEvent) => {
       const properties = event.features?.[0]?.properties;
       if (!properties || properties.cluster) return;
       setSelected({
@@ -305,8 +314,8 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         wasteType: String(properties.wasteType ?? "Waste report"),
         observedAt: String(properties.observedAt),
       });
-    });
-    map.on("click", "waste-clusters", (event) => {
+    };
+    const handleWasteClusterClick = (event: mapboxgl.MapLayerMouseEvent) => {
       const feature = event.features?.[0];
       const clusterId = Number(feature?.properties?.cluster_id);
       const coordinates = feature?.geometry.type === "Point" ? feature.geometry.coordinates : undefined;
@@ -317,15 +326,35 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           map.easeTo({ center: coordinates as [number, number], zoom });
         }
       });
-    });
+    };
+    const handleLayerMouseEnter = () => { map.getCanvas().style.cursor = "pointer"; };
+    const handleLayerMouseLeave = () => { map.getCanvas().style.cursor = ""; };
 
-    for (const layer of ["center-points", "collector-points", "waste-report-points", "waste-clusters"]) {
-      map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
-      map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
+    map.on("load", handleLoad);
+    map.on("error", handleError);
+    map.on("click", "center-points", handleCenterClick);
+    map.on("click", "collector-points", handleCollectorClick);
+    map.on("click", "waste-report-points", handleWasteReportClick);
+    map.on("click", "waste-clusters", handleWasteClusterClick);
+
+    const interactiveLayers = ["center-points", "collector-points", "waste-report-points", "waste-clusters"];
+    for (const layer of interactiveLayers) {
+      map.on("mouseenter", layer, handleLayerMouseEnter);
+      map.on("mouseleave", layer, handleLayerMouseLeave);
     }
 
     return () => {
       abortRef.current?.abort();
+      map.off("load", handleLoad);
+      map.off("error", handleError);
+      map.off("click", "center-points", handleCenterClick);
+      map.off("click", "collector-points", handleCollectorClick);
+      map.off("click", "waste-report-points", handleWasteReportClick);
+      map.off("click", "waste-clusters", handleWasteClusterClick);
+      for (const layer of interactiveLayers) {
+        map.off("mouseenter", layer, handleLayerMouseEnter);
+        map.off("mouseleave", layer, handleLayerMouseLeave);
+      }
       map.remove();
       mapRef.current = null;
     };
@@ -457,12 +486,13 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
   }
 
   function useMyLocation() {
-    if (!navigator.geolocation) {
+    const geolocation = typeof window === "undefined" ? undefined : window.navigator.geolocation;
+    if (!geolocation) {
       setLocationMessage("Location is not supported by this browser.");
       return;
     }
     setLocationMessage("Finding your location…");
-    navigator.geolocation.getCurrentPosition(
+    geolocation.getCurrentPosition(
       ({ coords }) => {
         setLocationMessage("Map centered on your location.");
         mapRef.current?.flyTo({ center: [coords.longitude, coords.latitude], zoom: 15, essential: false });
@@ -579,14 +609,6 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
                 </DrawerClose>
               </div>
             </div>
-            <section
-              className="live-map-mobile-sheet__content"
-              id="mobile-map-panel-content"
-              aria-label={`${MOBILE_PANEL_TABS.find((tab) => tab.value === mobilePanelTab)?.label ?? "Map"} panel`}
-            >
-              {mobilePanelTab === "centers" ? centerList : null}
-              {mobilePanelTab === "collectors" ? collectorList : null}
-            </section>
             <nav className="live-map-panel-tabs" aria-label="Map panel sections">
               {MOBILE_PANEL_TABS.map(({ value, label, Icon }) => (
                 <button
@@ -600,6 +622,27 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
                   <span className="live-map-panel-tabs__icon"><Icon size={21} aria-hidden="true" /></span>
                   <span>{label}</span>
                 </button>
+              ))}
+            </nav>
+            <section
+              className="live-map-mobile-sheet__content"
+              id="mobile-map-panel-content"
+              aria-label={`${MOBILE_PANEL_TABS.find((tab) => tab.value === mobilePanelTab)?.label ?? "Map"} panel`}
+            >
+              {mobilePanelTab === "centers" ? centerList : null}
+              {mobilePanelTab === "collectors" ? collectorList : null}
+            </section>
+            <nav className="live-map-bottom-nav" aria-label="Home bottom navigation">
+              {HOME_BOTTOM_NAV_ITEMS.map(({ href, label, Icon }) => (
+                <Link
+                  className={href === "/" ? "nav-link is-active" : "nav-link"}
+                  href={href}
+                  key={href}
+                  aria-current={href === "/" ? "page" : undefined}
+                >
+                  <Icon size={19} aria-hidden="true" />
+                  <span>{label}</span>
+                </Link>
               ))}
             </nav>
           </DrawerContent>

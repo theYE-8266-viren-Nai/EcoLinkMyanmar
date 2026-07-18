@@ -13,7 +13,7 @@ import { useEcoLink } from "@/providers/ecolink-context";
 const DEMO_MODE = process.env.NEXT_PUBLIC_ECOLINK_DEMO_MODE !== "false";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Map", Icon: House },
+  { href: "/", label: "Home", Icon: House },
   { href: "/impact", label: "Impact", Icon: CircleGauge },
   { href: "/recycle", label: "Recycle", Icon: MapPinned },
   { href: "/report", label: "Report", Icon: Recycle },
