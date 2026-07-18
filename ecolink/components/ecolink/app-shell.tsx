@@ -107,9 +107,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <section className="header-popover profile-panel" aria-label="Member profile">
                   <div className="popover-heading"><div><strong>{displayName}</strong><span>EcoLink member</span></div><button type="button" onClick={() => setProfileOpen(false)} aria-label="Close profile"><X size={18} /></button></div>
                   <div className="member-code-card"><QrCode size={52} /><span><small>Member code</small><strong>{memberCode}</strong></span></div>
-                  <p>Show this code when dropping off recyclables at a partner center.</p>
+                  <p>Show this code when a partner center needs to identify your EcoLink profile.</p>
                   <div className="profile-account-row"><span>Account and sign out</span><EcoLinkUserButton /></div>
-                  <button className="profile-reset" type="button" onClick={() => { resetDemo(); setProfileOpen(false); }}><RotateCcw size={17} /> Reset demo data</button>
+                  {DEMO_MODE ? (
+                    <button className="profile-reset" type="button" onClick={() => { resetDemo(); setProfileOpen(false); }}><RotateCcw size={17} /> Reset demo data</button>
+                  ) : null}
                 </section>
               ) : null}
             </div>

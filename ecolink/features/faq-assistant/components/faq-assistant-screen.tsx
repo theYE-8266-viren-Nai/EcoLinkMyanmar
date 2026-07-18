@@ -9,9 +9,9 @@ import type { FaqAssistantMessage } from "@/features/faq-assistant/types/faq-ass
 
 const STARTERS = [
   "How should I prepare plastic bottles before recycling?",
-  "How should I handle batteries and e-waste safely?",
-  "How do points work after a drop-off?",
-  "How do I report a waste spot in EcoLink?",
+  "Where should batteries and e-waste go?",
+  "How do points work after a report is approved?",
+  "How do I report a waste issue to EcoLink?",
 ];
 
 async function sendFeedback(messageId: string, value: "useful" | "not_useful") {
@@ -30,6 +30,7 @@ function ChecklistIcon({ status }: { status: "recommended" | "warning" | "import
 
 function VideoCard({ video }: { video: FaqVideoCard }) {
   const [error, setError] = useState("");
+
   return (
     <button
       aria-label={`Open ${video.title} on YouTube`}
@@ -37,7 +38,7 @@ function VideoCard({ video }: { video: FaqVideoCard }) {
       type="button"
       onClick={() => {
         const opened = window.open(video.youtubeUrl, "_blank", "noopener,noreferrer");
-        if (!opened) setError("The YouTube link could not be opened. Check your browser settings.");
+        if (!opened) setError("The YouTube link could not open. Check your browser pop-up settings.");
       }}
     >
       <span className="faq-video-thumb">
@@ -53,7 +54,10 @@ function VideoCard({ video }: { video: FaqVideoCard }) {
   );
 }
 
-function AnswerCard({ message, onFeedback }: {
+function AnswerCard({
+  message,
+  onFeedback,
+}: {
   message: FaqAssistantMessage;
   onFeedback: (messageId: string, value: "useful" | "not_useful") => void;
 }) {
@@ -64,23 +68,34 @@ function AnswerCard({ message, onFeedback }: {
     <article className="faq-answer-card">
       <div className="faq-answer-title"><Leaf aria-hidden="true" size={18} /><h2>{response.title}</h2></div>
       <p>{response.answer}</p>
+
       {response.checklist.length > 0 ? (
-        <section><h3>Checklist</h3><ul className="faq-checklist">{response.checklist.map((item) => (
-          <li className={`is-${item.status}`} key={item.text}><ChecklistIcon status={item.status} /><span>{item.text}</span></li>
-        ))}</ul></section>
+        <section>
+          <h3>Checklist</h3>
+          <ul className="faq-checklist">
+            {response.checklist.map((item) => (
+              <li className={`is-${item.status}`} key={item.text}><ChecklistIcon status={item.status} /><span>{item.text}</span></li>
+            ))}
+          </ul>
+        </section>
       ) : null}
+
       {response.questionsToAsk.length > 0 ? (
-        <section><h3>Helpful follow-up questions</h3><ul>{response.questionsToAsk.map((item) => <li key={item}>{item}</li>)}</ul></section>
+        <section><h3>Questions to ask</h3><ul>{response.questionsToAsk.map((item) => <li key={item}>{item}</li>)}</ul></section>
       ) : null}
+
       {response.warnings.length > 0 ? (
         <section><h3>Warnings</h3><ul className="faq-warnings">{response.warnings.map((item) => <li key={item}>{item}</li>)}</ul></section>
       ) : null}
+
       {response.videos.length > 0 ? (
         <section><h3>Related learning</h3><div className="faq-video-list">{response.videos.map((video) => <VideoCard key={video.id} video={video} />)}</div></section>
       ) : null}
+
       {response.confidence === "low" || response.needsHumanHelp ? (
-        <p className="faq-confidence">Some details may be missing. Confirm final acceptance, points, or account-specific records with a partner center or the EcoLink team.</p>
+        <p className="faq-confidence">EcoGuide is not fully confident. Confirm with a partner center or the EcoLink team before acting.</p>
       ) : null}
+
       <div className="faq-feedback" aria-label="Assistant answer feedback">
         <button type="button" onClick={() => onFeedback(message.id, "useful")}><ThumbsUp size={15} />Useful</button>
         <button type="button" onClick={() => onFeedback(message.id, "not_useful")}><ThumbsDown size={15} />Not useful</button>
@@ -114,14 +129,16 @@ export function FaqAssistantScreen({ mode = "page" }: { mode?: "page" | "panel" 
     const trimmed = nextQuestion.trim();
     if (!trimmed || loading) return;
     if (offline) {
-      setError("You are offline. Reconnect before asking EcoGuide again.");
+      setError("You appear to be offline. Reconnect before asking EcoGuide.");
       return;
     }
+
     setError("");
     setQuestion("");
     setLoading(true);
     const localUserMessage: FaqAssistantMessage = { id: crypto.randomUUID(), role: "user", content: trimmed };
     setMessages((current) => [...current, localUserMessage]);
+
     try {
       const response = await fetch("/api/faq-assistant", {
         method: "POST",
@@ -134,7 +151,7 @@ export function FaqAssistantScreen({ mode = "page" }: { mode?: "page" | "panel" 
       const assistantMessageId = payload.messageId;
       setMessages((current) => [...current, { id: assistantMessageId, role: "assistant", content: assistantResponse.answer, response: assistantResponse }]);
     } catch (sendError) {
-      setError(sendError instanceof Error ? sendError.message : "The assistant is temporarily unavailable.");
+      setError(sendError instanceof Error ? sendError.message : "EcoGuide is temporarily unavailable.");
     } finally {
       setLoading(false);
     }
@@ -143,7 +160,7 @@ export function FaqAssistantScreen({ mode = "page" }: { mode?: "page" | "panel" 
   return (
     <section className={mode === "panel" ? "faq-page faq-page--panel" : "content-container faq-page"}>
       <header className="faq-header">
-        <div><span><Leaf size={16} /> EcoGuide</span><h1>EcoLink FAQ assistant</h1><p>Ask about recycling, drop-off preparation, points, rewards, and environment reports.</p></div>
+        <div><span><Leaf size={16} /> EcoGuide</span><h1>EcoLink FAQ assistant</h1><p>Ask about recycling, drop-offs, report approvals, points, rewards, and safe material handling.</p></div>
         <strong className={offline ? "is-offline" : ""}>{offline ? <WifiOff size={15} /> : <span />} {offline ? "Offline" : "Online"}</strong>
       </header>
 
@@ -152,7 +169,7 @@ export function FaqAssistantScreen({ mode = "page" }: { mode?: "page" | "panel" 
           {messages.length === 0 ? (
             <div className="faq-empty">
               <Leaf size={30} />
-              <h2>Not sure what to recycle or how EcoLink works?</h2>
+              <h2>Not sure where something belongs?</h2>
               <div>{STARTERS.map((starter) => <button key={starter} type="button" onClick={() => send(starter)}>{starter}</button>)}</div>
             </div>
           ) : messages.map((message) => (
@@ -160,14 +177,14 @@ export function FaqAssistantScreen({ mode = "page" }: { mode?: "page" | "panel" 
               {message.role === "user" ? <p>{message.content}</p> : <AnswerCard message={message} onFeedback={sendFeedback} />}
             </div>
           ))}
-          {loading ? <div className="faq-loading"><RefreshCcw size={16} />EcoGuide is thinking...</div> : null}
+          {loading ? <div className="faq-loading"><RefreshCcw size={16} />EcoGuide is checking guidance...</div> : null}
           {error ? <div className="faq-error"><span>{error}</span><button type="button" onClick={() => send(messages.filter((item) => item.role === "user").at(-1)?.content ?? "")}>Retry</button></div> : null}
           <div ref={latestRef} />
         </div>
 
         <form className="faq-composer" onSubmit={(event) => { event.preventDefault(); void send(); }}>
           <label className="sr-only" htmlFor={inputId}>Ask EcoGuide</label>
-          <textarea id={inputId} value={question} maxLength={700} placeholder="Example: Should I remove the cap from a plastic bottle?" onChange={(event) => setQuestion(event.target.value)} />
+          <textarea id={inputId} value={question} maxLength={700} placeholder="Example: should I remove the cap from a plastic bottle?" onChange={(event) => setQuestion(event.target.value)} />
           <button aria-label="Send question" type="submit" disabled={loading || !question.trim()}><Send size={18} /></button>
         </form>
       </section>
