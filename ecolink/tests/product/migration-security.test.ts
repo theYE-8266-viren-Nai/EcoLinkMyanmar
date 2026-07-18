@@ -63,6 +63,10 @@ const weeklyPickupRoutesMigration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260718220000_weekly_two_loop_pickup_routes.sql"),
   "utf8",
 );
+const rewardLedgerSyncMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260719000000_sync_reward_redemptions_with_point_ledger.sql"),
+  "utf8",
+);
 
 describe("EcoLink Supabase migration", () => {
   it("enables RLS on every new user-data table", () => {
@@ -240,5 +244,16 @@ describe("EcoLink Supabase migration", () => {
     expect(weeklyPickupRoutesMigration).toContain("at time zone 'Asia/Yangon'");
     expect(weeklyPickupRoutesMigration).toContain("pickup_latitude");
     expect(weeklyPickupRoutesMigration).toContain("pickup_longitude");
+  });
+
+  it("uses one locked point ledger for reward display and redemption", () => {
+    expect(rewardLedgerSyncMigration).toContain("create or replace function public.get_current_points_balance()");
+    expect(rewardLedgerSyncMigration).toContain("from public.point_ledger_entries ledger");
+    expect(rewardLedgerSyncMigration).toContain("for update");
+    expect(rewardLedgerSyncMigration).toContain("available_points < offer.points_cost");
+    expect(rewardLedgerSyncMigration).toContain("-offer.points_cost");
+    expect(rewardLedgerSyncMigration).toContain("available_points - offer.points_cost");
+    expect(rewardLedgerSyncMigration).toContain("revoke all on function public.get_current_points_balance() from public, anon");
+    expect(rewardLedgerSyncMigration).toContain("revoke all on function public.redeem_partner_reward(uuid) from public, anon");
   });
 });

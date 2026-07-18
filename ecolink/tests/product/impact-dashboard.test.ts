@@ -3,6 +3,18 @@ import { describe, expect, it } from "vitest";
 import { buildImpactDashboardData } from "@/features/impact/data/dashboard-impact";
 
 describe("impact dashboard read model", () => {
+  it("uses the authoritative balance when activity rows are paginated", () => {
+    const dashboard = buildImpactDashboardData({
+      displayName: "Mya Thiri",
+      memberCode: "ECO-MM-1048",
+      authoritativeBalance: 680,
+      ledgerEntries: [],
+      reports: [],
+    });
+
+    expect(dashboard.balance).toBe(680);
+  });
+
   it("uses point ledger rows for balance and report rows for history counts", () => {
     const dashboard = buildImpactDashboardData({
       displayName: "Mya Thiri",

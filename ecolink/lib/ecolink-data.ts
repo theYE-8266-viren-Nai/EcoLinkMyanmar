@@ -76,7 +76,7 @@ export const PARTNER_REWARDS = [
     description: "A sturdy washable bag for groceries and everyday errands.",
     points: 150,
     stock: 24,
-    imageUrl: "https://images.unsplash.com/photo-1597484662317-9bd7bdda2907?auto=format&fit=crop&w=960&q=80",
+    imageUrl: "/rewards/reusable-market-tote.svg",
   },
   {
     id: "herb-seedling",
@@ -88,7 +88,7 @@ export const PARTNER_REWARDS = [
     description: "Choose one seasonal herb prepared for a balcony or windowsill.",
     points: 250,
     stock: 18,
-    imageUrl: "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=960&q=80",
+    imageUrl: "/rewards/kitchen-herb-seedling.svg",
   },
   {
     id: "refill-discount",
@@ -100,7 +100,7 @@ export const PARTNER_REWARDS = [
     description: "Use one voucher on household refill products brought in your own container.",
     points: 350,
     stock: 60,
-    imageUrl: "https://images.unsplash.com/photo-1604342427523-189b17048853?auto=format&fit=crop&w=960&q=80",
+    imageUrl: "/rewards/refill-discount.svg",
   },
   {
     id: "sorting-kit",
@@ -112,7 +112,7 @@ export const PARTNER_REWARDS = [
     description: "Three reusable labels and fold-flat bags for separating dry recyclables.",
     points: 500,
     stock: 8,
-    imageUrl: "https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?auto=format&fit=crop&w=960&q=80",
+    imageUrl: "/rewards/home-sorting-kit.svg",
   },
 ] as const;
 

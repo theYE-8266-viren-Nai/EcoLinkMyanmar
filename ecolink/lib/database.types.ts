@@ -721,7 +721,11 @@ export type Database = {
       };
       redeem_partner_reward: {
         Args: { reward_id: string };
-        Returns: Array<{ redemption_id: string; claim_code: string }>;
+        Returns: Array<{ redemption_id: string; claim_code: string; balance: number }>;
+      };
+      get_current_points_balance: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
       };
       fulfill_partner_reward: {
         Args: { reward_claim_code: string };

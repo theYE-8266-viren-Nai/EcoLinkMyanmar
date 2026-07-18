@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { sanitizeErrorMessage } from "@/lib/errors";
 import type { ImpactDashboardData, ImpactLedgerItem, ImpactReportHistoryItem } from "@/features/impact/types";
+import { getPointLedgerBalance } from "@/features/rewards/data/point-ledger-balance";
 
 type SupabaseUser = {
   id: string;
@@ -63,6 +64,7 @@ export function buildImpactDashboardData(input: {
   memberCode: string;
   ledgerEntries: ImpactLedgerItem[];
   reports: ImpactReportHistoryItem[];
+  authoritativeBalance?: number;
   errorMessage?: string;
 }): ImpactDashboardData {
   const ledger = input.ledgerEntries
@@ -71,7 +73,7 @@ export function buildImpactDashboardData(input: {
   const reports = input.reports
     .slice()
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  const balance = ledger.reduce((total, item) => total + item.points, 0);
+  const balance = input.authoritativeBalance ?? ledger.reduce((total, item) => total + item.points, 0);
   const positivePoints = ledger.reduce((total, item) => total + Math.max(0, item.points), 0);
   const approvedReportCount = reports.filter((report) => report.status === "APPROVED").length;
   const pendingReportCount = reports.filter((report) => report.status === "PENDING").length;
@@ -154,7 +156,8 @@ export async function getImpactDashboardData(user: SupabaseUser): Promise<Impact
   }
 
   const profile = profileData[0];
-  const [ledgerResult, reportsResult] = await Promise.all([
+  const [balanceResult, ledgerResult, reportsResult] = await Promise.all([
+    getPointLedgerBalance(supabase, profile.profile_id),
     supabase
       .from("point_ledger_entries")
       .select("id, report_id, points, entry_type, description, created_at, environment_reports(title, status, location_text)")
@@ -169,17 +172,21 @@ export async function getImpactDashboardData(user: SupabaseUser): Promise<Impact
       .limit(20),
   ]);
 
-  if (ledgerResult.error || reportsResult.error) {
+  if (balanceResult.error || ledgerResult.error || reportsResult.error) {
     return buildEmptyDashboardData({
       displayName: profile.display_name,
       memberCode: profile.member_code,
-      errorMessage: ledgerResult.error?.message ?? reportsResult.error?.message ?? "Dashboard data could not be loaded.",
+      errorMessage: sanitizeErrorMessage(
+        balanceResult.error?.message ?? ledgerResult.error?.message ?? reportsResult.error?.message,
+        "Dashboard data could not be loaded.",
+      ),
     });
   }
 
   return buildImpactDashboardData({
     displayName: profile.display_name,
     memberCode: profile.member_code,
+    authoritativeBalance: balanceResult.data ?? 0,
     ledgerEntries: ((ledgerResult.data ?? []) as LedgerRow[]).map(toLedgerItem),
     reports: ((reportsResult.data ?? []) as ReportRow[]).map(toReportHistoryItem),
   });
