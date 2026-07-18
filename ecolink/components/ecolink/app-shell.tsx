@@ -18,13 +18,12 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import { Bell, Check, CircleGauge, House, MapPinned, QrCode, Recycle, RotateCcw, X } from "lucide-react";
+import { Bell, Check, CircleGauge, House, MapPinned, Recycle, RotateCcw, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { syncCurrentProfile } from "@/actions/profile";
 import { EcoLinkUserButton } from "@/components/auth/user-button";
 import { LanguageToggle } from "@/components/language-toggle";
 import { FaqAssistantScreen } from "@/features/faq-assistant/components/faq-assistant-screen";
@@ -104,7 +103,6 @@ export function AppShell({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
-  const [memberCode, setMemberCode] = useState(state.user.memberCode);
 
   const unread = state.notifications.filter((item) => !item.read).length;
   const metadataName =
@@ -116,19 +114,6 @@ export function AppShell({
     .join("")
     .slice(0, 2)
     .toUpperCase();
-
-  useEffect(() => {
-    if (DEMO_MODE || !user) return;
-    let cancelled = false;
-    void syncCurrentProfile().then((result) => {
-      if (!cancelled && result.ok) setMemberCode(result.profile.member_code);
-    }).catch((error) => {
-      if (!cancelled) console.warn("EcoLink profile sync failed", error);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
 
   // Assist dialog keyboard listener
   useEffect(() => {
@@ -435,7 +420,7 @@ export function AppShell({
           </Box>
         </Drawer>
 
-        {/* Profile & Member Code Bottom Drawer */}
+        {/* Profile Bottom Drawer */}
         <Drawer
           anchor="bottom"
           onClose={() => setProfileOpen(false)}
@@ -467,49 +452,7 @@ export function AppShell({
             </Stack>
             <Divider />
 
-            {/* Member Code QR Card */}
-            <Paper
-              elevation={0}
-              sx={{
-                bgcolor: "background.default",
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 2,
-                p: 2,
-                my: 2.5,
-                display: "flex",
-                alignItems: "center",
-                gap: 2,
-              }}
-            >
-              <Box
-                sx={{
-                  bgcolor: "background.paper",
-                  p: 1,
-                  borderRadius: 1,
-                  border: "1.5px solid",
-                  borderColor: "divider",
-                  display: "grid",
-                  placeItems: "center",
-                }}
-              >
-                <QrCode size={52} />
-              </Box>
-              <Box sx={{ display: "flex", flexDirection: "column" }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                  {t("shell.memberCode")}
-                </Typography>
-                <Typography variant="body1" sx={{ fontWeight: 800, fontSize: "1.1rem", color: "secondary.main" }}>
-                  {memberCode}
-                </Typography>
-              </Box>
-            </Paper>
-
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              {t("shell.memberHelp")}
-            </Typography>
-
-            <Stack spacing={2} sx={{ mb: 1 }}>
+            <Stack spacing={2} sx={{ mt: 2.5, mb: 1 }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <Typography variant="body2" color="text.secondary">{t("shell.account")}</Typography>
                 <EcoLinkUserButton />
