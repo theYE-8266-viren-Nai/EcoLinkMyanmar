@@ -43,11 +43,16 @@ describe("generated OpenAPI document", () => {
 
     expect(document.openapi).toBe("3.1.0");
     expect(Object.keys(document.paths)).toEqual([
+      "/api/admin/reports",
+      "/api/admin/reports/{id}/approve",
+      "/api/admin/reports/{id}/reject",
       "/api/ai/scans",
       "/api/collector-vehicles/location",
       "/api/environment-reports",
       "/api/map/waste",
+      "/api/reports",
     ]);
+    expect(document.paths).not.toHaveProperty("/api/reports/{id}/claim");
     expect(operation.summary).toBe("Analyze a recyclable-items image");
     expect(requestBody.content["multipart/form-data"].schema.$ref).toContain(
       "AiScanRequestBodySchema",

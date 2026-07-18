@@ -17,7 +17,6 @@ export type ReportWorkflowService = {
   listPendingReports(): Promise<unknown>;
   approveReport(reportId: string): Promise<void>;
   rejectReport(reportId: string, reason?: string): Promise<void>;
-  claimReportPoints(reportId: string): Promise<unknown>;
 };
 
 async function createDefaultRepository() {
@@ -92,10 +91,6 @@ export async function createReportWorkflowService(): Promise<ReportWorkflowServi
     async rejectReport(reportId, reason) {
       await requireAdmin();
       await repository.rejectReport(reportId, reason);
-    },
-    async claimReportPoints(reportId) {
-      await requireUser();
-      return repository.claimReportPoints(reportId);
     },
   };
 }

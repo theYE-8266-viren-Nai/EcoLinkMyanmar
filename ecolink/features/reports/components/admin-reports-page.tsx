@@ -78,7 +78,7 @@ export function AdminReportsPage({
         <button className="button button--secondary" type="button" onClick={loadReports} disabled={refreshing}><RefreshCw size={17}/> {refreshing ? "Refreshing" : "Refresh"}</button>
       </header>
       <div className="admin-container admin-reports-container">
-        <div className="admin-title"><div><p>Admin MVP</p><h1>Pending reports</h1><span>Approve or reject community reports before points can be claimed.</span></div><Link className="back-link" href="/"><ShieldCheck size={17}/> Citizen website</Link></div>
+        <div className="admin-title"><div><p>Admin MVP</p><h1>Pending reports</h1><span>Approve community reports to award points directly.</span></div><Link className="back-link" href="/"><ShieldCheck size={17}/> Citizen website</Link></div>
         {message ? <p className={message.kind === "success" ? "admin-message is-success" : "admin-message is-error"} role="status">{message.text}</p> : null}
         <section className="admin-report-list" aria-label="Pending report moderation queue">
           {reports.length === 0 ? <p className="empty-copy">No pending reports.</p> : reports.map((report) => (

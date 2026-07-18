@@ -23,7 +23,6 @@ const reportWorkflowMigration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260718153000_report_approval_workflow.sql"),
   "utf8",
 );
-const normalizedReportWorkflowMigration = reportWorkflowMigration.replace(/\r\n/g, "\n");
 const reportPhotoLocationMigration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260718161000_report_photo_location_submission.sql"),
   "utf8",
@@ -34,6 +33,10 @@ const authenticatedReportSelectRepairMigration = readFileSync(
 );
 const reportRpcAmbiguityRepairMigration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260718065705_repair_report_rpc_ambiguous_columns.sql"),
+  "utf8",
+);
+const reportApprovalPointAwardMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718172000_award_report_points_on_admin_approval.sql"),
   "utf8",
 );
 
@@ -81,15 +84,17 @@ describe("EcoLink Supabase migration", () => {
     expect(profileRpcRepairMigration).toContain("add column if not exists deleted_at");
   });
 
-  it("protects report review and point claiming transitions", () => {
+  it("protects report review and awards points only through admin approval", () => {
     expect(reportWorkflowMigration).toContain("create type public.report_status as enum ('PENDING', 'APPROVED', 'REJECTED')");
     expect(reportWorkflowMigration).toContain("alter table public.environment_reports enable row level security");
     expect(reportWorkflowMigration).toContain("profile.app_role = 'admin'");
     expect(reportWorkflowMigration).toContain("if not public.current_profile_is_admin() then");
-    expect(normalizedReportWorkflowMigration).toContain("where id = target_report_id\n    and status = 'PENDING'::public.report_status");
-    expect(reportWorkflowMigration).toContain("if report_row.status <> 'APPROVED'::public.report_status then");
-    expect(reportWorkflowMigration).toContain("for update");
-    expect(reportWorkflowMigration).toContain("on conflict (report_id) where report_id is not null do nothing");
+    expect(reportApprovalPointAwardMigration).toContain("if not public.current_profile_is_admin() then");
+    expect(reportApprovalPointAwardMigration).toContain("and status = 'PENDING'::public.report_status");
+    expect(reportApprovalPointAwardMigration).toContain("for update");
+    expect(reportApprovalPointAwardMigration).toContain("'Approved community report'");
+    expect(reportApprovalPointAwardMigration).toContain("where ledger.report_id = report_row.id");
+    expect(reportApprovalPointAwardMigration).toContain("drop function if exists public.claim_environment_report_points(uuid)");
   });
 
   it("keeps report table reads private while allowing authenticated RLS checks", () => {
@@ -113,7 +118,7 @@ describe("EcoLink Supabase migration", () => {
     expect(reportPhotoLocationMigration).toContain("revoke all on function public.submit_environment_report(text, text, text, text, double precision, double precision, text, text) from public, anon");
     expect(reportWorkflowMigration).toContain("revoke all on function public.approve_environment_report(uuid) from public, anon");
     expect(reportWorkflowMigration).toContain("revoke all on function public.reject_environment_report(uuid, text) from public, anon");
-    expect(reportWorkflowMigration).toContain("revoke all on function public.claim_environment_report_points(uuid) from public, anon");
+    expect(reportApprovalPointAwardMigration).toContain("revoke all on function public.claim_environment_report_points(uuid) from public, anon, authenticated");
   });
 
   it("requires report photo and current coordinates when submitting reports", () => {

@@ -133,14 +133,3 @@ export async function handleRejectReport(request: Request, reportId: string, dep
   }
 }
 
-export async function handleClaimReportPoints(reportId: string, dependencies: HandlerDependencies = {}) {
-  try {
-    const parsed = reportIdSchema.safeParse(reportId);
-    if (!parsed.success) return validationError(parsed.error);
-    const service = await getService(dependencies);
-    const claim = await service.claimReportPoints(parsed.data);
-    return NextResponse.json({ claim });
-  } catch (error) {
-    return safeError(error);
-  }
-}

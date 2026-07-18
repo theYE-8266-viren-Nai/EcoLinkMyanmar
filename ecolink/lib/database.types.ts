@@ -513,10 +513,6 @@ export type Database = {
         Args: { target_report_id: string; reason?: string | null };
         Returns: string;
       };
-      claim_environment_report_points: {
-        Args: { target_report_id: string };
-        Returns: Array<{ report_id: string; points_awarded: number; claimed_at: string }>;
-      };
     };
     Enums: {
       report_status: "PENDING" | "APPROVED" | "REJECTED";

@@ -14,8 +14,6 @@ export type MemberReport = {
   approvedAt: string | null;
   reviewedAt: string | null;
   rejectionReason: string | null;
-  isClaimed: boolean;
-  claimedAt: string | null;
   pointsAwarded: number | null;
 };
 
@@ -24,10 +22,4 @@ export type AdminPendingReport = MemberReport & {
     displayName: string;
     email: string;
   };
-};
-
-export type ReportClaimResult = {
-  reportId: string;
-  pointsAwarded: number;
-  claimedAt: string;
 };

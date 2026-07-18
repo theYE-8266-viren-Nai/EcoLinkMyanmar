@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   handleApproveReport,
-  handleClaimReportPoints,
   handleListPendingReports,
   handleSubmitReport,
 } from "@/features/reports/api/report-handlers";
@@ -43,7 +42,6 @@ function service(overrides: Partial<ReportWorkflowService> = {}): ReportWorkflow
     listPendingReports: vi.fn(async () => []),
     approveReport: vi.fn(async () => undefined),
     rejectReport: vi.fn(async () => undefined),
-    claimReportPoints: vi.fn(async () => ({ reportId: "report-1", pointsAwarded: 50, claimedAt: "2026-07-18T00:00:00Z" })),
     ...overrides,
   };
 }
@@ -87,20 +85,9 @@ describe("report workflow handlers", () => {
     expect(response.status).toBe(403);
   });
 
-  it("validates report IDs before approval or claim", async () => {
+  it("validates report IDs before approval", async () => {
     const approve = await handleApproveReport("not-a-uuid", { service: service() });
-    const claim = await handleClaimReportPoints("not-a-uuid", { service: service() });
 
     expect(approve.status).toBe(400);
-    expect(claim.status).toBe(400);
-  });
-
-  it("returns claim result for approved unclaimed reports", async () => {
-    const response = await handleClaimReportPoints("80000000-0000-0000-0000-000000000002", { service: service() });
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({
-      claim: { reportId: "report-1", pointsAwarded: 50, claimedAt: "2026-07-18T00:00:00Z" },
-    });
   });
 });

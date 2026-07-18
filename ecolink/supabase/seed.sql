@@ -133,30 +133,21 @@ on conflict (center_id, profile_id) do update set
   role = excluded.role,
   is_active = excluded.is_active;
 
-insert into public.verified_drop_offs (
-  id, center_id, member_profile_id, recorded_by_profile_id,
-  material_slug, weight_kg, points_awarded, recorded_at
-) values
-  ('60000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000002', 'pet-plastic', 3.0, 150, '2026-07-14T09:30:00+06:30'),
-  ('60000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000003', '40000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000002', 'paper', 6.0, 120, '2026-07-09T10:15:00+06:30'),
-  ('60000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000002', 'pet-plastic', 5.0, 250, '2026-06-28T08:45:00+06:30'),
-  ('60000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000005', '40000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000002', 'e-waste', 2.0, 160, '2026-06-18T12:00:00+06:30')
-on conflict (id) do update set
-  weight_kg = excluded.weight_kg,
-  points_awarded = excluded.points_awarded,
-  recorded_at = excluded.recorded_at;
+delete from public.point_ledger_entries
+where id in (
+  '70000000-0000-0000-0000-000000000001',
+  '70000000-0000-0000-0000-000000000002',
+  '70000000-0000-0000-0000-000000000003',
+  '70000000-0000-0000-0000-000000000004'
+);
 
-insert into public.point_ledger_entries (
-  id, profile_id, center_id, drop_off_id, points, entry_type, description, created_at
-) values
-  ('70000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001', 150, 'earned', 'Verified PET plastic recycling drop-off', '2026-07-14T09:30:00+06:30'),
-  ('70000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000003', '60000000-0000-0000-0000-000000000002', 120, 'earned', 'Verified paper recycling drop-off', '2026-07-09T10:15:00+06:30'),
-  ('70000000-0000-0000-0000-000000000003', '40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000003', 250, 'earned', 'Verified PET plastic recycling drop-off', '2026-06-28T08:45:00+06:30'),
-  ('70000000-0000-0000-0000-000000000004', '40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000005', '60000000-0000-0000-0000-000000000004', 160, 'earned', 'Verified e-waste recycling drop-off', '2026-06-18T12:00:00+06:30')
-on conflict (id) do update set
-  points = excluded.points,
-  description = excluded.description,
-  created_at = excluded.created_at;
+delete from public.verified_drop_offs
+where id in (
+  '60000000-0000-0000-0000-000000000001',
+  '60000000-0000-0000-0000-000000000002',
+  '60000000-0000-0000-0000-000000000003',
+  '60000000-0000-0000-0000-000000000004'
+);
 
 insert into auth.users (
   id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -322,9 +313,9 @@ insert into public.environment_reports (
     '2026-07-12T11:00:00+06:30',
     '40000000-0000-0000-0000-000000000003',
     null,
-    '2026-07-12T11:15:00+06:30',
-    50,
-    true,
+    null,
+    null,
+    false,
     '2026-07-11T08:00:00+06:30',
     '2026-07-11T08:00:00+06:30'
   )
@@ -345,18 +336,5 @@ on conflict (id) do update set
   points_awarded = excluded.points_awarded,
   is_claimed = excluded.is_claimed;
 
-insert into public.point_ledger_entries (
-  id, profile_id, report_id, points, entry_type, description, created_at
-) values (
-  '70000000-0000-0000-0000-000000000005',
-  '40000000-0000-0000-0000-000000000001',
-  '80000000-0000-0000-0000-000000000004',
-  50,
-  'earned',
-  'Approved community report',
-  '2026-07-12T11:15:00+06:30'
-)
-on conflict (id) do update set
-  points = excluded.points,
-  description = excluded.description,
-  created_at = excluded.created_at;
+delete from public.point_ledger_entries
+where id = '70000000-0000-0000-0000-000000000005';

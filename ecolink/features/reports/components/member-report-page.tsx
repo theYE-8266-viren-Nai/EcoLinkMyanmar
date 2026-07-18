@@ -54,7 +54,6 @@ export function MemberReportPage({
   const [reports, setReports] = useState<MemberReport[]>(initialReports);
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [claimingId, setClaimingId] = useState<string>();
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | undefined>(
     initialError ? { kind: "error", text: initialError } : undefined,
   );
@@ -131,24 +130,10 @@ export function MemberReportPage({
     await loadReports();
   }
 
-  async function claimPoints(reportId: string) {
-    setClaimingId(reportId);
-    setMessage(undefined);
-    const response = await fetch(`/api/reports/${reportId}/claim`, { method: "POST" });
-    const body = await readJsonResponse<{ error?: string; claim?: { pointsAwarded: number } }>(response);
-    setClaimingId(undefined);
-    if (!response.ok) {
-      setMessage({ kind: "error", text: body?.error ?? "Report points could not be claimed." });
-      return;
-    }
-    setMessage({ kind: "success", text: `${body?.claim?.pointsAwarded ?? 50} points were added to your account.` });
-    await loadReports();
-  }
-
   return (
     <AppShell>
       <main className="content-container report-page report-page--wide">
-        <header className="report-intro"><p>Community action</p><h1>Report an environmental issue</h1><span>Reports are reviewed before points can be claimed, so community impact stays trustworthy.</span></header>
+        <header className="report-intro"><p>Community action</p><h1>Report an environmental issue</h1><span>Reports are reviewed by admins before any points are awarded.</span></header>
         {message ? <p className={message.kind === "success" ? "admin-message is-success" : "admin-message is-error"} role="status">{message.text}</p> : null}
         <section className="report-workspace">
           <div className="report-step-heading"><span>Submit report</span><h2>Add photo evidence and current location</h2><p>No points are awarded until an admin approves the report.</p></div>
@@ -170,7 +155,6 @@ export function MemberReportPage({
           {reports.length === 0 ? <p className="empty-copy">No reports yet.</p> : (
             <div className="report-history-list">
               {reports.map((report) => {
-                const canClaim = report.status === "APPROVED" && !report.isClaimed;
                 return (
                   <article key={report.id}>
                     <div>
@@ -181,11 +165,8 @@ export function MemberReportPage({
                       {report.photoStoragePath ? <small>Image attached: {report.photoStoragePath.split("/").at(-1)}</small> : null}
                       {report.status === "PENDING" ? <small>Your report is awaiting admin approval.</small> : null}
                       {report.status === "REJECTED" ? <small>{report.rejectionReason ?? "This report was not approved for points."}</small> : null}
-                      {report.isClaimed ? <small>Claimed {report.pointsAwarded ?? 50} points.</small> : null}
+                      {report.status === "APPROVED" ? <small>{report.pointsAwarded ?? 0} points awarded by admin approval.</small> : null}
                     </div>
-                    <button className="button button--primary" type="button" disabled={!canClaim || claimingId === report.id} onClick={() => claimPoints(report.id)}>
-                      {claimingId === report.id ? "Claiming" : report.isClaimed ? "Claimed" : canClaim ? "Claim Points" : "Claim unavailable"}
-                    </button>
                   </article>
                 );
               })}
