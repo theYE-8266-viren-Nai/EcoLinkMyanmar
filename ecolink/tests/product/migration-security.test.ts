@@ -39,6 +39,10 @@ const reportApprovalPointAwardMigration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260718172000_award_report_points_on_admin_approval.sql"),
   "utf8",
 );
+const approvedReportPointBackfillMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718184500_backfill_approved_report_points.sql"),
+  "utf8",
+);
 
 describe("EcoLink Supabase migration", () => {
   it("enables RLS on every new user-data table", () => {
@@ -95,6 +99,24 @@ describe("EcoLink Supabase migration", () => {
     expect(reportApprovalPointAwardMigration).toContain("'Approved community report'");
     expect(reportApprovalPointAwardMigration).toContain("where ledger.report_id = report_row.id");
     expect(reportApprovalPointAwardMigration).toContain("drop function if exists public.claim_environment_report_points(uuid)");
+  });
+
+  it("backfills approved reports that missed report point ledger entries", () => {
+    expect(approvedReportPointBackfillMigration).toContain("with repaired_reports as");
+    expect(approvedReportPointBackfillMigration).toContain("report.status = 'APPROVED'::public.report_status");
+    expect(approvedReportPointBackfillMigration).toContain("where ledger.report_id = report.id");
+    expect(approvedReportPointBackfillMigration).toContain("ledger.points > 0");
+    expect(approvedReportPointBackfillMigration).toContain("insert into public.point_ledger_entries");
+    expect(approvedReportPointBackfillMigration).toContain("on conflict (report_id) where report_id is not null do nothing");
+  });
+
+  it("lets admin approval repair an already-approved report missing points", () => {
+    const normalizedBackfillMigration = approvedReportPointBackfillMigration.replace(/\r\n/g, "\n");
+    expect(normalizedBackfillMigration).toContain("where id = target_report_id\n  for update");
+    expect(approvedReportPointBackfillMigration).toContain("if report_row.status = 'REJECTED'::public.report_status then");
+    expect(approvedReportPointBackfillMigration).toContain("if report_row.status = 'PENDING'::public.report_status then");
+    expect(approvedReportPointBackfillMigration).toContain("needs_award");
+    expect(approvedReportPointBackfillMigration).toContain("and needs_award");
   });
 
   it("keeps report table reads private while allowing authenticated RLS checks", () => {
