@@ -29,7 +29,12 @@ import {
   Truck,
   X,
 } from "lucide-react";
-import mapboxgl, { type GeoJSONSource, type Map as MapboxMap } from "mapbox-gl";
+import mapboxgl, {
+  type GeoJSONSource,
+  type LightSpecification,
+  type Map as MapboxMap,
+  type StyleSpecification,
+} from "mapbox-gl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -83,6 +88,34 @@ type MobilePanelTab = "centers" | "collectors";
 type MapboxDirectionsResponse = {
   routes?: Array<{ geometry?: { coordinates?: unknown } }>;
 };
+
+type DeprecatedLightStyle = StyleSpecification & {
+  light?: LightSpecification;
+};
+
+function normalizeMapStyleLights(style: StyleSpecification): StyleSpecification {
+  const styleWithDeprecatedLight = style as DeprecatedLightStyle;
+  if (!styleWithDeprecatedLight.light) return style;
+  const { light, ...styleWithoutLight } = styleWithDeprecatedLight;
+  return {
+    ...styleWithoutLight,
+    lights: style.lights ?? [{ id: "ecolink-flat-light", type: "flat", properties: light }],
+  };
+}
+
+function mapboxStyleApiUrl(styleUrl: string, accessToken: string) {
+  if (!styleUrl.startsWith("mapbox://styles/")) return styleUrl;
+  const stylePath = styleUrl.slice("mapbox://styles/".length);
+  const apiUrl = new URL(`https://api.mapbox.com/styles/v1/${stylePath}`);
+  apiUrl.searchParams.set("access_token", accessToken);
+  return apiUrl.toString();
+}
+
+async function resolveMapStyle(styleUrl: string, accessToken: string, signal: AbortSignal) {
+  const response = await fetch(mapboxStyleApiUrl(styleUrl, accessToken), { signal });
+  if (!response.ok) throw new Error("Map style could not be loaded.");
+  return normalizeMapStyleLights(await response.json() as StyleSpecification);
+}
 
 function isRouteCoordinates(value: unknown): value is [number, number][] {
   return Array.isArray(value) && value.length >= 2 && value.every((coordinate) =>
@@ -333,113 +366,118 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
 
   useEffect(() => {
     if (!MAPBOX_TOKEN || !mapContainerRef.current || mapRef.current) return;
+    let disposed = false;
+    const styleController = new AbortController();
     mapContainerRef.current.replaceChildren();
     mapboxgl.accessToken = MAPBOX_TOKEN;
-    const map = new mapboxgl.Map({
-      container: mapContainerRef.current,
-      style: MAP_STYLE,
-      center: YANGON_CENTER,
-      zoom: YANGON_ZOOM,
-      minZoom: 9,
-      maxZoom: 19,
-      maxBounds: YANGON_BOUNDS,
-      attributionControl: false,
-      cooperativeGestures: false,
-    });
-    mapRef.current = map;
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false, showZoom: false }), "bottom-right");
-
-    const handleLoad = () => {
-      void addMapSourcesAndLayers(map, centers)
-        .then(() => {
-          setMapReady(true);
-          setMapUnavailable(false);
-        })
-        .catch(() => {
-          setMapError(t("map.errorIcons"));
-        });
-    };
-    const handleError = (event: mapboxgl.ErrorEvent) => {
-      console.error("Mapbox rendering error", event.error);
-      setMapError(t("map.errorBasemap"));
-    };
-
-    const handleCenterClick = (event: mapboxgl.MapLayerMouseEvent) => {
-      const id = String(event.features?.[0]?.properties?.id ?? "");
-      const center = centers.find((item) => item.id === id);
-      if (center) setSelected({ kind: "center", center });
-    };
-    const handleCollectorClick = (event: mapboxgl.MapLayerMouseEvent) => {
-      const properties = event.features?.[0]?.properties;
-      if (!properties) return;
-      setSelected({
-        kind: "vehicle",
-        vehicle: {
-          vehicleId: String(properties.vehicleId),
-          label: String(properties.label),
-          centerId: String(properties.centerId),
-          latitude: Number(properties.latitude),
-          longitude: Number(properties.longitude),
-          heading: Number(properties.heading),
-          speedKph: Number(properties.speedKph),
-          status: properties.status,
-          observedAt: String(properties.observedAt),
-          isDemo: properties.isDemo === true || properties.isDemo === "true",
-          vehicleIcon: String(properties.vehicleIcon ?? "🚚"),
-        },
-      });
-    };
-    const handleWasteReportClick = (event: mapboxgl.MapLayerMouseEvent) => {
-      const properties = event.features?.[0]?.properties;
-      if (!properties || properties.cluster) return;
-      setSelected({
-        kind: "report",
-        score: Number(properties.score),
-        wasteType: String(properties.wasteType ?? "Waste report"),
-        observedAt: String(properties.observedAt),
-      });
-    };
-    const handleWasteClusterClick = (event: mapboxgl.MapLayerMouseEvent) => {
-      const feature = event.features?.[0];
-      const clusterId = Number(feature?.properties?.cluster_id);
-      const coordinates = feature?.geometry.type === "Point" ? feature.geometry.coordinates : undefined;
-      const source = map.getSource("waste-reports") as GeoJSONSource;
-      if (!coordinates || !Number.isFinite(clusterId)) return;
-      source.getClusterExpansionZoom(clusterId, (error, zoom) => {
-        if (!error && zoom !== null && zoom !== undefined) {
-          map.easeTo({ center: coordinates as [number, number], zoom });
-        }
-      });
-    };
-    const handleLayerMouseEnter = () => { map.getCanvas().style.cursor = "pointer"; };
-    const handleLayerMouseLeave = () => { map.getCanvas().style.cursor = ""; };
-
-    map.on("load", handleLoad);
-    map.on("error", handleError);
-    map.on("click", "center-points", handleCenterClick);
-    map.on("click", "collector-vehicle-icons", handleCollectorClick);
-    map.on("click", "waste-report-points", handleWasteReportClick);
-    map.on("click", "waste-clusters", handleWasteClusterClick);
-
     const interactiveLayers = ["center-points", "collector-vehicle-icons", "waste-report-points", "waste-clusters"];
-    for (const layer of interactiveLayers) {
-      map.on("mouseenter", layer, handleLayerMouseEnter);
-      map.on("mouseleave", layer, handleLayerMouseLeave);
-    }
+
+    void resolveMapStyle(MAP_STYLE, MAPBOX_TOKEN, styleController.signal)
+      .then((style) => {
+        if (disposed || !mapContainerRef.current) return;
+        const map = new mapboxgl.Map({
+          container: mapContainerRef.current,
+          style,
+          center: YANGON_CENTER,
+          zoom: YANGON_ZOOM,
+          minZoom: 9,
+          maxZoom: 19,
+          maxBounds: YANGON_BOUNDS,
+          attributionControl: false,
+          cooperativeGestures: false,
+        });
+        mapRef.current = map;
+        map.addControl(new mapboxgl.NavigationControl({ showCompass: false, showZoom: false }), "bottom-right");
+
+        const handleLoad = () => {
+          void addMapSourcesAndLayers(map, centers)
+            .then(() => {
+              setMapReady(true);
+              setMapUnavailable(false);
+            })
+            .catch(() => {
+              setMapError(t("map.errorIcons"));
+            });
+        };
+        const handleError = (event: mapboxgl.ErrorEvent) => {
+          console.error("Mapbox rendering error", event.error);
+          setMapError(t("map.errorBasemap"));
+        };
+
+        const handleCenterClick = (event: mapboxgl.MapLayerMouseEvent) => {
+          const id = String(event.features?.[0]?.properties?.id ?? "");
+          const center = centers.find((item) => item.id === id);
+          if (center) setSelected({ kind: "center", center });
+        };
+        const handleCollectorClick = (event: mapboxgl.MapLayerMouseEvent) => {
+          const properties = event.features?.[0]?.properties;
+          if (!properties) return;
+          setSelected({
+            kind: "vehicle",
+            vehicle: {
+              vehicleId: String(properties.vehicleId),
+              label: String(properties.label),
+              centerId: String(properties.centerId),
+              latitude: Number(properties.latitude),
+              longitude: Number(properties.longitude),
+              heading: Number(properties.heading),
+              speedKph: Number(properties.speedKph),
+              status: properties.status,
+              observedAt: String(properties.observedAt),
+              isDemo: properties.isDemo === true || properties.isDemo === "true",
+              vehicleIcon: String(properties.vehicleIcon ?? "recycle-car"),
+            },
+          });
+        };
+        const handleWasteReportClick = (event: mapboxgl.MapLayerMouseEvent) => {
+          const properties = event.features?.[0]?.properties;
+          if (!properties || properties.cluster) return;
+          setSelected({
+            kind: "report",
+            score: Number(properties.score),
+            wasteType: String(properties.wasteType ?? "Waste report"),
+            observedAt: String(properties.observedAt),
+          });
+        };
+        const handleWasteClusterClick = (event: mapboxgl.MapLayerMouseEvent) => {
+          const feature = event.features?.[0];
+          const clusterId = Number(feature?.properties?.cluster_id);
+          const coordinates = feature?.geometry.type === "Point" ? feature.geometry.coordinates : undefined;
+          const source = map.getSource("waste-reports") as GeoJSONSource;
+          if (!coordinates || !Number.isFinite(clusterId)) return;
+          source.getClusterExpansionZoom(clusterId, (error, zoom) => {
+            if (!error && zoom !== null && zoom !== undefined) {
+              map.easeTo({ center: coordinates as [number, number], zoom });
+            }
+          });
+        };
+        const handleLayerMouseEnter = () => { map.getCanvas().style.cursor = "pointer"; };
+        const handleLayerMouseLeave = () => { map.getCanvas().style.cursor = ""; };
+
+        map.on("load", handleLoad);
+        map.on("error", handleError);
+        map.on("click", "center-points", handleCenterClick);
+        map.on("click", "collector-vehicle-icons", handleCollectorClick);
+        map.on("click", "waste-report-points", handleWasteReportClick);
+        map.on("click", "waste-clusters", handleWasteClusterClick);
+
+        for (const layer of interactiveLayers) {
+          map.on("mouseenter", layer, handleLayerMouseEnter);
+          map.on("mouseleave", layer, handleLayerMouseLeave);
+        }
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        console.error("Mapbox style load failed", error);
+        setMapError(t("map.errorBasemap"));
+        setMapUnavailable(true);
+      });
 
     return () => {
+      disposed = true;
+      styleController.abort();
       abortRef.current?.abort();
-      map.off("load", handleLoad);
-      map.off("error", handleError);
-      map.off("click", "center-points", handleCenterClick);
-      map.off("click", "collector-vehicle-icons", handleCollectorClick);
-      map.off("click", "waste-report-points", handleWasteReportClick);
-      map.off("click", "waste-clusters", handleWasteClusterClick);
-      for (const layer of interactiveLayers) {
-        map.off("mouseenter", layer, handleLayerMouseEnter);
-        map.off("mouseleave", layer, handleLayerMouseLeave);
-      }
-      map.remove();
+      mapRef.current?.remove();
       mapRef.current = null;
     };
   }, [centers, t]);
@@ -632,6 +670,8 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
   const densityLabel = wasteMode === "heatmap" ? t("map.heatmap") : t("map.reportMarkers");
   const bottomNavOffset = "calc(var(--ecolink-bottom-nav-clearance, 64px) + 12px)";
   const selectedCardOffset = "calc(var(--ecolink-bottom-nav-clearance, 64px) + 156px)";
+  const mapEdgeLeft = "calc(12px + var(--ecolink-safe-area-left, 0px))";
+  const mapEdgeRight = "calc(12px + var(--ecolink-safe-area-right, 0px))";
 
   return (
     <Box className="live-map-canvas" sx={{ position: "relative", width: "100%", height: "100%", display: "flex", flexGrow: 1 }}>
@@ -670,9 +710,9 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         sx={{
           position: "absolute",
           top: 12,
-          left: 12,
+          left: mapEdgeLeft,
           zIndex: 10,
-          maxWidth: "calc(100% - 24px)",
+          maxWidth: "calc(100% - 24px - var(--ecolink-safe-area-left, 0px) - var(--ecolink-safe-area-right, 0px))",
         }}
       >
         <Paper
@@ -739,7 +779,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         sx={{
           position: "absolute",
           top: "30%",
-          right: 12,
+          right: mapEdgeRight,
           zIndex: 10,
         }}
       >
@@ -778,7 +818,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         sx={{
           position: "absolute",
           bottom: selected ? selectedCardOffset : bottomNavOffset,
-          left: 12,
+          left: mapEdgeLeft,
           zIndex: 9,
           p: 1,
           borderRadius: "8px",
@@ -814,12 +854,14 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           sx={{
             position: "absolute",
             bottom: bottomNavOffset,
-            left: 12,
-            right: 12,
+            left: mapEdgeLeft,
+            right: mapEdgeRight,
             zIndex: 15,
             borderRadius: 3,
             border: "1px solid",
             borderColor: "divider",
+            maxHeight: "min(44dvh, 260px)",
+            overflowY: "auto",
           }}
         >
           <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
@@ -884,14 +926,14 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         sx={{
           position: "absolute",
           bottom: "var(--ecolink-bottom-nav-clearance, 64px)",
-          left: 0,
-          right: 0,
+          left: "var(--ecolink-safe-area-left, 0px)",
+          right: "var(--ecolink-safe-area-right, 0px)",
           zIndex: 20,
           borderTopLeftRadius: 16,
           borderTopRightRadius: 16,
           display: "flex",
           flexDirection: "column",
-          maxHeight: "75%",
+          maxHeight: "calc(100% - var(--ecolink-bottom-nav-clearance, 64px) - 24px)",
           transform: mobileSheetOpen ? "translateY(0)" : "translateY(calc(100% + var(--ecolink-bottom-nav-clearance, 64px)))",
           transition: "transform 0.25s ease-out",
           borderTop: "1px solid",
@@ -1019,8 +1061,8 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           sx={{
             position: "absolute",
             top: 76,
-            left: 12,
-            right: 12,
+            left: mapEdgeLeft,
+            right: mapEdgeRight,
             zIndex: 100,
             borderRadius: 2,
           }}
@@ -1035,8 +1077,8 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           sx={{
             position: "absolute",
             top: 76,
-            left: 12,
-            right: 12,
+            left: mapEdgeLeft,
+            right: mapEdgeRight,
             zIndex: 100,
             borderRadius: 2,
           }}

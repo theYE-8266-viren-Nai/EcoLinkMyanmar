@@ -1,12 +1,11 @@
 "use client";
 
-import { LoaderCircle, RefreshCw, Save, ShieldCheck, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { LoaderCircle, MapPin, Save, Search, Trash2, Truck, Warehouse } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-import { EcoLinkMark } from "@/components/ecolink/app-shell";
-import { RECYCLING_ROUTE_STATUSES, type AdminCenterDropoffRouteRequest, type AdminPickupRouteRequest, type AdminRouteRequestList } from "@/features/recycling-routes/types";
+import { AdminMetric, AdminShell } from "@/features/admin/components/admin-shell";
+import { RECYCLING_ROUTE_STATUSES, type AdminCenterDropoffRouteRequest, type AdminPickupRouteRequest, type AdminRouteRequestList, type RecyclingRouteStatus } from "@/features/recycling-routes/types";
 
 type Message = { kind: "success" | "error"; text: string };
 type RouteResponse = { requests: AdminRouteRequestList } | { error: string };
@@ -46,9 +45,38 @@ export function AdminRecyclingPage({
 }) {
   const [requests, setRequests] = useState(initialRequests);
   const [savingId, setSavingId] = useState<string>();
+  const [query, setQuery] = useState("");
+  const [routeFilter, setRouteFilter] = useState<"all" | "pickup" | "center">("all");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | RecyclingRouteStatus>("ALL");
   const [message, setMessage] = useState<Message | undefined>(
     initialError ? { kind: "error", text: initialError } : undefined,
   );
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredRequests = useMemo(() => {
+    function matches(request: AdminPickupRouteRequest | AdminCenterDropoffRouteRequest) {
+      const locationValues = request.kind === "pickup"
+        ? [request.pickupAddress, request.routeArea, request.routeWindow]
+        : [request.centerName, request.centerAddress, request.centerTownship, request.centerHours];
+      const matchesQuery = !normalizedQuery || [
+        request.submittedBy.displayName,
+        request.submittedBy.email,
+        ...locationValues,
+        ...request.selectedItems.map((item) => item.itemType),
+      ].some((value) => value.toLowerCase().includes(normalizedQuery));
+      return matchesQuery && (statusFilter === "ALL" || request.status === statusFilter);
+    }
+
+    return {
+      pickups: routeFilter === "center" ? [] : requests.pickups.filter(matches),
+      centerDropoffs: routeFilter === "pickup" ? [] : requests.centerDropoffs.filter(matches),
+    };
+  }, [normalizedQuery, requests, routeFilter, statusFilter]);
+
+  const allRequests = [...requests.pickups, ...requests.centerDropoffs];
+  const pendingCount = allRequests.filter((request) => request.status === "PENDING").length;
+  const completedCount = allRequests.filter((request) => request.status === "COMPLETED").length;
+  const visibleCount = filteredRequests.pickups.length + filteredRequests.centerDropoffs.length;
 
   async function loadRequests() {
     setSavingId("refresh");
@@ -143,87 +171,157 @@ export function AdminRecyclingPage({
   }
 
   return (
-    <main className="admin-page">
-      <header className="admin-header">
-        <Link href="/"><EcoLinkMark compact /></Link>
-        <div><span className="status-dot"/><strong>Recycling submissions</strong><small>Pickup and center requests</small></div>
-        <button className="button button--secondary" type="button" onClick={loadRequests} disabled={savingId === "refresh"}><RefreshCw size={17}/> {savingId === "refresh" ? "Refreshing" : "Refresh"}</button>
-      </header>
-      <div className="admin-container admin-reports-container">
-        <div className="admin-title">
-          <div><p>Admin MVP</p><h1>Recycle route CRUD</h1><span>Review, edit, status-update, and soft-delete member route submissions.</span></div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Link className="back-link" href="/admin/reports"><ShieldCheck size={17}/> Report moderation</Link>
-            <Link className="back-link" href="/"><ShieldCheck size={17}/> Citizen website</Link>
+    <AdminShell
+      activeSection="recycling"
+      description="Review member routes, update operational details, and manage request status from one queue."
+      isRefreshing={savingId === "refresh"}
+      onRefresh={loadRequests}
+      title="Recycling submissions"
+    >
+      <div className="admin-metrics" aria-label="Recycling request summary">
+        <AdminMetric label="All requests" value={allRequests.length} detail={`${requests.pickups.length} pickups · ${requests.centerDropoffs.length} drop-offs`} />
+        <AdminMetric label="Needs review" value={pendingCount} detail="Currently pending" />
+        <AdminMetric label="Completed" value={completedCount} detail="Finished routes" />
+      </div>
+        {message ? <p className={message.kind === "success" ? "admin-message is-success" : "admin-message is-error"} role="status">{message.text}</p> : null}
+      <section className="admin-data-section" aria-label="Recycling request records">
+        <div className="admin-data-toolbar admin-data-toolbar--filters">
+          <div>
+            <h2>Request directory</h2>
+            <span>{visibleCount} of {allRequests.length} requests</span>
+          </div>
+          <div className="admin-filter-controls">
+            <div className="admin-segmented" aria-label="Filter by route type">
+              {(["all", "pickup", "center"] as const).map((filter) => (
+                <button aria-pressed={routeFilter === filter} key={filter} onClick={() => setRouteFilter(filter)} type="button">
+                  {filter === "all" ? "All" : filter === "pickup" ? "Pickups" : "Drop-offs"}
+                </button>
+              ))}
+            </div>
+            <label className="admin-compact-select">
+              <span className="sr-only">Filter by status</span>
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "ALL" | RecyclingRouteStatus)}>
+                <option value="ALL">All statuses</option>
+                {RECYCLING_ROUTE_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+              </select>
+            </label>
+            <label className="admin-search">
+              <span className="sr-only">Search recycling requests</span>
+              <Search size={16} aria-hidden="true" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search member, route, or item…" type="search" />
+            </label>
           </div>
         </div>
-        {message ? <p className={message.kind === "success" ? "admin-message is-success" : "admin-message is-error"} role="status">{message.text}</p> : null}
-        <RouteSection title="Truck pickup requests" empty="No pickup requests yet.">
-          {requests.pickups.map((request) => (
-            <article key={request.requestId}>
-              <div className="admin-report-detail">
-                <span className={statusClass(request.status)}>{request.status}</span>
-                <h2>{request.pickupAddress}</h2>
-                <dl>
-                  <div><dt>Submitted by</dt><dd>{request.submittedBy.displayName} ({request.submittedBy.email})</dd></div>
-                  <div><dt>Date</dt><dd>{DATE_FORMATTER.format(new Date(request.createdAt))}</dd></div>
-                  <div><dt>Route</dt><dd>{request.routeWindow} - {request.routeArea}</dd></div>
-                  <div><dt>Estimate</dt><dd>{request.estimatedWeightKg.toFixed(2)} kg - ~{request.estimatedPoints} pts</dd></div>
-                  <div><dt>Items</dt><dd>{selectedItemLine(request)}</dd></div>
-                </dl>
-              </div>
-              <div className="admin-review-actions">
-                <label><span>Status</span><select value={request.status} onChange={(event) => updatePickup(request.requestId, { status: event.target.value as AdminPickupRouteRequest["status"] })}>{RECYCLING_ROUTE_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
-                <label><span>Pickup address</span><textarea value={request.pickupAddress} onChange={(event) => updatePickup(request.requestId, { pickupAddress: event.target.value })} maxLength={500}/></label>
-                <label><span>Route window</span><input value={request.routeWindow} onChange={(event) => updatePickup(request.requestId, { routeWindow: event.target.value })} maxLength={120}/></label>
-                <label><span>Route area</span><input value={request.routeArea} onChange={(event) => updatePickup(request.requestId, { routeArea: event.target.value })} maxLength={120}/></label>
-                <label><span>Notes</span><textarea value={request.notes ?? ""} onChange={(event) => updatePickup(request.requestId, { notes: event.target.value || null })} maxLength={500}/></label>
-                <button className="button button--primary" type="button" disabled={savingId === request.requestId} onClick={() => savePickup(request)}>{savingId === request.requestId ? <LoaderCircle className="spin" size={17}/> : <Save size={17}/>} Save</button>
-                <button className="button button--secondary" type="button" disabled={savingId === request.requestId} onClick={() => deleteRequest("pickup", request.requestId)}><Trash2 size={17}/> Delete</button>
-              </div>
-            </article>
-          ))}
-        </RouteSection>
-        <RouteSection title="Recycle center drop-offs" empty="No center drop-off requests yet.">
-          {requests.centerDropoffs.map((request) => (
-            <article key={request.requestId}>
-              <div className="admin-report-detail">
-                <span className={statusClass(request.status)}>{request.status}</span>
-                <h2>{request.centerName}</h2>
-                <dl>
-                  <div><dt>Submitted by</dt><dd>{request.submittedBy.displayName} ({request.submittedBy.email})</dd></div>
-                  <div><dt>Date</dt><dd>{DATE_FORMATTER.format(new Date(request.createdAt))}</dd></div>
-                  <div><dt>Center</dt><dd>{request.centerAddress} - {request.centerTownship} - {request.centerHours}</dd></div>
-                  <div><dt>Estimate</dt><dd>{request.estimatedWeightKg.toFixed(2)} kg - ~{request.estimatedPoints} pts</dd></div>
-                  <div><dt>Items</dt><dd>{selectedItemLine(request)}</dd></div>
-                </dl>
-              </div>
-              <div className="admin-review-actions">
-                <label><span>Status</span><select value={request.status} onChange={(event) => updateCenter(request.requestId, { status: event.target.value as AdminCenterDropoffRouteRequest["status"] })}>{RECYCLING_ROUTE_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
-                <label><span>Center name</span><input value={request.centerName} onChange={(event) => updateCenter(request.requestId, { centerName: event.target.value })} maxLength={180}/></label>
-                <label><span>Center address</span><textarea value={request.centerAddress} onChange={(event) => updateCenter(request.requestId, { centerAddress: event.target.value })} maxLength={500}/></label>
-                <label><span>Township</span><input value={request.centerTownship} onChange={(event) => updateCenter(request.requestId, { centerTownship: event.target.value })} maxLength={120}/></label>
-                <label><span>Hours</span><input value={request.centerHours} onChange={(event) => updateCenter(request.requestId, { centerHours: event.target.value })} maxLength={120}/></label>
-                <label><span>Notes</span><textarea value={request.notes ?? ""} onChange={(event) => updateCenter(request.requestId, { notes: event.target.value || null })} maxLength={500}/></label>
-                <button className="button button--primary" type="button" disabled={savingId === request.requestId} onClick={() => saveCenter(request)}>{savingId === request.requestId ? <LoaderCircle className="spin" size={17}/> : <Save size={17}/>} Save</button>
-                <button className="button button--secondary" type="button" disabled={savingId === request.requestId} onClick={() => deleteRequest("center", request.requestId)}><Trash2 size={17}/> Delete</button>
-              </div>
-            </article>
-          ))}
-        </RouteSection>
-      </div>
-    </main>
+
+        {visibleCount === 0 ? (
+          <div className="admin-empty"><Search size={22} aria-hidden="true" /><h3>No matching requests</h3><p>Adjust the route type, status, or search terms to see more records.</p></div>
+        ) : null}
+
+        {filteredRequests.pickups.length > 0 ? (
+          <RouteSection count={filteredRequests.pickups.length} icon={<Truck size={17} aria-hidden="true" />} title="Truck pickups">
+            {filteredRequests.pickups.map((request) => (
+              <details className="admin-record" key={request.requestId}>
+                <summary>
+                  <span className="admin-record-primary">
+                    <span className={statusClass(request.status)}>{request.status}</span>
+                    <strong>{request.pickupAddress}</strong>
+                    <small><MapPin size={13} aria-hidden="true" />{request.routeArea}</small>
+                  </span>
+                  <span className="admin-record-meta">
+                    <span>{request.submittedBy.displayName}</span>
+                    <span>{request.estimatedWeightKg.toFixed(2)} kg · ~{request.estimatedPoints} pts</span>
+                    <time dateTime={request.createdAt}>{DATE_FORMATTER.format(new Date(request.createdAt))}</time>
+                  </span>
+                </summary>
+                <div className="admin-record-body">
+                  <RouteDetails request={request} routeLabel={`${request.routeWindow} · ${request.routeArea}`} />
+                  <div className="admin-review-actions">
+                    <div className="admin-action-heading"><strong>Edit pickup</strong><span>Update the fulfillment status and route information.</span></div>
+                    <div className="admin-form-grid">
+                      <label><span>Status</span><select value={request.status} onChange={(event) => updatePickup(request.requestId, { status: event.target.value as AdminPickupRouteRequest["status"] })}>{RECYCLING_ROUTE_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
+                      <label><span>Route window</span><input value={request.routeWindow} onChange={(event) => updatePickup(request.requestId, { routeWindow: event.target.value })} maxLength={120}/></label>
+                      <label className="admin-form-wide"><span>Pickup address</span><textarea value={request.pickupAddress} onChange={(event) => updatePickup(request.requestId, { pickupAddress: event.target.value })} maxLength={500}/></label>
+                      <label><span>Route area</span><input value={request.routeArea} onChange={(event) => updatePickup(request.requestId, { routeArea: event.target.value })} maxLength={120}/></label>
+                      <label className="admin-form-wide"><span>Internal notes <small>Optional</small></span><textarea value={request.notes ?? ""} onChange={(event) => updatePickup(request.requestId, { notes: event.target.value || null })} maxLength={500}/></label>
+                    </div>
+                    <RecordActions disabled={savingId === request.requestId} onDelete={() => deleteRequest("pickup", request.requestId)} onSave={() => savePickup(request)} />
+                  </div>
+                </div>
+              </details>
+            ))}
+          </RouteSection>
+        ) : null}
+
+        {filteredRequests.centerDropoffs.length > 0 ? (
+          <RouteSection count={filteredRequests.centerDropoffs.length} icon={<Warehouse size={17} aria-hidden="true" />} title="Center drop-offs">
+            {filteredRequests.centerDropoffs.map((request) => (
+              <details className="admin-record" key={request.requestId}>
+                <summary>
+                  <span className="admin-record-primary">
+                    <span className={statusClass(request.status)}>{request.status}</span>
+                    <strong>{request.centerName}</strong>
+                    <small><MapPin size={13} aria-hidden="true" />{request.centerTownship}</small>
+                  </span>
+                  <span className="admin-record-meta">
+                    <span>{request.submittedBy.displayName}</span>
+                    <span>{request.estimatedWeightKg.toFixed(2)} kg · ~{request.estimatedPoints} pts</span>
+                    <time dateTime={request.createdAt}>{DATE_FORMATTER.format(new Date(request.createdAt))}</time>
+                  </span>
+                </summary>
+                <div className="admin-record-body">
+                  <RouteDetails request={request} routeLabel={`${request.centerAddress} · ${request.centerHours}`} />
+                  <div className="admin-review-actions">
+                    <div className="admin-action-heading"><strong>Edit drop-off</strong><span>Keep center details accurate for the member.</span></div>
+                    <div className="admin-form-grid">
+                      <label><span>Status</span><select value={request.status} onChange={(event) => updateCenter(request.requestId, { status: event.target.value as AdminCenterDropoffRouteRequest["status"] })}>{RECYCLING_ROUTE_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}</select></label>
+                      <label><span>Center name</span><input value={request.centerName} onChange={(event) => updateCenter(request.requestId, { centerName: event.target.value })} maxLength={180}/></label>
+                      <label className="admin-form-wide"><span>Center address</span><textarea value={request.centerAddress} onChange={(event) => updateCenter(request.requestId, { centerAddress: event.target.value })} maxLength={500}/></label>
+                      <label><span>Township</span><input value={request.centerTownship} onChange={(event) => updateCenter(request.requestId, { centerTownship: event.target.value })} maxLength={120}/></label>
+                      <label><span>Opening hours</span><input value={request.centerHours} onChange={(event) => updateCenter(request.requestId, { centerHours: event.target.value })} maxLength={120}/></label>
+                      <label className="admin-form-wide"><span>Internal notes <small>Optional</small></span><textarea value={request.notes ?? ""} onChange={(event) => updateCenter(request.requestId, { notes: event.target.value || null })} maxLength={500}/></label>
+                    </div>
+                    <RecordActions disabled={savingId === request.requestId} onDelete={() => deleteRequest("center", request.requestId)} onSave={() => saveCenter(request)} />
+                  </div>
+                </div>
+              </details>
+            ))}
+          </RouteSection>
+        ) : null}
+      </section>
+    </AdminShell>
   );
 }
 
-function RouteSection({ children, empty, title }: { children: ReactNode; empty: string; title: string }) {
-  const hasChildren = Array.isArray(children) ? children.length > 0 : Boolean(children);
+function RouteDetails({ request, routeLabel }: { request: AdminPickupRouteRequest | AdminCenterDropoffRouteRequest; routeLabel: string }) {
   return (
-    <section className="admin-report-list" aria-label={title}>
-      <div className="admin-title" style={{ marginTop: 24 }}>
-        <div><p>Recycling</p><h1>{title}</h1></div>
-      </div>
-      {hasChildren ? children : <p className="empty-copy">{empty}</p>}
+    <div className="admin-report-detail">
+      <dl>
+        <div><dt>Submitted by</dt><dd>{request.submittedBy.displayName}<br/><span>{request.submittedBy.email}</span></dd></div>
+        <div><dt>Submitted</dt><dd>{DATE_FORMATTER.format(new Date(request.createdAt))}</dd></div>
+        <div className="admin-detail-wide"><dt>Route details</dt><dd>{routeLabel}</dd></div>
+        <div><dt>Estimated load</dt><dd>{request.estimatedWeightKg.toFixed(2)} kg</dd></div>
+        <div><dt>Estimated reward</dt><dd>~{request.estimatedPoints} points</dd></div>
+        <div className="admin-detail-wide"><dt>Selected items</dt><dd>{selectedItemLine(request)}</dd></div>
+        {request.notes ? <div className="admin-detail-wide"><dt>Internal notes</dt><dd>{request.notes}</dd></div> : null}
+      </dl>
+    </div>
+  );
+}
+
+function RecordActions({ disabled, onDelete, onSave }: { disabled: boolean; onDelete: () => void; onSave: () => void }) {
+  return (
+    <div className="admin-action-row admin-action-row--split">
+      <button className="button button--danger-ghost" type="button" disabled={disabled} onClick={onDelete}><Trash2 size={16} aria-hidden="true" /> Delete request</button>
+      <button className="button button--primary" type="button" disabled={disabled} onClick={onSave}>{disabled ? <LoaderCircle className="spin" size={16} aria-hidden="true" /> : <Save size={16} aria-hidden="true" />} Save changes</button>
+    </div>
+  );
+}
+
+function RouteSection({ children, count, icon, title }: { children: ReactNode; count: number; icon: ReactNode; title: string }) {
+  return (
+    <section className="admin-route-group" aria-label={title}>
+      <header><span>{icon}</span><h3>{title}</h3><small>{count}</small></header>
+      <div className="admin-record-list">{children}</div>
     </section>
   );
 }

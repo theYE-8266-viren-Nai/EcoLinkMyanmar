@@ -1,11 +1,10 @@
 "use client";
 
-import { CheckCircle2, LoaderCircle, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
+import { CheckCircle2, ImageIcon, LoaderCircle, MapPin, Search, UserRound, XCircle } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-import { EcoLinkMark } from "@/components/ecolink/app-shell";
+import { AdminMetric, AdminShell } from "@/features/admin/components/admin-shell";
 import type { AdminPendingReport } from "@/features/reports/types";
 import { useI18n } from "@/lib/i18n";
 
@@ -38,9 +37,22 @@ export function AdminReportsPage({
   const [refreshing, setRefreshing] = useState(false);
   const [actingId, setActingId] = useState<string>();
   const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
+  const [query, setQuery] = useState("");
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | undefined>(
     initialError ? { kind: "error", text: initialError } : undefined,
   );
+
+  const filteredReports = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return reports;
+    return reports.filter((report) =>
+      [report.title, report.issueType, report.locationText, report.submittedBy.displayName, report.submittedBy.email]
+        .some((value) => value.toLowerCase().includes(normalizedQuery)),
+    );
+  }, [query, reports]);
+
+  const highPriorityCount = reports.filter((report) => /high|critical|severe/i.test(report.severity)).length;
+  const evidenceCount = reports.filter((report) => Boolean(report.photoUrl)).length;
 
   async function loadReports() {
     setRefreshing(true);
@@ -73,48 +85,79 @@ export function AdminReportsPage({
   }
 
   return (
-    <main className="admin-page">
-      <header className="admin-header">
-        <Link href="/"><EcoLinkMark compact /></Link>
-        <div><span className="status-dot"/><strong>{t("admin.moderation")}</strong><small>{t("admin.pendingOnly")}</small></div>
-        <button className="button button--secondary" type="button" onClick={loadReports} disabled={refreshing}><RefreshCw size={17}/> {refreshing ? t("admin.refreshing") : t("admin.refresh")}</button>
-      </header>
-      <div className="admin-container admin-reports-container">
-        <div className="admin-title">
-          <div><p>{t("admin.mvp")}</p><h1>{t("admin.pendingReports")}</h1><span>{t("admin.approveHelp")}</span></div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Link className="back-link" href="/admin/recycling"><ShieldCheck size={17}/> Recycling submissions</Link>
-            <Link className="back-link" href="/"><ShieldCheck size={17}/> {t("admin.citizen")}</Link>
-          </div>
-        </div>
-        {message ? <p className={message.kind === "success" ? "admin-message is-success" : "admin-message is-error"} role="status">{message.text}</p> : null}
-        <section className="admin-report-list" aria-label={t("admin.queue")}>
-          {reports.length === 0 ? <p className="empty-copy">{t("admin.empty")}</p> : reports.map((report) => (
-            <article key={report.id}>
-              <div className="admin-report-detail">
-                <span className="report-status report-status--pending">{t("admin.pending")}</span>
-                <h2>{report.title}</h2>
-                {report.photoUrl ? <Image alt="Submitted report evidence" className="admin-report-photo" height={293} src={report.photoUrl} unoptimized width={520} /> : null}
-                <dl>
-                  <div><dt>{t("admin.submittedBy")}</dt><dd>{report.submittedBy.displayName} ({report.submittedBy.email})</dd></div>
-                  <div><dt>{t("admin.date")}</dt><dd>{DATE_FORMATTER.format(new Date(report.createdAt))}</dd></div>
-                  <div><dt>{t("admin.issue")}</dt><dd>{report.issueType}</dd></div>
-                  <div><dt>{t("admin.severity")}</dt><dd>{report.severity}</dd></div>
-                  <div><dt>{t("admin.location")}</dt><dd>{report.locationText}</dd></div>
-                  <div><dt>{t("admin.image")}</dt><dd>{report.photoStoragePath ? report.photoStoragePath.split("/").pop() : t("admin.noImage")}</dd></div>
-                  <div><dt>{t("admin.details")}</dt><dd>{report.details ?? t("admin.noDetails")}</dd></div>
-                  <div><dt>{t("admin.status")}</dt><dd>{report.status}</dd></div>
-                </dl>
-              </div>
-              <div className="admin-review-actions">
-                <label><span>{t("admin.rejectReason")} <small>{t("admin.optional")}</small></span><textarea value={rejectionReasons[report.id] ?? ""} onChange={(event) => setRejectionReasons((current) => ({ ...current, [report.id]: event.target.value }))} maxLength={300}/></label>
-                <button className="button button--primary" type="button" disabled={actingId === report.id} onClick={() => reviewReport(report.id, "approve")}>{actingId === report.id ? <LoaderCircle className="spin" size={17}/> : <CheckCircle2 size={17}/>} {t("admin.approve")}</button>
-                <button className="button button--secondary" type="button" disabled={actingId === report.id} onClick={() => reviewReport(report.id, "reject")}><XCircle size={17}/> {t("admin.reject")}</button>
-              </div>
-            </article>
-          ))}
-        </section>
+    <AdminShell
+      activeSection="reports"
+      description={t("admin.approveHelp")}
+      isRefreshing={refreshing}
+      onRefresh={loadReports}
+      title={t("admin.pendingReports")}
+    >
+      <div className="admin-metrics" aria-label="Moderation summary">
+        <AdminMetric label="Pending" value={reports.length} detail="Awaiting a decision" />
+        <AdminMetric label="High priority" value={highPriorityCount} detail="High or critical severity" />
+        <AdminMetric label="With evidence" value={evidenceCount} detail="Photo attached" />
       </div>
-    </main>
+        {message ? <p className={message.kind === "success" ? "admin-message is-success" : "admin-message is-error"} role="status">{message.text}</p> : null}
+        <section className="admin-data-section" aria-label={t("admin.queue")}>
+          <div className="admin-data-toolbar">
+            <div>
+              <h2>Moderation queue</h2>
+              <span>{filteredReports.length} of {reports.length} reports</span>
+            </div>
+            <label className="admin-search">
+              <span className="sr-only">Search pending reports</span>
+              <Search size={16} aria-hidden="true" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search title, location, or member…" type="search" />
+            </label>
+          </div>
+
+          {reports.length === 0 ? (
+            <div className="admin-empty"><CheckCircle2 size={22} aria-hidden="true" /><h3>Queue cleared</h3><p>{t("admin.empty")}</p></div>
+          ) : filteredReports.length === 0 ? (
+            <div className="admin-empty"><Search size={22} aria-hidden="true" /><h3>No matching reports</h3><p>Try a different title, member, issue type, or location.</p></div>
+          ) : (
+            <div className="admin-record-list">
+              {filteredReports.map((report) => (
+                <details className="admin-record" key={report.id}>
+                  <summary>
+                    <span className="admin-record-primary">
+                      <span className="report-status report-status--pending">{t("admin.pending")}</span>
+                      <strong>{report.title}</strong>
+                      <small><MapPin size={13} aria-hidden="true" />{report.locationText}</small>
+                    </span>
+                    <span className="admin-record-meta">
+                      <span><UserRound size={14} aria-hidden="true" />{report.submittedBy.displayName}</span>
+                      <span>{report.issueType} · {report.severity}</span>
+                      <time dateTime={report.createdAt}>{DATE_FORMATTER.format(new Date(report.createdAt))}</time>
+                    </span>
+                  </summary>
+                  <div className="admin-record-body">
+                    <div className="admin-report-detail">
+                      {report.photoUrl ? <Image alt="Submitted report evidence" className="admin-report-photo" height={293} src={report.photoUrl} unoptimized width={520} /> : <div className="admin-photo-placeholder"><ImageIcon size={22} aria-hidden="true" /><span>{t("admin.noImage")}</span></div>}
+                      <dl>
+                        <div><dt>{t("admin.submittedBy")}</dt><dd>{report.submittedBy.displayName}<br/><span>{report.submittedBy.email}</span></dd></div>
+                        <div><dt>{t("admin.date")}</dt><dd>{DATE_FORMATTER.format(new Date(report.createdAt))}</dd></div>
+                        <div><dt>{t("admin.issue")}</dt><dd>{report.issueType}</dd></div>
+                        <div><dt>{t("admin.severity")}</dt><dd>{report.severity}</dd></div>
+                        <div><dt>{t("admin.location")}</dt><dd>{report.locationText}</dd></div>
+                        <div><dt>{t("admin.image")}</dt><dd>{report.photoStoragePath ? report.photoStoragePath.split("/").pop() : t("admin.noImage")}</dd></div>
+                        <div className="admin-detail-wide"><dt>{t("admin.details")}</dt><dd>{report.details ?? t("admin.noDetails")}</dd></div>
+                      </dl>
+                    </div>
+                    <div className="admin-review-actions">
+                      <div className="admin-action-heading"><strong>Review decision</strong><span>Approve verified reports or record a reason before rejecting.</span></div>
+                      <label><span>{t("admin.rejectReason")} <small>{t("admin.optional")}</small></span><textarea value={rejectionReasons[report.id] ?? ""} onChange={(event) => setRejectionReasons((current) => ({ ...current, [report.id]: event.target.value }))} maxLength={300} placeholder="Add context for the member…"/></label>
+                      <div className="admin-action-row">
+                        <button className="button button--primary" type="button" disabled={actingId === report.id} onClick={() => reviewReport(report.id, "approve")}>{actingId === report.id ? <LoaderCircle className="spin" size={17}/> : <CheckCircle2 size={17}/>} {t("admin.approve")}</button>
+                        <button className="button button--danger" type="button" disabled={actingId === report.id} onClick={() => reviewReport(report.id, "reject")}><XCircle size={17}/> {t("admin.reject")}</button>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+              ))}
+            </div>
+          )}
+        </section>
+    </AdminShell>
   );
 }

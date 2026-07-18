@@ -18,7 +18,7 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import { Bell, Check, CircleGauge, House, MapPinned, Recycle, RotateCcw, X } from "lucide-react";
+import { Bell, Check, CircleGauge, House, MapPinned, Recycle, RotateCcw, WifiOff, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -103,6 +103,7 @@ export function AppShell({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [offline, setOffline] = useState(false);
 
   const unread = state.notifications.filter((item) => !item.read).length;
   const metadataName =
@@ -125,6 +126,17 @@ export function AppShell({
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [assistantOpen]);
 
+  useEffect(() => {
+    const updateNetworkState = () => setOffline(!navigator.onLine);
+    updateNetworkState();
+    window.addEventListener("online", updateNetworkState);
+    window.addEventListener("offline", updateNetworkState);
+    return () => {
+      window.removeEventListener("online", updateNetworkState);
+      window.removeEventListener("offline", updateNetworkState);
+    };
+  }, []);
+
   const activeTabValue = NAV_ITEMS.some((item) => item.href === pathname) ? pathname : false;
 
   return (
@@ -139,11 +151,14 @@ export function AppShell({
     >
       <Box
         sx={{
+          "--ecolink-safe-area-top": "env(safe-area-inset-top, 0px)",
+          "--ecolink-safe-area-left": "env(safe-area-inset-left, 0px)",
+          "--ecolink-safe-area-right": "env(safe-area-inset-right, 0px)",
           "--ecolink-bottom-nav-height": "64px",
           "--ecolink-bottom-nav-safe-area": "env(safe-area-inset-bottom, 0px)",
           "--ecolink-bottom-nav-clearance": "calc(var(--ecolink-bottom-nav-height) + var(--ecolink-bottom-nav-safe-area))",
           width: "100%",
-          maxWidth: 480,
+          maxWidth: { xs: "none", sm: 480 },
           height: "100dvh",
           bgcolor: "background.default",
           boxShadow: { sm: 3 },
@@ -151,6 +166,10 @@ export function AppShell({
           flexDirection: "column",
           position: "relative",
           overflow: "hidden",
+          "@media (display-mode: standalone)": {
+            maxWidth: "none",
+            boxShadow: "none",
+          },
         }}
       >
         {/* Header (AppBar) */}
@@ -162,9 +181,18 @@ export function AppShell({
             color: "text.primary",
             borderBottom: "1px solid",
             borderColor: "divider",
+            pt: "var(--ecolink-safe-area-top)",
           }}
         >
-          <Toolbar sx={{ justifyContent: "space-between", minHeight: 56, px: 1.5, gap: 1 }}>
+          <Toolbar
+            sx={{
+              justifyContent: "space-between",
+              minHeight: 56,
+              pl: "calc(12px + var(--ecolink-safe-area-left))",
+              pr: "calc(12px + var(--ecolink-safe-area-right))",
+              gap: 1,
+            }}
+          >
             <Link href="/" style={{ textDecoration: "none", minHeight: 44, display: "inline-flex", alignItems: "center" }}>
               <EcoLinkMark compact />
             </Link>
@@ -215,6 +243,29 @@ export function AppShell({
           </Toolbar>
         </AppBar>
 
+        {offline ? (
+          <Box
+            role="status"
+            sx={{
+              minHeight: 32,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 0.75,
+              px: "calc(12px + var(--ecolink-safe-area-left))",
+              pr: "calc(12px + var(--ecolink-safe-area-right))",
+              bgcolor: "rgba(255, 244, 214, 0.96)",
+              color: "#7a4b08",
+              borderBottom: "1px solid rgba(185, 120, 24, 0.18)",
+              fontSize: "0.74rem",
+              fontWeight: 800,
+            }}
+          >
+            <WifiOff size={15} aria-hidden="true" />
+            {t("shell.offline")}
+          </Box>
+        ) : null}
+
         {/* Content Area */}
         <Box
           component="main"
@@ -224,6 +275,8 @@ export function AppShell({
             position: "relative",
             bgcolor: "background.default",
             p: disablePadding ? 0 : { xs: 1.5, sm: 2 },
+            pl: disablePadding ? 0 : "max(12px, calc(12px + var(--ecolink-safe-area-left)))",
+            pr: disablePadding ? 0 : "max(12px, calc(12px + var(--ecolink-safe-area-right)))",
             pb: disableScroll ? 0 : "calc(var(--ecolink-bottom-nav-clearance) + 24px)",
             display: "flex",
             flexDirection: "column",
@@ -237,7 +290,7 @@ export function AppShell({
           sx={{
             position: "absolute",
             bottom: "calc(var(--ecolink-bottom-nav-clearance) + 12px)",
-            right: 12,
+            right: "calc(12px + var(--ecolink-safe-area-right))",
             zIndex: 1050,
           }}
         >
@@ -294,6 +347,8 @@ export function AppShell({
             borderColor: "divider",
             height: "var(--ecolink-bottom-nav-clearance)",
             pb: "var(--ecolink-bottom-nav-safe-area)",
+            pl: "var(--ecolink-safe-area-left)",
+            pr: "var(--ecolink-safe-area-right)",
           }}
         >
           <BottomNavigation
@@ -344,8 +399,12 @@ export function AppShell({
                 borderTopLeftRadius: 16,
                 borderTopRightRadius: 16,
                 maxHeight: "80dvh",
-                maxWidth: 480,
+                width: "100%",
+                maxWidth: { xs: "none", sm: 480 },
                 mx: "auto",
+                "@media (display-mode: standalone)": {
+                  maxWidth: "none",
+                },
               },
             },
           }}
@@ -434,8 +493,12 @@ export function AppShell({
                 borderTopLeftRadius: 16,
                 borderTopRightRadius: 16,
                 maxHeight: "85dvh",
-                maxWidth: 480,
+                width: "100%",
+                maxWidth: { xs: "none", sm: 480 },
                 mx: "auto",
+                "@media (display-mode: standalone)": {
+                  maxWidth: "none",
+                },
               },
             },
           }}
@@ -491,8 +554,12 @@ export function AppShell({
                 borderTopRightRadius: 16,
                 height: "80dvh",
                 maxHeight: "80dvh",
-                maxWidth: 480,
+                width: "100%",
+                maxWidth: { xs: "none", sm: 480 },
                 mx: "auto",
+                "@media (display-mode: standalone)": {
+                  maxWidth: "none",
+                },
               },
             },
           }}
