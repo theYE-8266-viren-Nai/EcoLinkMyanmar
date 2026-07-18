@@ -70,7 +70,7 @@ export function getVehicleFreshness(observedAt: string, now = Date.now()) {
 export function interpolateRoute(
   route: Array<[number, number]>,
   elapsedMilliseconds: number,
-  segmentDuration = 7000,
+  segmentDuration = 14000,
 ) {
   if (route.length < 2) return { coordinates: route[0] ?? YANGON_CENTER, heading: 0 };
   const progress = elapsedMilliseconds / segmentDuration;
@@ -100,7 +100,7 @@ export function vehiclesToFeatureCollection(vehicles: CollectorVehicleLocation[]
         type: "Point" as const,
         coordinates: [vehicle.longitude, vehicle.latitude] as [number, number],
       },
-      properties: { ...vehicle, freshness },
+      properties: { vehicleIcon: "recycle-car", ...vehicle, freshness },
     }];
   });
 

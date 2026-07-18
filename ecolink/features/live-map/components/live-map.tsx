@@ -1,9 +1,10 @@
 "use client";
 
+import BottomNavigation from "@mui/material/BottomNavigation";
+import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import {
   AlertTriangle,
   Building2,
-  CarFront,
   ChevronRight,
   CircleGauge,
   House,
@@ -15,8 +16,7 @@ import {
   PanelBottomOpen,
   Recycle,
   RotateCcw,
-  Signal,
-  SignalZero,
+  Truck,
   X,
 } from "lucide-react";
 import mapboxgl, { type GeoJSONSource, type Map as MapboxMap } from "mapbox-gl";
@@ -67,7 +67,7 @@ type MobilePanelTab = "centers" | "collectors";
 
 const MOBILE_PANEL_TABS = [
   { value: "centers", label: "Centers", Icon: Building2 },
-  { value: "collectors", label: "Collectors", Icon: CarFront },
+  { value: "collectors", label: "Collectors", Icon: Truck },
 ] as const satisfies ReadonlyArray<{
   value: MobilePanelTab;
   label: string;
@@ -108,7 +108,16 @@ function formatUpdatedAt(value: string) {
   return `Updated ${Math.floor(seconds / 60)}m ago`;
 }
 
-function addMapSourcesAndLayers(map: MapboxMap, centers: RecyclingCenterMapItem[]) {
+async function addCollectorVehicleIcons(map: MapboxMap) {
+  if (map.hasImage("recycle-car")) return;
+  const image = new Image();
+  image.src = "/recycle-car.svg";
+  await image.decode();
+  map.addImage("recycle-car", image, { pixelRatio: 2 });
+}
+
+async function addMapSourcesAndLayers(map: MapboxMap, centers: RecyclingCenterMapItem[]) {
+  await addCollectorVehicleIcons(map);
   map.addSource("waste-density", { type: "geojson", data: EMPTY_FEATURES });
   map.addSource("waste-reports", {
     type: "geojson",
@@ -124,11 +133,10 @@ function addMapSourcesAndLayers(map: MapboxMap, centers: RecyclingCenterMapItem[
     id: "waste-heatmap",
     type: "heatmap",
     source: "waste-density",
-    maxzoom: 12,
     paint: {
       "heatmap-weight": ["interpolate", ["linear"], ["*", ["get", "count"], ["get", "averageScore"]], 1, 0.12, 40, 1],
-      "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 8, 0.7, 12, 1.8],
-      "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 8, 18, 12, 42],
+      "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 8, 0.7, 12, 1.8, 16, 1.35],
+      "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 8, 18, 12, 42, 16, 58],
       "heatmap-color": [
         "interpolate", ["linear"], ["heatmap-density"],
         0, "rgba(8,124,120,0)",
@@ -137,7 +145,7 @@ function addMapSourcesAndLayers(map: MapboxMap, centers: RecyclingCenterMapItem[
         0.7, "rgba(238,126,62,0.82)",
         1, "rgba(184,55,72,0.94)",
       ],
-      "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 11.4, 0.9, 12, 0],
+      "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.88, 12, 0.72, 16, 0.42],
     },
   });
 
@@ -203,22 +211,17 @@ function addMapSourcesAndLayers(map: MapboxMap, centers: RecyclingCenterMapItem[
   });
 
   map.addLayer({
-    id: "collector-points",
-    type: "circle",
-    source: "collector-vehicles",
-    paint: {
-      "circle-radius": 13,
-      "circle-color": ["case", ["==", ["get", "freshness"], "stale"], "#68737d", "#0b3558"],
-      "circle-stroke-color": "#ffffff",
-      "circle-stroke-width": 2,
-    },
-  });
-  map.addLayer({
-    id: "collector-direction",
+    id: "collector-vehicle-icons",
     type: "symbol",
     source: "collector-vehicles",
-    layout: { "text-field": "▲", "text-size": 12, "text-rotate": ["get", "heading"], "text-rotation-alignment": "map" },
-    paint: { "text-color": "#ffffff" },
+    layout: {
+      "icon-image": ["coalesce", ["get", "vehicleIcon"], "recycle-car"],
+      "icon-size": 0.4,
+      "icon-rotate": ["+", ["get", "heading"], 90],
+      "icon-rotation-alignment": "map",
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
+    },
   });
 }
 
@@ -240,9 +243,6 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
   const [mobilePanelTab, setMobilePanelTab] = useState<MobilePanelTab>("centers");
   const [selected, setSelected] = useState<SelectedMapItem>(null);
   const [vehicles, setVehicles] = useState(initialVehicles);
-  const [realtimeState, setRealtimeState] = useState<"connecting" | "live" | "offline">(
-    demoMode ? "live" : HAS_SUPABASE_CONFIG ? "connecting" : "offline",
-  );
   const [locationMessage, setLocationMessage] = useState("");
 
   useEffect(() => {
@@ -272,9 +272,14 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
 
     const handleLoad = () => {
-      addMapSourcesAndLayers(map, centers);
-      setMapReady(true);
-      setMapUnavailable(false);
+      void addMapSourcesAndLayers(map, centers)
+        .then(() => {
+          setMapReady(true);
+          setMapUnavailable(false);
+        })
+        .catch(() => {
+          setMapError("The collector vehicle icons could not load. Center information is still available.");
+        });
     };
     const handleError = (event: mapboxgl.ErrorEvent) => {
       console.error("Mapbox rendering error", event.error);
@@ -302,6 +307,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           status: properties.status,
           observedAt: String(properties.observedAt),
           isDemo: properties.isDemo === true || properties.isDemo === "true",
+          vehicleIcon: String(properties.vehicleIcon ?? "🚚"),
         },
       });
     };
@@ -333,11 +339,11 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
     map.on("load", handleLoad);
     map.on("error", handleError);
     map.on("click", "center-points", handleCenterClick);
-    map.on("click", "collector-points", handleCollectorClick);
+    map.on("click", "collector-vehicle-icons", handleCollectorClick);
     map.on("click", "waste-report-points", handleWasteReportClick);
     map.on("click", "waste-clusters", handleWasteClusterClick);
 
-    const interactiveLayers = ["center-points", "collector-points", "waste-report-points", "waste-clusters"];
+    const interactiveLayers = ["center-points", "collector-vehicle-icons", "waste-report-points", "waste-clusters"];
     for (const layer of interactiveLayers) {
       map.on("mouseenter", layer, handleLayerMouseEnter);
       map.on("mouseleave", layer, handleLayerMouseLeave);
@@ -348,7 +354,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
       map.off("load", handleLoad);
       map.off("error", handleError);
       map.off("click", "center-points", handleCenterClick);
-      map.off("click", "collector-points", handleCollectorClick);
+      map.off("click", "collector-vehicle-icons", handleCollectorClick);
       map.off("click", "waste-report-points", handleWasteReportClick);
       map.off("click", "waste-clusters", handleWasteClusterClick);
       for (const layer of interactiveLayers) {
@@ -423,9 +429,9 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
   useEffect(() => {
     const map = mapRef.current;
     if (!mapReady || !map) return;
-    setLayerVisibility(map, ["waste-heatmap", "waste-clusters", "waste-cluster-count", "waste-report-points"], showWaste);
+    setLayerVisibility(map, ["waste-clusters", "waste-cluster-count", "waste-report-points"], showWaste);
     setLayerVisibility(map, ["center-halo", "center-points", "center-labels"], showCenters);
-    setLayerVisibility(map, ["collector-points", "collector-direction"], showCollectors);
+    setLayerVisibility(map, ["collector-vehicle-icons"], showCollectors);
   }, [mapReady, showCenters, showCollectors, showWaste]);
 
   useEffect(() => {
@@ -436,10 +442,24 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
   useEffect(() => {
     if (!demoMode) return;
     const startedAt = Date.now();
-    const update = () => setVehicles(createDemoVehicles(Date.now() - startedAt));
-    update();
-    const interval = window.setInterval(update, 350);
-    return () => window.clearInterval(interval);
+    let animationFrame = 0;
+    let lastPanelUpdate = 0;
+
+    const update = (timestamp: number) => {
+      const nextVehicles = createDemoVehicles(Date.now() - startedAt);
+      const source = mapRef.current?.getSource("collector-vehicles") as GeoJSONSource | undefined;
+      if (source) source.setData(vehiclesToFeatureCollection(nextVehicles) as Parameters<GeoJSONSource["setData"]>[0]);
+
+      if (timestamp - lastPanelUpdate >= 1000) {
+        lastPanelUpdate = timestamp;
+        setVehicles(nextVehicles);
+      }
+
+      animationFrame = window.requestAnimationFrame(update);
+    };
+
+    animationFrame = window.requestAnimationFrame(update);
+    return () => window.cancelAnimationFrame(animationFrame);
   }, [demoMode]);
 
   useEffect(() => {
@@ -470,7 +490,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           return current.map((vehicle) => vehicle.vehicleId === vehicleId ? next : vehicle);
         });
       })
-      .subscribe((status) => setRealtimeState(status === "SUBSCRIBED" ? "live" : status === "CHANNEL_ERROR" || status === "TIMED_OUT" ? "offline" : "connecting"));
+      .subscribe();
 
     return () => { void supabase.removeChannel(channel); };
   }, [demoMode]);
@@ -512,16 +532,16 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
 
   const layerToggles = (
     <div className="map-layer-toggles" aria-label="Visible map layers">
-      <button type="button" className={showWaste ? "is-active" : ""} onClick={() => setShowWaste((value) => !value)} aria-pressed={showWaste}><span className="map-layer-dot map-layer-dot--waste" />Waste density</button>
+      <button type="button" className={showWaste ? "is-active" : ""} onClick={() => setShowWaste((value) => !value)} aria-pressed={showWaste}><span className="map-layer-dot map-layer-dot--waste" />Report markers</button>
       <button type="button" className={showCenters ? "is-active" : ""} onClick={() => setShowCenters((value) => !value)} aria-pressed={showCenters}><Building2 size={16} />Centers</button>
-      <button type="button" className={showCollectors ? "is-active" : ""} onClick={() => setShowCollectors((value) => !value)} aria-pressed={showCollectors}><CarFront size={16} />Collectors</button>
+      <button type="button" className={showCollectors ? "is-active" : ""} onClick={() => setShowCollectors((value) => !value)} aria-pressed={showCollectors}><Truck size={16} />Collectors</button>
     </div>
   );
 
   const mapSummary = (
     <div className="map-panel-summary" aria-live="polite">
       <span><Layers3 size={15} aria-hidden="true" />{wasteLoading ? "Updating density…" : `${densityLabel} · ${wasteCount} visible`}</span>
-      <span><CarFront size={15} aria-hidden="true" />{visibleVehicles.length} collectors</span>
+      <span><Truck size={15} aria-hidden="true" />{visibleVehicles.length} collectors</span>
     </div>
   );
 
@@ -541,7 +561,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
       <div><strong>Active collectors</strong><span>{visibleVehicles.length} nearby</span></div>
       {visibleVehicles.length ? visibleVehicles.map((vehicle) => (
         <button type="button" key={vehicle.vehicleId} onClick={() => focusVehicle(vehicle)}>
-          <span><CarFront size={18} aria-hidden="true" /></span>
+          <span><Truck size={18} aria-hidden="true" /></span>
           <div>
             <strong>{vehicle.label}</strong>
             <small>{vehicle.status.replaceAll("_", " ")} · {formatUpdatedAt(vehicle.observedAt)}</small>
@@ -566,11 +586,6 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
       </div>
 
       <aside className="live-map-panel" aria-label="Map layers and recycling centers">
-        <div className="live-map-panel__heading">
-          <div><span>Yangon network</span><h1>Waste & recycling</h1></div>
-          <span className={realtimeState === "live" ? "map-live-status is-live" : "map-live-status"}>{realtimeState === "live" ? <Signal size={14} /> : <SignalZero size={14} />}{demoMode ? "Demo live" : realtimeState === "live" ? "Live" : realtimeState}</span>
-        </div>
-
         {layerToggles}
         {mapSummary}
         {centerList}
@@ -598,12 +613,10 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           <DrawerContent className="live-map-mobile-sheet">
             <div className="live-map-mobile-sheet__heading">
               <div>
-                <span>Yangon network</span>
                 <DrawerTitle className="live-map-mobile-sheet__title">Yangon Network</DrawerTitle>
                 <DrawerDescription className="sr-only">Browse recycling centers and active collector cars on the live Yangon map.</DrawerDescription>
               </div>
               <div className="live-map-mobile-sheet__heading-actions">
-                <span className={realtimeState === "live" ? "map-live-status is-live" : "map-live-status"}>{realtimeState === "live" ? <Signal size={14} /> : <SignalZero size={14} />}{demoMode ? "Demo live" : realtimeState === "live" ? "Live" : realtimeState}</span>
                 <DrawerClose className="live-map-mobile-sheet__close" aria-label="Close map controls">
                   <X size={19} aria-hidden="true" />
                 </DrawerClose>
@@ -637,33 +650,38 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
       ) : null}
 
       {isMobileMap ? (
-        <nav className="live-map-bottom-nav" aria-label="Home bottom navigation">
+        <BottomNavigation
+          aria-label="Home bottom navigation"
+          className="live-map-bottom-nav"
+          showLabels
+          value="/"
+        >
           {HOME_BOTTOM_NAV_ITEMS.map(({ href, label, Icon }) => (
-            <Link
-              className={href === "/" ? "nav-link is-active" : "nav-link"}
-              href={href}
-              key={href}
+            <BottomNavigationAction
               aria-current={href === "/" ? "page" : undefined}
+              component={Link}
+              href={href}
+              icon={<Icon size={22} aria-hidden="true" />}
+              key={href}
+              label={label}
               onClick={() => setMobileSheetOpen(false)}
-            >
-              <Icon size={20} aria-hidden="true" />
-              <span>{label}</span>
-            </Link>
+              value={href}
+            />
           ))}
-        </nav>
+        </BottomNavigation>
       ) : null}
 
       {selected ? (
         <article className="map-selection" aria-live="polite">
           <button type="button" onClick={() => setSelected(null)} aria-label="Close map details"><X size={17} /></button>
           {selected.kind === "center" ? <><span className="map-selection__type"><Building2 size={15} />Partner center</span><h2>{selected.center.name}</h2><p>{selected.center.address}, {selected.center.township}</p><small>{selected.center.hours}</small><div className="map-selection__tags">{selected.center.materials.slice(0, 5).map((material) => <span key={material}>{material.replaceAll("-", " ")}</span>)}</div><a href={`https://www.google.com/maps/dir/?api=1&destination=${selected.center.latitude},${selected.center.longitude}`} target="_blank" rel="noreferrer"><Navigation size={16} />Get directions</a></> : null}
-          {selected.kind === "vehicle" ? <><span className="map-selection__type"><CarFront size={15} />{selected.vehicle.isDemo ? "Demo collector" : "Live collector"}</span><h2>{selected.vehicle.label}</h2><p>{selected.vehicle.status.replaceAll("_", " ")} · {Math.round(selected.vehicle.speedKph)} km/h</p><small>{formatUpdatedAt(selected.vehicle.observedAt)}</small></> : null}
+          {selected.kind === "vehicle" ? <><span className="map-selection__type"><Truck size={15} />{selected.vehicle.isDemo ? "Demo collector" : "Live collector"}</span><h2>{selected.vehicle.label}</h2><p>{selected.vehicle.status.replaceAll("_", " ")} · {Math.round(selected.vehicle.speedKph)} km/h</p><small>{formatUpdatedAt(selected.vehicle.observedAt)}</small></> : null}
           {selected.kind === "report" ? <><span className="map-selection__type"><AlertTriangle size={15} />Community report</span><h2>{selected.wasteType.replaceAll("_", " ")}</h2><p>Waste density score {selected.score} out of 10</p><small>Approximate location · {new Date(selected.observedAt).toLocaleDateString("en-US", { timeZone: "Asia/Yangon" })}</small></> : null}
         </article>
       ) : null}
 
       <section className="map-legend" aria-label="Waste density legend">
-        <strong>Waste density</strong><span className="map-legend__ramp" aria-hidden="true" /><div><span>Lower</span><span>Higher</span></div><small>{wasteMode === "heatmap" ? "City overview" : "Approximate reports"}</small>
+        <strong>Waste density</strong><span className="map-legend__ramp" aria-hidden="true" /><div><span>Lower</span><span>Higher</span></div><small>Always visible</small>
       </section>
 
       {mapError ? <div className="map-notice map-notice--error" role="alert"><AlertTriangle size={17} />{mapError}</div> : null}

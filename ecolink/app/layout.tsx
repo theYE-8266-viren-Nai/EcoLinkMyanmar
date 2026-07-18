@@ -1,3 +1,4 @@
+import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import type { Metadata, Viewport } from "next";
 import { RootProviders } from "@/providers/root-providers";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -18,7 +19,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
-        <RootProviders>{children}</RootProviders>
+        <AppRouterCacheProvider options={{ enableCssLayer: true }}>
+          <RootProviders>{children}</RootProviders>
+        </AppRouterCacheProvider>
       </body>
     </html>
   );

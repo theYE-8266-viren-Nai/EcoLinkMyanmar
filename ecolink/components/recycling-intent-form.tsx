@@ -1,14 +1,19 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import CircularProgress from "@mui/material/CircularProgress";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
 import { motion } from "framer-motion";
 import { Recycle } from "lucide-react";
-import { useState, useTransition, type ReactNode } from "react";
+import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 
 import { submitRecyclingIntentAction } from "@/actions/recycling-intent";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useMounted } from "@/hooks/use-mounted";
 import {
   recyclingIntentSchema,
@@ -52,111 +57,84 @@ export function RecyclingIntentForm() {
   return (
     <motion.form
       animate={mounted ? { opacity: 1, y: 0 } : false}
-      className="w-full max-w-xl space-y-4 rounded-xl border bg-card p-6 shadow-sm"
+      className="w-full max-w-xl"
       initial={{ opacity: 0, y: 12 }}
       onSubmit={form.handleSubmit(onSubmit)}
       transition={{ duration: 0.2, ease: "easeOut" }}
     >
-      <div className="flex items-start gap-3">
-        <span className="rounded-lg bg-primary/10 p-2 text-primary">
-          <Recycle aria-hidden="true" className="size-5" />
-        </span>
-        <div>
-          <h2 className="text-lg font-semibold">Recycling intent example</h2>
-          <p className="text-sm text-muted-foreground">
-            A starter RHF + Zod form connected to a typed Server Action.
-          </p>
-        </div>
-      </div>
+      <Card variant="outlined">
+        <CardContent>
+          <Stack spacing={2.25}>
+            <div className="flex items-start gap-3">
+              <span className="rounded-lg bg-primary/10 p-2 text-primary">
+                <Recycle aria-hidden="true" className="size-5" />
+              </span>
+              <div>
+                <h2 className="text-lg font-semibold">Plan a recycling pickup</h2>
+                <p className="text-sm text-muted-foreground">
+                  Tell us what you want to recycle and when collection works best.
+                </p>
+              </div>
+            </div>
 
-      <Field
-        error={form.formState.errors.name?.message}
-        htmlFor="name"
-        label="Name"
-      >
-        <Input id="name" autoComplete="name" {...form.register("name")} />
-      </Field>
+            <TextField
+              autoComplete="name"
+              error={Boolean(form.formState.errors.name)}
+              helperText={form.formState.errors.name?.message}
+              id="name"
+              label="Name"
+              {...form.register("name")}
+            />
 
-      <Field
-        error={form.formState.errors.email?.message}
-        htmlFor="email"
-        label="Email"
-      >
-        <Input
-          id="email"
-          type="email"
-          autoComplete="email"
-          {...form.register("email")}
-        />
-      </Field>
+            <TextField
+              autoComplete="email"
+              error={Boolean(form.formState.errors.email)}
+              helperText={form.formState.errors.email?.message}
+              id="email"
+              label="Email"
+              type="email"
+              {...form.register("email")}
+            />
 
-      <Field
-        error={form.formState.errors.materialType?.message}
-        htmlFor="materialType"
-        label="Material type"
-      >
-        <Input
-          id="materialType"
-          placeholder="Plastic bottles, paper, aluminum cans"
-          {...form.register("materialType")}
-        />
-      </Field>
+            <TextField
+              error={Boolean(form.formState.errors.materialType)}
+              helperText={form.formState.errors.materialType?.message}
+              id="materialType"
+              label="Material type"
+              placeholder="Plastic bottles, paper, aluminum cans"
+              {...form.register("materialType")}
+            />
 
-      <Field
-        error={form.formState.errors.pickupWindow?.message}
-        htmlFor="pickupWindow"
-        label="Preferred pickup window"
-      >
-        <Input id="pickupWindow" {...form.register("pickupWindow")} />
-      </Field>
+            <TextField
+              error={Boolean(form.formState.errors.pickupWindow)}
+              helperText={form.formState.errors.pickupWindow?.message}
+              id="pickupWindow"
+              label="Preferred pickup window"
+              {...form.register("pickupWindow")}
+            />
 
-      <Field
-        error={form.formState.errors.notes?.message}
-        htmlFor="notes"
-        label="Notes"
-      >
-        <Input
-          id="notes"
-          placeholder="Optional preparation or access details"
-          {...form.register("notes")}
-        />
-      </Field>
+            <TextField
+              error={Boolean(form.formState.errors.notes)}
+              helperText={form.formState.errors.notes?.message}
+              id="notes"
+              label="Notes"
+              placeholder="Gate code, pickup spot, or sorting notes"
+              {...form.register("notes")}
+            />
 
-      <Button className="w-full" disabled={isPending} type="submit">
-        {isPending ? "Submitting..." : "Validate recycling intent"}
-      </Button>
+            <Button
+              disabled={isPending}
+              startIcon={isPending ? <CircularProgress color="inherit" size={16} /> : null}
+              type="submit"
+              variant="contained"
+            >
+              {isPending ? "Submitting..." : "Request pickup"}
+            </Button>
 
-      {statusMessage ? (
-        <p className="rounded-lg bg-muted px-3 py-2 text-sm" role="status">
-          {statusMessage}
-        </p>
-      ) : null}
+            {statusMessage ? <Alert severity="info">{statusMessage}</Alert> : null}
+          </Stack>
+        </CardContent>
+      </Card>
     </motion.form>
-  );
-}
-
-function Field({
-  children,
-  error,
-  htmlFor,
-  label,
-}: {
-  children: ReactNode;
-  error?: string;
-  htmlFor: string;
-  label: string;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-sm font-medium" htmlFor={htmlFor}>
-        {label}
-      </label>
-      {children}
-      {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </div>
   );
 }

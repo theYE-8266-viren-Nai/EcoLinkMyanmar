@@ -68,4 +68,12 @@ describe("live map data", () => {
     expect(createDemoWasteResponse({ ...baseQuery, zoom: 17 }).mode).toBe("reports");
     expect(createDemoVehicles(1000)).toHaveLength(2);
   });
+
+  it("keeps demo collector movement slow between map refreshes", () => {
+    const [firstTick] = createDemoVehicles(1000);
+    const [secondTick] = createDemoVehicles(2000);
+
+    expect(Math.abs(secondTick.longitude - firstTick.longitude)).toBeLessThan(0.001);
+    expect(Math.abs(secondTick.latitude - firstTick.latitude)).toBeLessThan(0.001);
+  });
 });

@@ -1,13 +1,17 @@
 "use client";
 
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import CircularProgress from "@mui/material/CircularProgress";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
 import { UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
 
 export function EcoLinkSignUp() {
@@ -51,34 +55,51 @@ export function EcoLinkSignUp() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <CardTitle>Create a Supabase account</CardTitle>
-      </CardHeader>
+    <Card className="w-full max-w-sm" variant="outlined">
       <CardContent>
-        <form className="grid gap-4" onSubmit={signUp}>
-          <label className="grid gap-1.5 text-sm font-medium">
-            <span>Name</span>
-            <Input autoComplete="name" onChange={(event) => setDisplayName(event.target.value)} required value={displayName} />
-          </label>
-          <label className="grid gap-1.5 text-sm font-medium">
-            <span>Email</span>
-            <Input autoComplete="email" onChange={(event) => setEmail(event.target.value)} required type="email" value={email} />
-          </label>
-          <label className="grid gap-1.5 text-sm font-medium">
-            <span>Password</span>
-            <Input autoComplete="new-password" minLength={8} onChange={(event) => setPassword(event.target.value)} required type="password" value={password} />
-          </label>
-          {error ? <p className="form-error" role="alert">{error}</p> : null}
-          {message ? <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800" role="status">{message}</p> : null}
-          <Button disabled={isSubmitting} type="submit">
-            <UserPlus aria-hidden="true" />
+        <Stack component="form" spacing={2} onSubmit={signUp}>
+          <h2 className="text-xl font-bold text-secondary">Create your EcoLink account</h2>
+          <TextField
+            autoComplete="name"
+            label="Name"
+            onChange={(event) => setDisplayName(event.target.value)}
+            required
+            value={displayName}
+            variant="filled"
+          />
+          <TextField
+            autoComplete="email"
+            label="Email"
+            onChange={(event) => setEmail(event.target.value)}
+            required
+            type="email"
+            value={email}
+            variant="filled"
+          />
+          <TextField
+            autoComplete="new-password"
+            label="Password"
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            slotProps={{ htmlInput: { minLength: 8 } }}
+            type="password"
+            value={password}
+            variant="filled"
+          />
+          {error ? <Alert severity="error">{error}</Alert> : null}
+          {message ? <Alert severity="success">{message}</Alert> : null}
+          <Button
+            disabled={isSubmitting}
+            startIcon={isSubmitting ? <CircularProgress color="inherit" size={16} /> : <UserPlus aria-hidden="true" size={18} />}
+            type="submit"
+            variant="contained"
+          >
             {isSubmitting ? "Creating account" : "Create account"}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
-            Already have an account? <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/sign-in">Sign in</Link>
+            Already have an account? <Link className="inline-flex min-h-11 items-center font-medium text-primary underline-offset-4 hover:underline" href="/sign-in">Sign in</Link>
           </p>
-        </form>
+        </Stack>
       </CardContent>
     </Card>
   );

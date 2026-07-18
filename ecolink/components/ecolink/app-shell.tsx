@@ -1,5 +1,7 @@
 "use client";
 
+import BottomNavigation from "@mui/material/BottomNavigation";
+import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import { Bell, Bot, Check, CircleGauge, House, MapPinned, QrCode, Recycle, RotateCcw, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -104,13 +106,24 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       <div className="page-frame">{children}</div>
-      <nav className="mobile-nav" aria-label="Mobile navigation">
+      <BottomNavigation
+        aria-label="Mobile navigation"
+        className="mobile-nav"
+        showLabels
+        value={NAV_ITEMS.find((item) => item.href === pathname)?.href ?? false}
+      >
         {NAV_ITEMS.map(({ href, label, Icon }) => (
-          <Link className={pathname === href ? "nav-link is-active" : "nav-link"} href={href} key={href} aria-current={pathname === href ? "page" : undefined}>
-            <Icon size={19} aria-hidden="true" /><span>{label}</span>
-          </Link>
+          <BottomNavigationAction
+            aria-current={pathname === href ? "page" : undefined}
+            component={Link}
+            href={href}
+            icon={<Icon size={21} aria-hidden="true" />}
+            key={href}
+            label={label}
+            value={href}
+          />
         ))}
-      </nav>
+      </BottomNavigation>
     </div>
   );
 }
