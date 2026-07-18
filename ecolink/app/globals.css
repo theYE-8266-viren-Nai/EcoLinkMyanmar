@@ -364,6 +364,32 @@ h1, h2, h3 { text-wrap: balance; }
 .report-success h1 { max-width: 650px; margin-top: 8px; color: var(--navy); font-size: 2.1rem; }
 .report-success > span { max-width: 62ch; margin-top: 12px; color: var(--muted-ink); line-height: 1.55; }
 .report-success .button { margin-top: 24px; }
+.report-page--wide { max-width: 1080px; }
+.report-submit-form { display: grid; gap: 18px; margin-top: 20px; }
+.report-submit-form label { display: grid; gap: 7px; color: var(--ink); font-size: .75rem; font-weight: 700; }
+.report-submit-form label > input { min-height: 44px; padding: 0 11px; border: 1px solid var(--line); border-radius: 6px; outline: 0; }
+.report-submit-form label > input:focus { border-color: var(--teal); }
+.report-history { padding: 24px; }
+.report-history-list { display: grid; gap: 0; margin-top: 18px; border-top: 1px solid var(--line); }
+.report-history-list article { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.report-history-list h3 { margin-top: 7px; color: var(--navy); font-size: 1rem; }
+.report-history-list p, .report-history-list small { display: block; margin-top: 5px; color: var(--muted-ink); font-size: .72rem; }
+.report-status { display: inline-flex; align-items: center; min-height: 26px; padding: 0 8px; border-radius: 999px; font-size: .66rem; font-weight: 800; text-transform: uppercase; }
+.report-status--pending { color: #7a570c; background: #fff3d5; }
+.report-status--approved { color: var(--green); background: #e9f6ee; }
+.report-status--rejected { color: #8f2f2f; background: #fff0f0; }
+.admin-reports-container { max-width: 1020px; }
+.admin-report-list { display: grid; gap: 14px; margin-top: 18px; }
+.admin-report-list article { display: grid; grid-template-columns: 1fr 260px; gap: 18px; padding: 20px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+.admin-report-detail h2 { margin-top: 8px; color: var(--navy); font-size: 1.15rem; }
+.admin-report-detail dl { display: grid; gap: 9px; margin: 16px 0 0; }
+.admin-report-detail dl div { display: grid; grid-template-columns: 110px 1fr; gap: 12px; font-size: .74rem; }
+.admin-report-detail dt { color: var(--muted-ink); }
+.admin-report-detail dd { margin: 0; color: var(--ink); }
+.admin-review-actions { display: grid; align-content: start; gap: 10px; }
+.admin-review-actions label { display: grid; gap: 7px; color: var(--ink); font-size: .75rem; font-weight: 700; }
+.admin-review-actions textarea { min-height: 120px; resize: vertical; padding: 10px; border: 1px solid var(--line); border-radius: 6px; outline: 0; }
+.admin-review-actions textarea:focus { border-color: var(--teal); }
 
 .rewards-page { display: grid; gap: 28px; }
 .back-link { min-height: 40px; display: inline-flex; align-items: center; gap: 7px; justify-self: start; color: var(--muted-ink); font-size: .76rem; font-weight: 700; }
@@ -556,6 +582,10 @@ h1, h2, h3 { text-wrap: balance; }
   .stepper li { flex-direction: column; gap: 4px; font-size: .66rem; }
   .stepper li:not(:last-child)::after { left: calc(50% + 24px); right: calc(-50% + 24px); }
   .report-review > div { grid-template-columns: 100px 1fr; }
+  .report-history-list article, .admin-report-list article { grid-template-columns: 1fr; }
+  .report-history-list article { align-items: stretch; }
+  .report-history-list .button { width: 100%; }
+  .admin-report-detail dl div { grid-template-columns: 1fr; gap: 3px; }
   .rewards-intro { align-items: stretch; flex-direction: column; }
   .balance-panel { min-width: 0; }
   .reward-grid, .cleanup-section { grid-template-columns: 1fr; }

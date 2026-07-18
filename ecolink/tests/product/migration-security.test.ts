@@ -15,6 +15,10 @@ const supabaseAuthMigration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260718120000_supabase_native_auth.sql"),
   "utf8",
 );
+const reportWorkflowMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718153000_report_approval_workflow.sql"),
+  "utf8",
+);
 
 describe("EcoLink Supabase migration", () => {
   it("enables RLS on every new user-data table", () => {
@@ -52,5 +56,23 @@ describe("EcoLink Supabase migration", () => {
     expect(profileRpcMigration).toContain("create or replace function public.get_current_staff_center()");
     expect(profileRpcMigration).toContain("assignment.is_active");
     expect(profileRpcMigration).toContain("revoke all on function public.get_current_staff_center() from public, anon");
+  });
+
+  it("protects report review and point claiming transitions", () => {
+    expect(reportWorkflowMigration).toContain("create type public.report_status as enum ('PENDING', 'APPROVED', 'REJECTED')");
+    expect(reportWorkflowMigration).toContain("alter table public.environment_reports enable row level security");
+    expect(reportWorkflowMigration).toContain("profile.app_role = 'admin'");
+    expect(reportWorkflowMigration).toContain("if not public.current_profile_is_admin() then");
+    expect(reportWorkflowMigration).toContain("where id = target_report_id\n    and status = 'PENDING'::public.report_status");
+    expect(reportWorkflowMigration).toContain("if report_row.status <> 'APPROVED'::public.report_status then");
+    expect(reportWorkflowMigration).toContain("for update");
+    expect(reportWorkflowMigration).toContain("on conflict (report_id) where report_id is not null do nothing");
+  });
+
+  it("does not expose report workflow RPCs to anonymous callers", () => {
+    expect(reportWorkflowMigration).toContain("revoke all on function public.submit_environment_report(text, text, text, text, text) from public, anon");
+    expect(reportWorkflowMigration).toContain("revoke all on function public.approve_environment_report(uuid) from public, anon");
+    expect(reportWorkflowMigration).toContain("revoke all on function public.reject_environment_report(uuid, text) from public, anon");
+    expect(reportWorkflowMigration).toContain("revoke all on function public.claim_environment_report_points(uuid) from public, anon");
   });
 });

@@ -6,6 +6,64 @@
     "description": "Public EcoLink APIs for AI recyclable-item and environment image analysis."
   },
   "paths": {
+    "/api/admin/reports": {
+      "get": {
+        "operationId": "get-admin-reports",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [],
+        "responses": {}
+      }
+    },
+    "/api/admin/reports/{id}/approve": {
+      "post": {
+        "operationId": "post-admin-reports-{id}-approve",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "123",
+            "description": "Path parameter: id"
+          }
+        ],
+        "responses": {}
+      }
+    },
+    "/api/admin/reports/{id}/reject": {
+      "post": {
+        "operationId": "post-admin-reports-{id}-reject",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "123",
+            "description": "Path parameter: id"
+          }
+        ],
+        "responses": {}
+      }
+    },
     "/api/ai/scans": {
       "post": {
         "operationId": "post-ai-scans",
@@ -66,18 +124,6 @@
             }
           }
         }
-      }
-    },
-    "/api/collector-vehicles/location": {
-      "post": {
-        "operationId": "post-collector-vehicles-location",
-        "summary": "",
-        "description": "",
-        "tags": [
-          "Collector-vehicles"
-        ],
-        "parameters": [],
-        "responses": {}
       }
     },
     "/api/environment-reports": {
@@ -142,31 +188,64 @@
         }
       }
     },
-    "/api/map/waste": {
+    "/api/reports": {
       "get": {
-        "operationId": "get-map-waste",
+        "operationId": "get-reports",
         "summary": "",
         "description": "",
         "tags": [
-          "Map"
+          "Reports"
         ],
         "parameters": [],
+        "responses": {}
+      },
+      "post": {
+        "operationId": "post-reports",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Reports"
+        ],
+        "parameters": [],
+        "responses": {}
+      }
+    },
+    "/api/reports/{id}/claim": {
+      "post": {
+        "operationId": "post-reports-{id}-claim",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Reports"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "123",
+            "description": "Path parameter: id"
+          }
+        ],
         "responses": {}
       }
     }
   },
   "tags": [
     {
-      "name": "AI Scanner"
+      "name": "Admin"
     },
     {
-      "name": "Collector-vehicles"
+      "name": "AI Scanner"
     },
     {
       "name": "Environment Reports"
     },
     {
-      "name": "Map"
+      "name": "Reports"
     }
   ],
   "servers": [
@@ -488,58 +567,6 @@
           "participationStatus"
         ]
       },
-      "collectorLocationSchema": {
-        "type": "object",
-        "properties": {
-          "vehicleId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "latitude": {
-            "type": "number",
-            "minimum": -90,
-            "maximum": 90
-          },
-          "longitude": {
-            "type": "number",
-            "minimum": -180,
-            "maximum": 180
-          },
-          "heading": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 359.999999
-          },
-          "speedKph": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 180
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "collecting",
-              "en_route",
-              "returning",
-              "offline"
-            ]
-          },
-          "observedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "vehicleId",
-          "latitude",
-          "longitude",
-          "heading",
-          "speedKph",
-          "status",
-          "observedAt"
-        ],
-        "additionalProperties": false
-      },
       "communityCampaignSchema": {
         "type": "object",
         "properties": {
@@ -757,62 +784,6 @@
       },
       "finiteNumber": {
         "type": "number"
-      },
-      "mapPointGeometrySchema": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "Point"
-            ]
-          },
-          "coordinates": {
-            "type": "array",
-            "prefixItems": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "number"
-              }
-            ],
-            "items": false,
-            "minItems": 2,
-            "maxItems": 2
-          }
-        },
-        "required": [
-          "type",
-          "coordinates"
-        ]
-      },
-      "mapPolygonGeometrySchema": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "Polygon"
-            ]
-          },
-          "coordinates": {
-            "type": "array",
-            "items": {
-              "type": "array",
-              "items": {
-                "type": "array",
-                "items": {
-                  "type": "number"
-                }
-              }
-            }
-          }
-        },
-        "required": [
-          "type",
-          "coordinates"
-        ]
       },
       "materialCategorySchema": {
         "type": "object",
@@ -1252,6 +1223,19 @@
           "items"
         ]
       },
+      "rejectReportSchema": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 300
+          }
+        }
+      },
+      "reportIdSchema": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
       "rewardLedgerEntrySchema": {
         "type": "object",
         "properties": {
@@ -1367,6 +1351,25 @@
           "status"
         ]
       },
+      "submitReportLocationSchema": {
+        "type": "object",
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ]
+      },
       "uuidSchema": {
         "type": "string",
         "format": "uuid"
@@ -1404,104 +1407,6 @@
         "required": [
           "error"
         ]
-      },
-      "wasteMapQuerySchema": {
-        "type": "object",
-        "properties": {
-          "west": {
-            "type": "number",
-            "minimum": -180,
-            "maximum": 180
-          },
-          "south": {
-            "type": "number",
-            "minimum": -90,
-            "maximum": 90
-          },
-          "east": {
-            "type": "number",
-            "minimum": -180,
-            "maximum": 180
-          },
-          "north": {
-            "type": "number",
-            "minimum": -90,
-            "maximum": 90
-          },
-          "zoom": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 22
-          },
-          "window": {
-            "type": "string",
-            "enum": [
-              "24h",
-              "7d",
-              "30d"
-            ],
-            "default": "30d"
-          },
-          "wasteType": {
-            "type": "string",
-            "enum": [
-              "MIXED",
-              "PLASTIC",
-              "PAPER_CARDBOARD",
-              "METAL",
-              "GLASS",
-              "ORGANIC",
-              "E_WASTE",
-              "HAZARDOUS",
-              "OTHER"
-            ]
-          }
-        },
-        "required": [
-          "west",
-          "south",
-          "east",
-          "north",
-          "zoom",
-          "window"
-        ]
-      },
-      "wasteMapRpcRowsSchema": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "mode": {
-              "type": "string"
-            },
-            "feature_id": {
-              "type": "string"
-            },
-            "geometry": {
-              "oneOf": [
-                {
-                  "$ref": "#/components/schemas/mapPointGeometrySchema"
-                },
-                {
-                  "$ref": "#/components/schemas/mapPolygonGeometrySchema"
-                }
-              ]
-            },
-            "properties": {
-              "type": "object",
-              "additionalProperties": {},
-              "propertyNames": {
-                "type": "string"
-              }
-            }
-          },
-          "required": [
-            "mode",
-            "feature_id",
-            "geometry",
-            "properties"
-          ]
-        }
       }
     },
     "responses": {}
