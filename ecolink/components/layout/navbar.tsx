@@ -2,6 +2,7 @@ import { Leaf } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { MobileNavigation } from "@/components/layout/mobile-navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,9 @@ export function Navbar({ actions, className, items = defaultItems }: NavbarProps
           </span>
           EcoLink
         </Link>
+        <div className="sm:hidden">
+          <MobileNavigation items={items} />
+        </div>
         <nav className="hidden items-center gap-1 sm:flex" aria-label="Primary">
           {items.map((item) => (
             <Link

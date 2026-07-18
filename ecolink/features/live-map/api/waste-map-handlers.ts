@@ -20,7 +20,7 @@ async function loadWasteMapRows(query: WasteMapQuery, now: Date) {
     name: "get_public_waste_map",
     args: WasteMapRpc["Args"],
   ) => Promise<{ data: WasteMapRpc["Returns"] | null; error: { message: string } | null }>;
-  const callWasteMapRpc = supabase.rpc as unknown as WasteMapRpcCaller;
+  const callWasteMapRpc = supabase.rpc.bind(supabase) as unknown as WasteMapRpcCaller;
   const { data, error } = await callWasteMapRpc("get_public_waste_map", {
     min_lng: query.west,
     min_lat: query.south,

@@ -4,6 +4,8 @@ import { AdminReportsPage } from "@/features/reports/components/admin-reports-pa
 import { createReportWorkflowService, ReportWorkflowError } from "@/features/reports/services/report-service";
 import type { AdminPendingReport } from "@/features/reports/types";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminReportsRoutePage() {
   let initialReports: AdminPendingReport[] = [];
   let initialError: string | undefined;
@@ -15,6 +17,10 @@ export default async function AdminReportsRoutePage() {
     if (error instanceof ReportWorkflowError && error.status === 401) {
       redirect("/sign-in?redirect_url=/admin/reports");
     }
+    if (error instanceof ReportWorkflowError && error.status === 403) {
+      redirect("/dashboard");
+    }
+    console.error(error);
     initialError = error instanceof ReportWorkflowError ? error.message : "Pending reports could not be loaded.";
   }
 

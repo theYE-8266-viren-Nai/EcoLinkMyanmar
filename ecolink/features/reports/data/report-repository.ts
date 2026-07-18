@@ -80,7 +80,7 @@ export class ReportRepository {
 
   async ensureCurrentProfile(user: User) {
     if (!user.email) throw new Error("Your Supabase account needs a primary email.");
-    const rpc = this.supabase.rpc as unknown as (
+    const rpc = this.supabase.rpc.bind(this.supabase) as unknown as (
       name: "ensure_current_profile",
       args: { profile_display_name: string; profile_email: string },
     ) => RpcResult<EnsureProfileRow[]>;
@@ -93,7 +93,7 @@ export class ReportRepository {
   }
 
   async isCurrentUserAdmin() {
-    const rpc = this.supabase.rpc as unknown as (name: "current_profile_is_admin") => RpcResult<boolean>;
+    const rpc = this.supabase.rpc.bind(this.supabase) as unknown as (name: "current_profile_is_admin") => RpcResult<boolean>;
     const { data, error } = await rpc("current_profile_is_admin");
     if (error) throw new Error(error.message);
     return data === true;
@@ -117,7 +117,7 @@ export class ReportRepository {
   }
 
   async submitReport(input: PersistReportInput) {
-    const rpc = this.supabase.rpc as unknown as (
+    const rpc = this.supabase.rpc.bind(this.supabase) as unknown as (
       name: "submit_environment_report",
       args: {
         report_title: string;
@@ -189,13 +189,13 @@ export class ReportRepository {
   }
 
   async approveReport(reportId: string) {
-    const rpc = this.supabase.rpc as unknown as (name: "approve_environment_report", args: { target_report_id: string }) => RpcResult<string>;
+    const rpc = this.supabase.rpc.bind(this.supabase) as unknown as (name: "approve_environment_report", args: { target_report_id: string }) => RpcResult<string>;
     const { error } = await rpc("approve_environment_report", { target_report_id: reportId });
     if (error) throw new Error(error.message);
   }
 
   async rejectReport(reportId: string, reason?: string) {
-    const rpc = this.supabase.rpc as unknown as (
+    const rpc = this.supabase.rpc.bind(this.supabase) as unknown as (
       name: "reject_environment_report",
       args: { target_report_id: string; reason?: string | null },
     ) => RpcResult<string>;
@@ -204,7 +204,7 @@ export class ReportRepository {
   }
 
   async claimReportPoints(reportId: string): Promise<ReportClaimResult> {
-    const rpc = this.supabase.rpc as unknown as (
+    const rpc = this.supabase.rpc.bind(this.supabase) as unknown as (
       name: "claim_environment_report_points",
       args: { target_report_id: string },
     ) => RpcResult<ClaimReportRpcRow[]>;

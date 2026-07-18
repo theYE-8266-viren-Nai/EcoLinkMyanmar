@@ -632,21 +632,25 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
               {mobilePanelTab === "centers" ? centerList : null}
               {mobilePanelTab === "collectors" ? collectorList : null}
             </section>
-            <nav className="live-map-bottom-nav" aria-label="Home bottom navigation">
-              {HOME_BOTTOM_NAV_ITEMS.map(({ href, label, Icon }) => (
-                <Link
-                  className={href === "/" ? "nav-link is-active" : "nav-link"}
-                  href={href}
-                  key={href}
-                  aria-current={href === "/" ? "page" : undefined}
-                >
-                  <Icon size={19} aria-hidden="true" />
-                  <span>{label}</span>
-                </Link>
-              ))}
-            </nav>
           </DrawerContent>
         </Drawer>
+      ) : null}
+
+      {isMobileMap ? (
+        <nav className="live-map-bottom-nav" aria-label="Home bottom navigation">
+          {HOME_BOTTOM_NAV_ITEMS.map(({ href, label, Icon }) => (
+            <Link
+              className={href === "/" ? "nav-link is-active" : "nav-link"}
+              href={href}
+              key={href}
+              aria-current={href === "/" ? "page" : undefined}
+              onClick={() => setMobileSheetOpen(false)}
+            >
+              <Icon size={20} aria-hidden="true" />
+              <span>{label}</span>
+            </Link>
+          ))}
+        </nav>
       ) : null}
 
       {selected ? (
