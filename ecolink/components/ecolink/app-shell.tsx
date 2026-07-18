@@ -26,20 +26,24 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { syncCurrentProfile } from "@/actions/profile";
 import { EcoLinkUserButton } from "@/components/auth/user-button";
+import { LanguageToggle } from "@/components/language-toggle";
 import { FaqAssistantScreen } from "@/features/faq-assistant/components/faq-assistant-screen";
 import { useSupabaseUser } from "@/hooks/use-supabase-user";
+import { useI18n } from "@/lib/i18n";
 import { useEcoLink } from "@/providers/ecolink-context";
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_ECOLINK_DEMO_MODE === "true";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Home", Icon: House },
-  { href: "/dashboard", label: "Impact", Icon: CircleGauge },
-  { href: "/recycle", label: "Recycle", Icon: MapPinned },
-  { href: "/report", label: "Report", Icon: Recycle },
+  { href: "/", labelKey: "nav.home", Icon: House },
+  { href: "/dashboard", labelKey: "nav.impact", Icon: CircleGauge },
+  { href: "/recycle", labelKey: "nav.recycle", Icon: MapPinned },
+  { href: "/report", labelKey: "nav.report", Icon: Recycle },
 ] as const;
 
 export function EcoLinkMark({ compact = false }: { compact?: boolean }) {
+  const { t } = useI18n();
+
   return (
     <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
       <Box
@@ -76,7 +80,7 @@ export function EcoLinkMark({ compact = false }: { compact?: boolean }) {
               fontWeight: 650,
             }}
           >
-            Myanmar recycling network
+            {t("shell.tagline")}
           </Typography>
         )}
       </Box>
@@ -94,6 +98,7 @@ export function AppShell({
   disablePadding?: boolean;
 }) {
   const pathname = usePathname();
+  const { t } = useI18n();
   const { state, markAllNotificationsRead, resetDemo } = useEcoLink();
   const { user } = useSupabaseUser();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -171,17 +176,19 @@ export function AppShell({
             borderColor: "divider",
           }}
         >
-          <Toolbar sx={{ justifyContent: "space-between", minHeight: 56, px: 2 }}>
-            <Link href="/" style={{ textDecoration: "none" }}>
+          <Toolbar sx={{ justifyContent: "space-between", minHeight: 56, px: 1.5, gap: 1 }}>
+            <Link href="/" style={{ textDecoration: "none", minHeight: 44, display: "inline-flex", alignItems: "center" }}>
               <EcoLinkMark compact />
             </Link>
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
+              <LanguageToggle compact />
               {/* Notification Button */}
               <IconButton
-                aria-label={`Notifications, ${unread} unread`}
+                aria-label={t("shell.notifications", { count: unread })}
                 color="inherit"
                 onClick={() => setNotificationsOpen(true)}
                 size="medium"
+                sx={{ minWidth: 44, minHeight: 44 }}
               >
                 <Badge badgeContent={unread} color="error">
                   <Bell size={20} />
@@ -198,20 +205,20 @@ export function AppShell({
                   sx={{
                     borderRadius: "20px",
                     px: 2,
-                    minHeight: 32,
+                    minHeight: 44,
                     fontSize: "0.75rem",
                   }}
                 >
-                  Sign in
+                  {t("shell.signIn")}
                 </Button>
               ) : (
                 <IconButton
-                  aria-label="Open profile and member code"
+                  aria-label={t("shell.openProfile")}
                   onClick={() => setProfileOpen(true)}
-                  size="small"
-                  sx={{ border: "1.5px solid", borderColor: "divider", p: 0.25 }}
+                  size="medium"
+                  sx={{ border: "1.5px solid", borderColor: "divider", p: 0.5, minWidth: 44, minHeight: 44 }}
                 >
-                  <Avatar sx={{ width: 28, height: 28, fontSize: "0.75rem", bgcolor: "secondary.main" }}>
+                  <Avatar sx={{ width: 32, height: 32, fontSize: "0.75rem", bgcolor: "secondary.main" }}>
                     {initials}
                   </Avatar>
                 </IconButton>
@@ -228,8 +235,8 @@ export function AppShell({
             overflowY: disableScroll ? "hidden" : "auto",
             position: "relative",
             bgcolor: "background.default",
-            p: disablePadding ? 0 : 2,
-            pb: disableScroll ? 0 : "80px", // space for bottom navigation
+            p: disablePadding ? 0 : { xs: 1.5, sm: 2 },
+            pb: disableScroll ? 0 : "88px", // space for bottom navigation + safe area
             display: "flex",
             flexDirection: "column",
           }}
@@ -241,8 +248,8 @@ export function AppShell({
         <Box
           sx={{
             position: "absolute",
-            bottom: 76,
-            right: 16,
+            bottom: 84,
+            right: 12,
             zIndex: 1050,
           }}
         >
@@ -254,7 +261,7 @@ export function AppShell({
               transition: "transform 0.2s",
               "&:hover": { transform: "scale(1.08)" },
             }}
-            aria-label="Open EcoGuide assistant"
+            aria-label={t("shell.openAssistant")}
           >
             <Box
               sx={{
@@ -280,7 +287,7 @@ export function AppShell({
                   letterSpacing: 0.5,
                 }}
               >
-                EcoGuide
+                {t("shell.ecoGuide")}
               </Paper>
             </Box>
           </IconButton>
@@ -297,21 +304,29 @@ export function AppShell({
             zIndex: 1000,
             borderTop: "1px solid",
             borderColor: "divider",
-            height: 60,
+            height: 64,
+            pb: "env(safe-area-inset-bottom, 0px)",
           }}
         >
           <BottomNavigation
             showLabels
             value={activeTabValue}
-            sx={{ height: "100%" }}
+            sx={{
+              height: "100%",
+              "& .MuiBottomNavigationAction-root": {
+                minWidth: 0,
+                minHeight: 56,
+                py: 0.75,
+              },
+            }}
           >
-            {NAV_ITEMS.map(({ href, label, Icon }) => (
+            {NAV_ITEMS.map(({ href, labelKey, Icon }) => (
               <BottomNavigationAction
                 component={Link}
                 href={href}
                 icon={<Icon size={20} />}
                 key={href}
-                label={label}
+                label={t(labelKey)}
                 value={href}
                 sx={{
                   color: "text.secondary",
@@ -319,7 +334,11 @@ export function AppShell({
                     color: "primary.main",
                   },
                   minWidth: 0,
-                  py: 0.5,
+                  py: 0.75,
+                  "& .MuiBottomNavigationAction-label": {
+                    fontSize: "0.68rem",
+                    fontWeight: 700,
+                  },
                 }}
               />
             ))}
@@ -346,10 +365,10 @@ export function AppShell({
           <Box sx={{ p: 2, display: "flex", flexDirection: "column" }}>
             <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 2 }}>
               <Box>
-                <Typography variant="h6" sx={{ fontWeight: 800 }}>Notifications</Typography>
-                <Typography variant="caption" color="text.secondary">{unread} unread</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 800 }}>{t("shell.notificationsTitle")}</Typography>
+                <Typography variant="caption" color="text.secondary">{t("shell.unread", { count: unread })}</Typography>
               </Box>
-              <IconButton onClick={() => setNotificationsOpen(false)} aria-label="Close notifications">
+              <IconButton onClick={() => setNotificationsOpen(false)} aria-label={t("shell.closeNotifications")}>
                 <X size={20} />
               </IconButton>
             </Stack>
@@ -357,7 +376,7 @@ export function AppShell({
             <List sx={{ maxHeight: "350px", overflowY: "auto", py: 0 }}>
               {state.notifications.length === 0 ? (
                 <Typography sx={{ p: 3, textAlign: "center", color: "text.secondary" }}>
-                  You are all caught up.
+                  {t("shell.allCaughtUp")}
                 </Typography>
               ) : (
                 state.notifications.slice(0, 5).map((item) => (
@@ -410,7 +429,7 @@ export function AppShell({
                 variant="outlined"
                 sx={{ mt: 2 }}
               >
-                Mark all as read
+                {t("shell.markAllRead")}
               </Button>
             )}
           </Box>
@@ -439,10 +458,10 @@ export function AppShell({
                 <Avatar sx={{ bgcolor: "secondary.main" }}>{initials}</Avatar>
                 <Box>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{displayName}</Typography>
-                  <Typography variant="caption" color="text.secondary">EcoLink Member</Typography>
+                  <Typography variant="caption" color="text.secondary">{t("shell.member")}</Typography>
                 </Box>
               </Box>
-              <IconButton onClick={() => setProfileOpen(false)} aria-label="Close profile">
+              <IconButton onClick={() => setProfileOpen(false)} aria-label={t("shell.closeProfile")}>
                 <X size={20} />
               </IconButton>
             </Stack>
@@ -478,7 +497,7 @@ export function AppShell({
               </Box>
               <Box sx={{ display: "flex", flexDirection: "column" }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                  MEMBER CODE
+                  {t("shell.memberCode")}
                 </Typography>
                 <Typography variant="body1" sx={{ fontWeight: 800, fontSize: "1.1rem", color: "secondary.main" }}>
                   {memberCode}
@@ -487,12 +506,12 @@ export function AppShell({
             </Paper>
 
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Show this code when a partner center needs to identify your EcoLink profile.
+              {t("shell.memberHelp")}
             </Typography>
 
             <Stack spacing={2} sx={{ mb: 1 }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Typography variant="body2" color="text.secondary">Account and sign out</Typography>
+                <Typography variant="body2" color="text.secondary">{t("shell.account")}</Typography>
                 <EcoLinkUserButton />
               </Box>
               {DEMO_MODE && (
@@ -507,7 +526,7 @@ export function AppShell({
                   variant="outlined"
                   sx={{ mt: 1 }}
                 >
-                  Reset demo data
+                  {t("shell.resetDemo")}
                 </Button>
               )}
             </Stack>
@@ -535,12 +554,12 @@ export function AppShell({
           <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
             <Box sx={{ p: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>EcoGuide Assistant</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{t("shell.assistantTitle")}</Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Ask about recycling, points, reports, and rewards
+                  {t("shell.assistantSubtitle")}
                 </Typography>
               </Box>
-              <IconButton onClick={() => setAssistantOpen(false)} aria-label="Close assistant">
+              <IconButton onClick={() => setAssistantOpen(false)} aria-label={t("shell.closeAssistant")}>
                 <X size={20} />
               </IconButton>
             </Box>

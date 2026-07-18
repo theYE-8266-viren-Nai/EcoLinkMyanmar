@@ -21,18 +21,13 @@ import { useState } from "react";
 
 import { AppShell } from "@/components/ecolink/app-shell";
 import type { MemberReport } from "@/features/reports/types";
+import { useI18n } from "@/lib/i18n";
 
 const EMPTY_FORM = {
   image: undefined,
   latitude: undefined,
   longitude: undefined,
 } satisfies ReportFormState;
-
-const STATUS_LABELS = {
-  PENDING: "Pending",
-  APPROVED: "Approved",
-  REJECTED: "Rejected",
-} as const;
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -64,6 +59,7 @@ export function MemberReportPage({
   initialReports: MemberReport[];
   initialError?: string;
 }) {
+  const { t } = useI18n();
   const [form, setForm] = useState<ReportFormState>(EMPTY_FORM);
   const [reports, setReports] = useState<MemberReport[]>(initialReports);
   const [submitting, setSubmitting] = useState(false);
@@ -73,6 +69,11 @@ export function MemberReportPage({
   );
 
   const hasLocation = typeof form.latitude === "number" && typeof form.longitude === "number";
+  const statusLabels = {
+    PENDING: t("impact.pending"),
+    APPROVED: t("impact.approved"),
+    REJECTED: t("impact.rejected"),
+  } as const;
 
   function updateForm(update: Partial<ReportFormState>) {
     setForm((current) => ({ ...current, ...update }));
@@ -150,13 +151,13 @@ export function MemberReportPage({
         {/* Intro */}
         <Box sx={{ mt: 1 }}>
           <Typography variant="caption" sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase" }}>
-            Community Action
-          </Typography>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.5 }}>
-            Report an environmental issue
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Reports are reviewed by admins before any points are awarded.
+          {t("report.kicker")}
+        </Typography>
+        <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.5 }}>
+          {t("report.title")}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          {t("report.subtitle")}
           </Typography>
         </Box>
 
@@ -170,10 +171,10 @@ export function MemberReportPage({
         <Card variant="outlined" sx={{ borderRadius: 3 }}>
           <CardContent sx={{ p: 2 }} component="form" onSubmit={submitReport}>
             <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main", mb: 0.5 }}>
-              Submit Report
+              {t("report.submitTitle")}
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 2 }}>
-              Add photo evidence and your current location.
+              {t("report.submitHelp")}
             </Typography>
 
             <Stack spacing={2.5}>
@@ -185,7 +186,7 @@ export function MemberReportPage({
                   fullWidth
                   sx={{ minHeight: 48, borderRadius: 2 }}
                 >
-                  {form.image ? "Change Photo" : "Upload Photo Evidence"}
+                  {form.image ? t("report.changePhoto") : t("report.uploadPhoto")}
                   <input
                     type="file"
                     hidden
@@ -214,11 +215,11 @@ export function MemberReportPage({
                   bgcolor: hasLocation ? "rgba(45, 115, 80, 0.04)" : "transparent",
                 }}
               >
-                {hasLocation ? "Location Captured" : "Use My Current Location"}
+                {hasLocation ? t("report.locationCaptured") : t("report.useLocation")}
               </Button>
               {hasLocation && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center" }}>
-                  Coordinates: {form.latitude?.toFixed(6)}, {form.longitude?.toFixed(6)}
+                  {t("report.coordinates", { lat: form.latitude?.toFixed(6) ?? "", lng: form.longitude?.toFixed(6) ?? "" })}
                 </Typography>
               )}
 
@@ -230,7 +231,7 @@ export function MemberReportPage({
                 fullWidth
                 size="large"
               >
-                {submitting ? "Submitting..." : "Send Report"}
+                {submitting ? t("report.submitting") : t("report.send")}
               </Button>
             </Stack>
           </CardContent>
@@ -241,9 +242,9 @@ export function MemberReportPage({
           <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
             <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>
-                Your Reports
+                {t("report.yourReports")}
               </Typography>
-              <Typography variant="caption" color="text.secondary">Report history</Typography>
+              <Typography variant="caption" color="text.secondary">{t("report.history")}</Typography>
             </Box>
             <IconButton onClick={loadReports} disabled={refreshing} color="primary">
               <RefreshCw size={18} className={refreshing ? "spin" : ""} />
@@ -253,7 +254,7 @@ export function MemberReportPage({
           <Stack spacing={1.5}>
             {reports.length === 0 ? (
               <Typography variant="body2" sx={{ p: 3, textAlign: "center", color: "text.secondary" }}>
-                No reports submitted yet.
+                {t("report.empty")}
               </Typography>
             ) : (
               reports.map((report) => {
@@ -271,7 +272,7 @@ export function MemberReportPage({
                           {report.title}
                         </Typography>
                         <ChipLabel
-                          label={STATUS_LABELS[report.status]}
+                          label={statusLabels[report.status]}
                           color={statusColor}
                           bgcolor={
                             report.status === "APPROVED"
@@ -289,6 +290,7 @@ export function MemberReportPage({
                             alt="Submitted report photo"
                             src={report.photoUrl}
                             fill
+                            sizes="448px"
                             style={{ objectFit: "cover" }}
                             unoptimized
                           />
@@ -300,28 +302,28 @@ export function MemberReportPage({
                           <MapPin size={12} /> {report.locationText}
                         </Typography>
                         <Typography variant="caption" sx={{ display: "block" }}>
-                          Submitted · {DATE_FORMATTER.format(new Date(report.createdAt))}
+                          {t("report.submitted", { date: DATE_FORMATTER.format(new Date(report.createdAt)) })}
                         </Typography>
                         {report.photoStoragePath && (
                           <Typography variant="caption" sx={{ fontSize: "0.62rem", display: "block" }}>
-                            Image attached · {report.photoStoragePath.split("/").at(-1)}
+                            {t("report.imageAttached", { name: report.photoStoragePath.split("/").at(-1) ?? "" })}
                           </Typography>
                         )}
                       </Stack>
 
                       {report.status === "PENDING" && (
                         <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1.5, fontStyle: "italic" }}>
-                          Your report is awaiting admin approval.
+                          {t("report.awaiting")}
                         </Typography>
                       )}
                       {report.status === "REJECTED" && (
                         <Typography variant="caption" color="error.main" sx={{ display: "block", mt: 1.5, fontWeight: 700 }}>
-                          Rejection Reason: {report.rejectionReason ?? "This report was not approved."}
+                          {t("report.rejectionReason", { reason: report.rejectionReason ?? t("report.defaultRejection") })}
                         </Typography>
                       )}
                       {report.status === "APPROVED" && (
                         <Typography variant="caption" color="primary.main" sx={{ display: "block", mt: 1.5, fontWeight: 800 }}>
-                          {report.pointsAwarded ?? 0} points rewarded!
+                          {t("report.pointsRewarded", { count: report.pointsAwarded ?? 0 })}
                         </Typography>
                       )}
                     </CardContent>
@@ -339,7 +341,7 @@ export function MemberReportPage({
           variant="text"
           sx={{ alignSelf: "center", fontWeight: 700, mt: 1 }}
         >
-          View dashboard
+          {t("report.viewDashboard")}
         </Button>
       </Box>
     </AppShell>

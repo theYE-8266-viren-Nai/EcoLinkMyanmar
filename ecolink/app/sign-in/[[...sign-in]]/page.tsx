@@ -1,13 +1,16 @@
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { EcoLinkSignIn } from "@/components/auth/sign-in";
+import { Suspense } from "react";
 
 export default function SignInPage() {
   return (
     <AuthLayout
-      description="Access your recycling dashboard, rewards, and pickup activity."
-      title="Welcome back"
+      descriptionKey="auth.welcomeHelp"
+      titleKey="auth.welcome"
     >
-      <EcoLinkSignIn />
+      <Suspense>
+        <EcoLinkSignIn />
+      </Suspense>
     </AuthLayout>
   );
 }

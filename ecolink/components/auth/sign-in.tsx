@@ -13,8 +13,10 @@ import { useState, type FormEvent } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
 import { sanitizeErrorMessage } from "@/lib/errors";
+import { useI18n } from "@/lib/i18n";
 
 export function EcoLinkSignIn() {
+  const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -46,11 +48,11 @@ export function EcoLinkSignIn() {
   return (
     <Stack component="form" spacing={2.5} onSubmit={signIn} sx={{ width: "100%" }}>
       <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>
-        Sign in to EcoLink
+        {t("auth.signInTitle")}
       </Typography>
       <TextField
         autoComplete="email"
-        label="Email"
+        label={t("auth.email")}
         onChange={(event) => setEmail(event.target.value)}
         required
         type="email"
@@ -59,7 +61,7 @@ export function EcoLinkSignIn() {
       />
       <TextField
         autoComplete="current-password"
-        label="Password"
+        label={t("auth.password")}
         onChange={(event) => setPassword(event.target.value)}
         required
         slotProps={{ htmlInput: { minLength: 8 } }}
@@ -75,12 +77,12 @@ export function EcoLinkSignIn() {
         variant="contained"
         size="large"
       >
-        {isSubmitting ? "Signing in" : "Sign in"}
+        {isSubmitting ? t("auth.signingIn") : t("shell.signIn")}
       </Button>
       <Typography variant="body2" align="center" color="text.secondary">
-        New to EcoLink?{" "}
+        {t("auth.new")}{" "}
         <Link style={{ color: "#087c78", fontWeight: 700, textDecoration: "none" }} href="/sign-up">
-          Create an account
+          {t("auth.create")}
         </Link>
       </Typography>
     </Stack>

@@ -7,17 +7,28 @@ import { Leaf } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { LanguageToggle } from "@/components/language-toggle";
+import { useI18n, type TranslationKey } from "@/lib/i18n";
+
 export type AuthLayoutProps = {
   children: ReactNode;
-  description: string;
-  title: string;
+  description?: string;
+  descriptionKey?: TranslationKey;
+  title?: string;
+  titleKey?: TranslationKey;
 };
 
 export function AuthLayout({
   children,
   description,
+  descriptionKey,
   title,
+  titleKey,
 }: AuthLayoutProps) {
+  const { t } = useI18n();
+  const resolvedTitle = titleKey ? t(titleKey) : title;
+  const resolvedDescription = descriptionKey ? t(descriptionKey) : description;
+
   return (
     <Box
       component="main"
@@ -44,7 +55,7 @@ export function AuthLayout({
         }}
       >
         {/* Brand link */}
-        <Box sx={{ display: "inline-flex" }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Link
             href="/"
             style={{
@@ -71,15 +82,16 @@ export function AuthLayout({
               EcoLink
             </Typography>
           </Link>
+          <LanguageToggle compact />
         </Box>
 
         {/* Title and description */}
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.main" }}>
-            {title}
+            {resolvedTitle}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            {description}
+            {resolvedDescription}
           </Typography>
         </Box>
 

@@ -6,13 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { FaqAssistantClientResponse, FaqVideoCard } from "@/features/faq-assistant/schemas/faq-assistant";
 import type { FaqAssistantMessage } from "@/features/faq-assistant/types/faq-assistant";
-
-const STARTERS = [
-  "How should I prepare plastic bottles before recycling?",
-  "Where should batteries and e-waste go?",
-  "How do points work after a report is approved?",
-  "How do I report a waste issue to EcoLink?",
-];
+import { useI18n } from "@/lib/i18n";
 
 async function sendFeedback(messageId: string, value: "useful" | "not_useful") {
   await fetch("/api/faq-assistant/feedback", {
@@ -29,16 +23,17 @@ function ChecklistIcon({ status }: { status: "recommended" | "warning" | "import
 }
 
 function VideoCard({ video }: { video: FaqVideoCard }) {
+  const { t } = useI18n();
   const [error, setError] = useState("");
 
   return (
     <button
-      aria-label={`Open ${video.title} on YouTube`}
+      aria-label={t("faq.openYoutube", { title: video.title })}
       className="faq-video-card"
       type="button"
       onClick={() => {
         const opened = window.open(video.youtubeUrl, "_blank", "noopener,noreferrer");
-        if (!opened) setError("The YouTube link could not open. Check your browser pop-up settings.");
+        if (!opened) setError(t("faq.youtubeError"));
       }}
     >
       <span className="faq-video-thumb">
@@ -61,6 +56,7 @@ function AnswerCard({
   message: FaqAssistantMessage;
   onFeedback: (messageId: string, value: "useful" | "not_useful") => void;
 }) {
+  const { t } = useI18n();
   const response = message.response;
   if (!response) return null;
 
@@ -71,7 +67,7 @@ function AnswerCard({
 
       {response.checklist.length > 0 ? (
         <section>
-          <h3>Checklist</h3>
+          <h3>{t("faq.checklist")}</h3>
           <ul className="faq-checklist">
             {response.checklist.map((item) => (
               <li className={`is-${item.status}`} key={item.text}><ChecklistIcon status={item.status} /><span>{item.text}</span></li>
@@ -81,30 +77,31 @@ function AnswerCard({
       ) : null}
 
       {response.questionsToAsk.length > 0 ? (
-        <section><h3>Questions to ask</h3><ul>{response.questionsToAsk.map((item) => <li key={item}>{item}</li>)}</ul></section>
+        <section><h3>{t("faq.questions")}</h3><ul>{response.questionsToAsk.map((item) => <li key={item}>{item}</li>)}</ul></section>
       ) : null}
 
       {response.warnings.length > 0 ? (
-        <section><h3>Warnings</h3><ul className="faq-warnings">{response.warnings.map((item) => <li key={item}>{item}</li>)}</ul></section>
+        <section><h3>{t("faq.warnings")}</h3><ul className="faq-warnings">{response.warnings.map((item) => <li key={item}>{item}</li>)}</ul></section>
       ) : null}
 
       {response.videos.length > 0 ? (
-        <section><h3>Related learning</h3><div className="faq-video-list">{response.videos.map((video) => <VideoCard key={video.id} video={video} />)}</div></section>
+        <section><h3>{t("faq.learning")}</h3><div className="faq-video-list">{response.videos.map((video) => <VideoCard key={video.id} video={video} />)}</div></section>
       ) : null}
 
       {response.confidence === "low" || response.needsHumanHelp ? (
-        <p className="faq-confidence">EcoGuide is not fully confident. Confirm with a partner center or the EcoLink team before acting.</p>
+        <p className="faq-confidence">{t("faq.confidence")}</p>
       ) : null}
 
-      <div className="faq-feedback" aria-label="Assistant answer feedback">
-        <button type="button" onClick={() => onFeedback(message.id, "useful")}><ThumbsUp size={15} />Useful</button>
-        <button type="button" onClick={() => onFeedback(message.id, "not_useful")}><ThumbsDown size={15} />Not useful</button>
+      <div className="faq-feedback" aria-label={t("faq.feedback")}>
+        <button type="button" onClick={() => onFeedback(message.id, "useful")}><ThumbsUp size={15} />{t("faq.useful")}</button>
+        <button type="button" onClick={() => onFeedback(message.id, "not_useful")}><ThumbsDown size={15} />{t("faq.notUseful")}</button>
       </div>
     </article>
   );
 }
 
 export function FaqAssistantScreen({ mode = "page" }: { mode?: "page" | "panel" }) {
+  const { t } = useI18n();
   const [messages, setMessages] = useState<FaqAssistantMessage[]>([]);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
@@ -112,6 +109,12 @@ export function FaqAssistantScreen({ mode = "page" }: { mode?: "page" | "panel" 
   const [offline, setOffline] = useState(() => typeof navigator !== "undefined" ? !navigator.onLine : false);
   const latestRef = useRef<HTMLDivElement>(null);
   const inputId = mode === "panel" ? "faq-question-panel" : "faq-question";
+  const starters = [
+    t("faq.starterBottles"),
+    t("faq.starterBatteries"),
+    t("faq.starterPoints"),
+    t("faq.starterReport"),
+  ];
 
   useEffect(() => {
     const update = () => setOffline(!navigator.onLine);
@@ -129,7 +132,7 @@ export function FaqAssistantScreen({ mode = "page" }: { mode?: "page" | "panel" 
     const trimmed = nextQuestion.trim();
     if (!trimmed || loading) return;
     if (offline) {
-      setError("You appear to be offline. Reconnect before asking EcoGuide.");
+      setError(t("faq.offlineAsk"));
       return;
     }
 
@@ -145,13 +148,13 @@ export function FaqAssistantScreen({ mode = "page" }: { mode?: "page" | "panel" 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: trimmed }),
       });
-      const payload = await response.json().catch(() => ({ error: "EcoGuide could not read the assistant response." })) as { error?: string; messageId?: string; response?: FaqAssistantClientResponse };
-      if (!response.ok || !payload.response || !payload.messageId) throw new Error(payload.error ?? "Assistant unavailable");
+      const payload = await response.json().catch(() => ({ error: t("faq.readError") })) as { error?: string; messageId?: string; response?: FaqAssistantClientResponse };
+      if (!response.ok || !payload.response || !payload.messageId) throw new Error(payload.error ?? t("faq.unavailable"));
       const assistantResponse = payload.response;
       const assistantMessageId = payload.messageId;
       setMessages((current) => [...current, { id: assistantMessageId, role: "assistant", content: assistantResponse.answer, response: assistantResponse }]);
     } catch (sendError) {
-      setError(sendError instanceof Error ? sendError.message : "EcoGuide is temporarily unavailable.");
+      setError(sendError instanceof Error ? sendError.message : t("faq.tempUnavailable"));
     } finally {
       setLoading(false);
     }
@@ -160,32 +163,32 @@ export function FaqAssistantScreen({ mode = "page" }: { mode?: "page" | "panel" 
   return (
     <section className={mode === "panel" ? "faq-page faq-page--panel" : "content-container faq-page"}>
       <header className="faq-header">
-        <div><span><Leaf size={16} /> EcoGuide</span><h1>EcoLink FAQ assistant</h1><p>Ask about recycling, drop-offs, report approvals, points, rewards, and safe material handling.</p></div>
-        <strong className={offline ? "is-offline" : ""}>{offline ? <WifiOff size={15} /> : <span />} {offline ? "Offline" : "Online"}</strong>
+        <div><span><Leaf size={16} /> EcoGuide</span><h1>{t("faq.title")}</h1><p>{t("faq.subtitle")}</p></div>
+        <strong className={offline ? "is-offline" : ""}>{offline ? <WifiOff size={15} /> : <span />} {offline ? t("faq.offline") : t("faq.online")}</strong>
       </header>
 
-      <section className="faq-chat-shell" aria-label="EcoGuide chat">
+      <section className="faq-chat-shell" aria-label={t("faq.chatLabel")}>
         <div className="faq-message-list">
           {messages.length === 0 ? (
             <div className="faq-empty">
               <Leaf size={30} />
-              <h2>Not sure where something belongs?</h2>
-              <div>{STARTERS.map((starter) => <button key={starter} type="button" onClick={() => send(starter)}>{starter}</button>)}</div>
+              <h2>{t("faq.emptyTitle")}</h2>
+              <div>{starters.map((starter) => <button key={starter} type="button" onClick={() => send(starter)}>{starter}</button>)}</div>
             </div>
           ) : messages.map((message) => (
             <div className={`faq-message is-${message.role}`} key={message.id}>
               {message.role === "user" ? <p>{message.content}</p> : <AnswerCard message={message} onFeedback={sendFeedback} />}
             </div>
           ))}
-          {loading ? <div className="faq-loading"><RefreshCcw size={16} />EcoGuide is checking guidance...</div> : null}
-          {error ? <div className="faq-error"><span>{error}</span><button type="button" onClick={() => send(messages.filter((item) => item.role === "user").at(-1)?.content ?? "")}>Retry</button></div> : null}
+          {loading ? <div className="faq-loading"><RefreshCcw size={16} />{t("faq.loading")}</div> : null}
+          {error ? <div className="faq-error"><span>{error}</span><button type="button" onClick={() => send(messages.filter((item) => item.role === "user").at(-1)?.content ?? "")}>{t("faq.retry")}</button></div> : null}
           <div ref={latestRef} />
         </div>
 
         <form className="faq-composer" onSubmit={(event) => { event.preventDefault(); void send(); }}>
-          <label className="sr-only" htmlFor={inputId}>Ask EcoGuide</label>
-          <textarea id={inputId} value={question} maxLength={700} placeholder="Example: should I remove the cap from a plastic bottle?" onChange={(event) => setQuestion(event.target.value)} />
-          <button aria-label="Send question" type="submit" disabled={loading || !question.trim()}><Send size={18} /></button>
+          <label className="sr-only" htmlFor={inputId}>{t("faq.askLabel")}</label>
+          <textarea id={inputId} value={question} maxLength={700} placeholder={t("faq.placeholder")} onChange={(event) => setQuestion(event.target.value)} />
+          <button aria-label={t("faq.send")} type="submit" disabled={loading || !question.trim()}><Send size={18} /></button>
         </form>
       </section>
     </section>

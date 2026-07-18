@@ -47,6 +47,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/ecolink/app-shell";
 import { calculatePoints, MATERIALS, PARTNER_CENTERS, type MaterialSlug } from "@/lib/ecolink-data";
+import { useI18n } from "@/lib/i18n";
 import type { AiScanResponse } from "@/schemas/ai-scan";
 
 type FulfillmentOption = "truck" | "center" | null;
@@ -62,12 +63,6 @@ const initialPickupForm: PickupFormState = {
   address: "",
   date: "",
   notes: "",
-  window: "Tomorrow · 8:00 AM-11:00 AM",
-};
-
-const nextEcoLinkSchedule = {
-  area: "Yangon partner route",
-  label: "Next EcoLink pickup route",
   window: "Tomorrow · 8:00 AM-11:00 AM",
 };
 
@@ -122,6 +117,7 @@ function materialInitials(label: string) {
 }
 
 export default function RecyclePage() {
+  const { t } = useI18n();
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const previewUrlRef = useRef<string | undefined>(undefined);
@@ -163,7 +159,7 @@ export default function RecyclePage() {
 
   async function analyze() {
     if (!file) {
-      setError("Choose a clear photo before starting the analysis.");
+      setError(t("recycle.choosePhotoError"));
       return;
     }
 
@@ -180,13 +176,13 @@ export default function RecyclePage() {
       const response = await fetch("/api/ai/scans", { method: "POST", body: formData });
       const body = await response.json() as AiScanResponse | { error?: string; reason?: string };
       if (!response.ok) {
-        throw new Error("reason" in body ? body.reason : "error" in body ? body.error : "EcoGuide could not analyze this image.");
+        throw new Error("reason" in body ? body.reason : "error" in body ? body.error : t("recycle.aiError"));
       }
       const scanResult = body as AiScanResponse;
       setResult(scanResult);
       setSelectedDetectionKeys(scanResult.detections.map((_, index) => detectionKey(index)));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "EcoGuide could not analyze this image.");
+      setError(caught instanceof Error ? caught.message : t("recycle.aiError"));
     } finally {
       setAnalyzing(false);
     }
@@ -215,22 +211,26 @@ export default function RecyclePage() {
         key: detectionKey(index),
         materialSlug,
         estimatedPoints,
-        pointRuleLabel: isPlasticBottleDetection({ ...detection, materialSlug }) ? "1 point per bottle" : "Estimated by weight",
+        pointRuleLabel: isPlasticBottleDetection({ ...detection, materialSlug }) ? t("recycle.ruleBottle") : t("recycle.ruleWeight"),
       };
     });
-  }, [result]);
+  }, [result, t]);
 
-  const selectedDetections = selectableDetections.filter((detection) => selectedDetectionKeys.includes(detection.key));
+  const selectedDetectionKeySet = useMemo(() => new Set(selectedDetectionKeys), [selectedDetectionKeys]);
+  const selectedDetections = selectableDetections.filter((detection) => selectedDetectionKeySet.has(detection.key));
   const selectedMaterialSlugs = [...new Set(selectedDetections.flatMap((detection) => detection.materialSlug ? [detection.materialSlug] : []))];
   const estimatedSelectedWeightKg = selectedDetections.reduce((total, detection) => total + detection.estimatedWeightKg, 0);
   const estimatedSelectedPoints = selectedDetections.reduce((total, detection) => total + detection.estimatedPoints, 0);
   const matchingCenters = selectedMaterialSlugs.length > 0
-    ? PARTNER_CENTERS.filter((center) => selectedMaterialSlugs.some((slug) => center.materials.includes(slug)))
+    ? PARTNER_CENTERS.filter((center) => {
+      const centerMaterialSet = new Set(center.materials);
+      return selectedMaterialSlugs.some((slug) => centerMaterialSet.has(slug));
+    })
     : [];
 
   function submitSelectedRecyclables() {
     if (selectedDetections.length === 0) {
-      setError("Select at least one recyclable item before submitting.");
+      setError(t("recycle.selectError"));
       return;
     }
     setError("");
@@ -247,8 +247,8 @@ export default function RecyclePage() {
   function preparePickup() {
     setPickupForm((current) => ({
       ...current,
-      date: nextEcoLinkSchedule.label,
-      window: nextEcoLinkSchedule.window,
+      date: t("recycle.routeLabel"),
+      window: t("recycle.routeWindow"),
     }));
     setPickupPrepared(true);
     setFulfillmentOption("truck");
@@ -256,20 +256,28 @@ export default function RecyclePage() {
   }
 
   const submitted = submissionState === "submitted";
+  const nextEcoLinkSchedule = {
+    area: t("recycle.routeArea"),
+    label: t("recycle.routeLabel"),
+    window: t("recycle.routeWindow"),
+  };
 
   return (
     <AppShell>
       <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
         {/* Intro */}
-        <Box sx={{ mt: 1 }}>
-          <Typography variant="caption" sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase" }}>
-            Recycle in Yangon
+        <Box sx={{ mt: 0.5 }}>
+          <Typography
+            variant="caption"
+            sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase", letterSpacing: 0.4 }}
+          >
+            {t("recycle.kicker")}
           </Typography>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.5 }}>
-            Scan recyclables. Choose what happens next.
+          <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.75, fontSize: { xs: "1.35rem", sm: "1.5rem" }, lineHeight: 1.25 }}>
+            {t("recycle.title")}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Use EcoGuide to identify recyclable items, submit what you plan to recycle, then schedule Eco pickup or head to a matching center.
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.55 }}>
+            {t("recycle.subtitle")}
           </Typography>
 
           <Stack direction="row" spacing={1} sx={{ mt: 1.5, alignItems: "center" }}>
@@ -288,7 +296,7 @@ export default function RecyclePage() {
               }}
             >
               <Scale size={13} />
-              1 plastic bottle = 1 point
+              {t("recycle.bottleRule")}
             </Box>
           </Stack>
         </Box>
@@ -304,13 +312,13 @@ export default function RecyclePage() {
                   </Avatar>
                   <Box>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                      Selected recyclables submitted
+                      {t("recycle.submitted")}
                     </Typography>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.25 }}>
-                      Nice. Now choose how to recycle them.
+                      {t("recycle.nice")}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-                      This is a demo request. A partner will verify the final weight and reward points.
+                      {t("recycle.demoRequest")}
                     </Typography>
                   </Box>
                 </Stack>
@@ -319,15 +327,15 @@ export default function RecyclePage() {
 
                 <Stack direction="row" spacing={1} sx={{ justifyContent: "space-around", textAlign: "center" }}>
                   <Box>
-                    <Typography variant="caption" color="text.secondary">Items</Typography>
+                    <Typography variant="caption" color="text.secondary">{t("recycle.items")}</Typography>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{selectedDetections.length}</Typography>
                   </Box>
                   <Box>
-                    <Typography variant="caption" color="text.secondary">Weight</Typography>
+                    <Typography variant="caption" color="text.secondary">{t("recycle.weight")}</Typography>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{estimatedSelectedWeightKg.toFixed(2)} kg</Typography>
                   </Box>
                   <Box>
-                    <Typography variant="caption" color="text.secondary">Points</Typography>
+                    <Typography variant="caption" color="text.secondary">{t("recycle.points")}</Typography>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "primary.main" }}>
                       ~{formatPoints(estimatedSelectedPoints)}
                     </Typography>
@@ -339,7 +347,7 @@ export default function RecyclePage() {
             {/* List of submitted items */}
             <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: "background.default" }}>
               <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1, fontWeight: 700 }}>
-                SUBMITTED ITEMS
+                {t("recycle.submittedItems")}
               </Typography>
               <Stack spacing={0.5}>
                 {selectedDetections.map((d) => (
@@ -369,10 +377,10 @@ export default function RecyclePage() {
                     </Avatar>
                     <Box>
                       <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main" }}>
-                        Schedule Eco truck pickup
+                        {t("recycle.scheduleTruck")}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
-                        Confirm the next EcoLink route and add your pickup address.
+                        {t("recycle.scheduleHelp")}
                       </Typography>
                     </Box>
                   </Stack>
@@ -395,10 +403,10 @@ export default function RecyclePage() {
                     </Avatar>
                     <Box>
                       <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main" }}>
-                        Take to nearby recycle center
+                        {t("recycle.nearbyCenter")}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
-                        See verified centers that accept your selected materials.
+                        {t("recycle.nearbyHelp")}
                       </Typography>
                     </Box>
                   </Stack>
@@ -408,7 +416,7 @@ export default function RecyclePage() {
 
             {pickupPrepared && (
               <Alert severity="success" sx={{ borderRadius: 2 }}>
-                <strong>Eco pickup request prepared.</strong>
+                <strong>{t("recycle.pickupPrepared")}</strong>
                 <Typography variant="caption" sx={{ display: "block" }}>
                   {`${nextEcoLinkSchedule.window} · ${nextEcoLinkSchedule.area}`}
                 </Typography>
@@ -419,10 +427,10 @@ export default function RecyclePage() {
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main" }}>
-                    {matchingCenters.length > 0 ? `${matchingCenters.length} matching centers` : "No verified matches"}
+                    {matchingCenters.length > 0 ? t("recycle.matchingCenters", { count: matchingCenters.length }) : t("recycle.noMatches")}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {matchingCenters.length > 0 ? "These centers accept at least one selected material." : "Select items with known materials to find matches."}
+                    {matchingCenters.length > 0 ? t("recycle.matchesHelp") : t("recycle.noMatchesHelp")}
                   </Typography>
                 </Box>
 
@@ -460,7 +468,7 @@ export default function RecyclePage() {
                                 rel="noreferrer"
                                 sx={{ mt: 2, minHeight: 38 }}
                               >
-                                Start Navigation
+                                {t("recycle.startNavigation")}
                               </Button>
                             </Box>
                           </Stack>
@@ -479,7 +487,7 @@ export default function RecyclePage() {
               variant="text"
               sx={{ alignSelf: "center", fontWeight: 700 }}
             >
-              Edit selected items
+              {t("recycle.editItems")}
             </Button>
           </Box>
         ) : (
@@ -489,7 +497,7 @@ export default function RecyclePage() {
               <CardActionArea
                 onClick={() => setUploadOptionsOpen(true)}
                 sx={{
-                  minHeight: 200,
+                  minHeight: { xs: 220, sm: 200 },
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
@@ -504,11 +512,12 @@ export default function RecyclePage() {
                 }}
               >
                 {previewUrl ? (
-                  <Box sx={{ width: "100%", height: 200, position: "relative" }}>
+                  <Box sx={{ width: "100%", height: { xs: 220, sm: 200 }, position: "relative" }}>
                     <Image
                       alt="Uploaded preview"
                       src={previewUrl}
                       fill
+                      sizes="448px"
                       style={{ objectFit: "contain" }}
                       unoptimized
                     />
@@ -518,34 +527,48 @@ export default function RecyclePage() {
                     <Avatar sx={{ bgcolor: "rgba(8, 124, 120, 0.08)", color: "primary.main", width: 52, height: 52 }}>
                       <Camera size={24} />
                     </Avatar>
-                    <Typography variant="body2" sx={{ fontWeight: 800 }}>Tap to add a photo</Typography>
-                    <Typography variant="caption" color="text.secondary">Camera or gallery</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 800 }}>{t("recycle.tapPhoto")}</Typography>
+                    <Typography variant="caption" color="text.secondary">{t("recycle.cameraGallery")}</Typography>
                   </Stack>
                 )}
               </CardActionArea>
 
-              <CardContent sx={{ p: 2, pt: 1 }}>
-                <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
+              <CardContent sx={{ p: 2, pt: 1.5 }}>
+                <Stack spacing={1.5}>
                   <Box>
                     <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                      {file ? "Photo ready" : "Start with one clear item"}
+                      {file ? t("recycle.photoReady") : t("recycle.startClear")}
                     </Typography>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", maxWidth: 200 }}>
-                      {file ? file.name : "Scan recyclable item"}
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 800,
+                        color: "secondary.main",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {file ? file.name : t("recycle.scanItem")}
                     </Typography>
                     {file && (
-                      <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                        {(file.size / 1024 / 1024).toFixed(2)} MB selected
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
+                        {t("recycle.selectedMb", { size: (file.size / 1024 / 1024).toFixed(2) })}
                       </Typography>
                     )}
                   </Box>
                   <Button
                     disabled={!file || analyzing}
+                    fullWidth
                     onClick={analyze}
+                    size="large"
                     variant="contained"
-                    startIcon={analyzing ? <CircularProgress size={16} color="inherit" /> : <Sparkles size={16} />}
+                    startIcon={analyzing ? <CircularProgress size={18} color="inherit" /> : <Sparkles size={18} />}
+                    sx={{
+                      minHeight: 48,
+                      fontWeight: 800,
+                      borderRadius: 2,
+                    }}
                   >
-                    {analyzing ? "Analyzing" : "Analyze photo"}
+                    {analyzing ? t("recycle.analyzing") : t("recycle.analyzePhoto")}
                   </Button>
                 </Stack>
               </CardContent>
@@ -584,8 +607,8 @@ export default function RecyclePage() {
                           <CheckCircle2 size={16} />
                         </Avatar>
                         <Box>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Review detected items</Typography>
-                          <Typography variant="caption" color="text.secondary">Confidence: {Math.round(result.summary.confidence * 100)}%</Typography>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{t("recycle.reviewDetected")}</Typography>
+                          <Typography variant="caption" color="text.secondary">{t("recycle.confidence", { percent: Math.round(result.summary.confidence * 100) })}</Typography>
                         </Box>
                       </Box>
                       <Paper
@@ -598,7 +621,7 @@ export default function RecyclePage() {
                           borderRadius: 2,
                         }}
                       >
-                        <Typography variant="caption" sx={{ display: "block", fontWeight: 700, lineHeight: 1 }}>Selected</Typography>
+                        <Typography variant="caption" sx={{ display: "block", fontWeight: 700, lineHeight: 1 }}>{t("recycle.selected")}</Typography>
                         <Typography variant="subtitle2" sx={{ fontWeight: 900 }}>~{formatPoints(estimatedSelectedPoints)} pts</Typography>
                         <Typography variant="caption" sx={{ fontSize: "0.62rem", display: "block" }}>
                           {estimatedSelectedWeightKg.toFixed(2)} kg · {selectedDetections.length} items
@@ -619,7 +642,7 @@ export default function RecyclePage() {
                     <List sx={{ mt: 2, py: 0 }}>
                       {selectableDetections.length ? (
                         selectableDetections.map((detection) => {
-                          const isChecked = selectedDetectionKeys.includes(detection.key);
+                          const isChecked = selectedDetectionKeySet.has(detection.key);
                           return (
                             <ListItem
                               key={detection.key}
@@ -628,6 +651,7 @@ export default function RecyclePage() {
                                 <Checkbox
                                   edge="end"
                                   checked={isChecked}
+                                  sx={{ p: 1.25 }}
                                   onChange={(event) => {
                                     setSelectedDetectionKeys((current) => event.target.checked
                                       ? [...current, detection.key]
@@ -638,7 +662,8 @@ export default function RecyclePage() {
                               sx={{
                                 borderBottom: "1px solid",
                                 borderColor: "divider",
-                                py: 1,
+                                py: 1.25,
+                                minHeight: 56,
                               }}
                             >
                               <ListItemAvatar sx={{ minWidth: 46 }}>
@@ -657,7 +682,7 @@ export default function RecyclePage() {
                                       {detection.materialLabel} · {detection.pointRuleLabel}
                                     </Typography>
                                     <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main" }}>
-                                      {detection.estimatedCount}× · {detection.estimatedWeightKg.toFixed(2)} kg · {detection.estimatedPoints > 0 ? `~${formatPoints(detection.estimatedPoints)} pts` : "Verification required"}
+                                      {detection.estimatedCount}× · {detection.estimatedWeightKg.toFixed(2)} kg · {detection.estimatedPoints > 0 ? `~${formatPoints(detection.estimatedPoints)} pts` : t("recycle.verificationRequired")}
                                     </Typography>
                                   </>
                                 }
@@ -667,7 +692,7 @@ export default function RecyclePage() {
                         })
                       ) : (
                         <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center", py: 2 }}>
-                          No recyclable items detected. Try another photo.
+                          {t("recycle.noDetected")}
                         </Typography>
                       )}
                     </List>
@@ -680,9 +705,9 @@ export default function RecyclePage() {
                   onClick={submitSelectedRecyclables}
                   size="large"
                   variant="contained"
-                  sx={{ mt: 1 }}
+                  sx={{ mt: 1, minHeight: 48, fontWeight: 800, borderRadius: 2 }}
                 >
-                  Submit selected recyclables
+                  {t("recycle.submitSelected")}
                 </Button>
               </Box>
             )}
@@ -699,8 +724,8 @@ export default function RecyclePage() {
           <Box sx={{ p: 2 }}>
             <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 2 }}>
               <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Upload item photo</Typography>
-                <Typography variant="caption" color="text.secondary">Use a camera shot or select from gallery</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{t("recycle.uploadTitle")}</Typography>
+                <Typography variant="caption" color="text.secondary">{t("recycle.uploadHelp")}</Typography>
               </Box>
               <IconButton onClick={() => setUploadOptionsOpen(false)}>
                 <X size={20} />
@@ -708,17 +733,17 @@ export default function RecyclePage() {
             </Stack>
             <Divider />
             <List>
-              <ListItemButton onClick={() => { setUploadOptionsOpen(false); cameraInputRef.current?.click(); }} sx={{ py: 1.5, borderRadius: 2 }}>
+              <ListItemButton onClick={() => { setUploadOptionsOpen(false); cameraInputRef.current?.click(); }} sx={{ py: 1.75, minHeight: 56, borderRadius: 2 }}>
                 <ListItemAvatar>
                   <Avatar sx={{ bgcolor: "rgba(8, 124, 120, 0.08)", color: "primary.main" }}><Camera size={20} /></Avatar>
                 </ListItemAvatar>
-                <ListItemText primary="Camera shot" secondary="Take a new photo with camera" slotProps={{ primary: { variant: "body2", sx: { fontWeight: 700 } } }} />
+                <ListItemText primary={t("recycle.cameraShot")} secondary={t("recycle.cameraShotHelp")} slotProps={{ primary: { variant: "body2", sx: { fontWeight: 700 } } }} />
               </ListItemButton>
-              <ListItemButton onClick={() => { setUploadOptionsOpen(false); galleryInputRef.current?.click(); }} sx={{ py: 1.5, borderRadius: 2, mt: 1 }}>
+              <ListItemButton onClick={() => { setUploadOptionsOpen(false); galleryInputRef.current?.click(); }} sx={{ py: 1.75, minHeight: 56, borderRadius: 2, mt: 1 }}>
                 <ListItemAvatar>
                   <Avatar sx={{ bgcolor: "rgba(11, 53, 88, 0.08)", color: "secondary.main" }}><ImagePlus size={20} /></Avatar>
                 </ListItemAvatar>
-                <ListItemText primary="Pick from gallery" secondary="Choose an existing image" slotProps={{ primary: { variant: "body2", sx: { fontWeight: 700 } } }} />
+                <ListItemText primary={t("recycle.gallery")} secondary={t("recycle.galleryHelp")} slotProps={{ primary: { variant: "body2", sx: { fontWeight: 700 } } }} />
               </ListItemButton>
             </List>
           </Box>
@@ -734,8 +759,8 @@ export default function RecyclePage() {
           <Box sx={{ p: 2 }} component="form" onSubmit={(e) => { e.preventDefault(); preparePickup(); }}>
             <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 2 }}>
               <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Confirm Eco truck pickup</Typography>
-                <Typography variant="caption" color="text.secondary">EcoLink will place this demo request on the next route</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{t("recycle.confirmPickup")}</Typography>
+                <Typography variant="caption" color="text.secondary">{t("recycle.pickupHelp")}</Typography>
               </Box>
               <IconButton onClick={() => setPickupDrawerOpen(false)}>
                 <X size={20} />
@@ -754,8 +779,8 @@ export default function RecyclePage() {
                 required
                 multiline
                 rows={3}
-                label="Pickup address"
-                placeholder="Street, township, landmark"
+                label={t("recycle.pickupAddress")}
+                placeholder={t("recycle.pickupPlaceholder")}
                 value={pickupForm.address}
                 onChange={(e) => setPickupForm((current) => ({ ...current, address: e.target.value }))}
                 variant="filled"
@@ -764,8 +789,8 @@ export default function RecyclePage() {
               <TextField
                 multiline
                 rows={2}
-                label="Notes (optional)"
-                placeholder="Gate instructions, bag count, contact notes"
+                label={t("recycle.notes")}
+                placeholder={t("recycle.notesPlaceholder")}
                 value={pickupForm.notes}
                 onChange={(e) => setPickupForm((current) => ({ ...current, notes: e.target.value }))}
                 variant="filled"
@@ -778,7 +803,7 @@ export default function RecyclePage() {
                 fullWidth
                 size="large"
               >
-                Confirm next EcoLink schedule
+                {t("recycle.confirmSchedule")}
               </Button>
             </Stack>
           </Box>

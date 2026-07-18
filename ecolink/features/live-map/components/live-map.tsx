@@ -53,6 +53,7 @@ import {
   YANGON_CENTER,
   YANGON_ZOOM,
 } from "@/features/live-map/utils/map-data";
+import { useI18n } from "@/lib/i18n";
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
 
 const EMPTY_FEATURES: MapFeatureCollection = { type: "FeatureCollection", features: [] };
@@ -92,11 +93,11 @@ function setLayerVisibility(map: MapboxMap, layerIds: string[], visible: boolean
   }
 }
 
-function formatUpdatedAt(value: string) {
+function formatUpdatedAt(value: string, t: ReturnType<typeof useI18n>["t"]) {
   const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
-  if (seconds < 10) return "Updated just now";
-  if (seconds < 60) return `Updated ${seconds}s ago`;
-  return `Updated ${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 10) return t("map.updatedNow");
+  if (seconds < 60) return t("map.updatedSeconds", { count: seconds });
+  return t("map.updatedMinutes", { count: Math.floor(seconds / 60) });
 }
 
 async function addCollectorVehicleIcons(map: MapboxMap) {
@@ -217,6 +218,7 @@ async function addMapSourcesAndLayers(map: MapboxMap, centers: RecyclingCenterMa
 }
 
 export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMapBootstrap) {
+  const { t } = useI18n();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -265,12 +267,12 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           setMapUnavailable(false);
         })
         .catch(() => {
-          setMapError("The collector vehicle icons could not load. Center information is still available.");
+          setMapError(t("map.errorIcons"));
         });
     };
     const handleError = (event: mapboxgl.ErrorEvent) => {
       console.error("Mapbox rendering error", event.error);
-      setMapError("The map could not load its basemap. Center information is still available.");
+      setMapError(t("map.errorBasemap"));
     };
 
     const handleCenterClick = (event: mapboxgl.MapLayerMouseEvent) => {
@@ -351,7 +353,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
       map.remove();
       mapRef.current = null;
     };
-  }, [centers]);
+  }, [centers, t]);
 
   const loadWasteData = useCallback(async () => {
     const map = mapRef.current;
@@ -375,7 +377,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
     try {
       const response = await fetch(`/api/map/waste?${params}`, { signal: controller.signal });
       const body = await response.json() as WasteMapResponse | { error?: string };
-      if (!response.ok || !("mode" in body)) throw new Error("error" in body ? body.error : "Waste data is unavailable.");
+      if (!response.ok || !("mode" in body)) throw new Error("error" in body ? body.error : t("map.errorWaste"));
       const densitySource = map.getSource("waste-density") as GeoJSONSource;
       const reportsSource = map.getSource("waste-reports") as GeoJSONSource;
       if (body.mode === "reports") {
@@ -389,12 +391,12 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
       setWasteCount(body.data.features.length);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      setMapError(error instanceof Error ? error.message : "Waste density data is unavailable.");
+      setMapError(error instanceof Error ? error.message : t("map.errorDensity"));
       setWasteCount(0);
     } finally {
       if (!controller.signal.aborted) setWasteLoading(false);
     }
-  }, [mapReady]);
+  }, [mapReady, t]);
 
   useEffect(() => {
     if (!mapReady) return;
@@ -500,8 +502,8 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
   }
 
   function useMyLocation() {
-    if (!navigator.geolocation) {
-      setLocationMessage("Browser coordinates are not supported.");
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setLocationMessage(t("map.locationUnsupported"));
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -510,11 +512,11 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         mapRef.current?.flyTo({ center: coordinates, zoom: 15 });
         setLocationMessage("");
       },
-      () => setLocationMessage("We could not read your current location.")
+      () => setLocationMessage(t("map.locationError"))
     );
   }
 
-  const densityLabel = wasteMode === "heatmap" ? "Heatmap" : "Report markers";
+  const densityLabel = wasteMode === "heatmap" ? t("map.heatmap") : t("map.reportMarkers");
 
   return (
     <Box sx={{ position: "relative", width: "100%", height: "100%", display: "flex", flexGrow: 1 }}>
@@ -538,10 +540,10 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           >
             <MapPin size={48} color="#087c78" style={{ marginBottom: 16 }} />
             <Typography variant="h6" sx={{ fontWeight: 800, color: "secondary.main" }}>
-              Map view unavailable
+              {t("map.viewUnavailable")}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1, maxWidth: 300 }}>
-              Add a Mapbox public token to enable the interactive map. Partner center details remain available.
+              {t("map.tokenHelp")}
             </Typography>
           </Box>
         )}
@@ -573,7 +575,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
               variant={showWaste ? "filled" : "outlined"}
               color={showWaste ? "error" : "default"}
               size="small"
-              label="Reports"
+              label={t("map.reports")}
               sx={{ fontWeight: 700, fontSize: "0.68rem" }}
             />
             <Chip
@@ -582,7 +584,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
               color={showCenters ? "primary" : "default"}
               size="small"
               icon={<Building2 size={12} />}
-              label="Centers"
+              label={t("map.centers")}
               sx={{ fontWeight: 700, fontSize: "0.68rem" }}
             />
             <Chip
@@ -591,7 +593,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
               color={showCollectors ? "secondary" : "default"}
               size="small"
               icon={<Truck size={12} />}
-              label="Collectors"
+              label={t("map.collectors")}
               sx={{ fontWeight: 700, fontSize: "0.68rem" }}
             />
           </Stack>
@@ -610,7 +612,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         >
           <Typography variant="caption" sx={{ fontSize: "0.65rem", display: "flex", gap: 1, alignItems: "center", color: "text.secondary" }}>
             <Layers3 size={11} />
-            {wasteLoading ? "Loading..." : `${densityLabel} · ${wasteCount} reports`}
+            {wasteLoading ? t("map.loadingShort") : t("map.densityLabel", { mode: densityLabel, count: wasteCount })}
           </Typography>
         </Paper>
       </Stack>
@@ -628,7 +630,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         <Paper elevation={3} sx={{ borderRadius: "50%", overflow: "hidden" }}>
           <IconButton
             onClick={useMyLocation}
-            aria-label="Use my location"
+            aria-label={t("map.useLocation")}
             sx={{ bgcolor: "background.paper", color: "secondary.main", p: 1.25 }}
           >
             <LocateFixed size={20} />
@@ -637,7 +639,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         <Paper elevation={3} sx={{ borderRadius: "50%", overflow: "hidden" }}>
           <IconButton
             onClick={resetMap}
-            aria-label="Reset Yangon view"
+            aria-label={t("map.reset")}
             sx={{ bgcolor: "background.paper", color: "secondary.main", p: 1.25 }}
           >
             <RotateCcw size={20} />
@@ -646,7 +648,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         <Paper elevation={3} sx={{ borderRadius: "50%", overflow: "hidden" }}>
           <IconButton
             onClick={() => setMobileSheetOpen(true)}
-            aria-label="Open list panel"
+            aria-label={t("map.openPanel")}
             sx={{ bgcolor: "primary.main", color: "white", p: 1.25, "&:hover": { bgcolor: "primary.dark" } }}
           >
             <PanelBottomOpen size={20} />
@@ -674,7 +676,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         }}
       >
         <Typography variant="caption" sx={{ fontWeight: 800, fontSize: "0.62rem" }}>
-          Waste density
+          {t("map.wasteDensity")}
         </Typography>
         <Box
           sx={{
@@ -684,8 +686,8 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           }}
         />
         <Stack direction="row" sx={{ justifyContent: "space-between", color: "text.secondary" }}>
-          <span>Low</span>
-          <span>High</span>
+          <span>{t("map.low")}</span>
+          <span>{t("map.high")}</span>
         </Stack>
       </Paper>
 
@@ -709,7 +711,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
               <Box>
                 {selected.kind === "center" && (
                   <>
-                    <Chip size="small" icon={<Building2 size={12} />} label="Partner Center" color="primary" sx={{ mb: 1, height: 20, fontSize: "0.65rem", fontWeight: 700 }} />
+                    <Chip size="small" icon={<Building2 size={12} />} label={t("map.partnerCenter")} color="primary" sx={{ mb: 1, height: 20, fontSize: "0.65rem", fontWeight: 700 }} />
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>{selected.center.name}</Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{selected.center.address}, {selected.center.township}</Typography>
                     <Typography variant="caption" color="primary.main" sx={{ display: "block", mt: 0.5, fontWeight: 700 }}>{selected.center.hours}</Typography>
@@ -727,27 +729,27 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
                       rel="noreferrer"
                       sx={{ mt: 2, minHeight: 38 }}
                     >
-                      Get Directions
+                      {t("map.getDirections")}
                     </Button>
                   </>
                 )}
                 {selected.kind === "vehicle" && (
                   <>
-                    <Chip size="small" icon={<Truck size={12} />} label={selected.vehicle.isDemo ? "Demo Collector" : "Live Collector"} color="secondary" sx={{ mb: 1, height: 20, fontSize: "0.65rem", fontWeight: 700 }} />
+                    <Chip size="small" icon={<Truck size={12} />} label={selected.vehicle.isDemo ? t("map.demoCollector") : t("map.liveCollector")} color="secondary" sx={{ mb: 1, height: 20, fontSize: "0.65rem", fontWeight: 700 }} />
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>{selected.vehicle.label}</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Status: {selected.vehicle.status.replaceAll("_", " ")}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{t("map.status", { status: selected.vehicle.status.replaceAll("_", " ") })}</Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-                      Heading · {Math.round(selected.vehicle.speedKph)} km/h · {formatUpdatedAt(selected.vehicle.observedAt)}
+                      {t("map.heading", { speed: Math.round(selected.vehicle.speedKph), updated: formatUpdatedAt(selected.vehicle.observedAt, t) })}
                     </Typography>
                   </>
                 )}
                 {selected.kind === "report" && (
                   <>
-                    <Chip size="small" icon={<AlertTriangle size={12} />} label="Community Waste Report" color="error" sx={{ mb: 1, height: 20, fontSize: "0.65rem", fontWeight: 700 }} />
+                    <Chip size="small" icon={<AlertTriangle size={12} />} label={t("map.communityWasteReport")} color="error" sx={{ mb: 1, height: 20, fontSize: "0.65rem", fontWeight: 700 }} />
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>{selected.wasteType.replaceAll("_", " ")}</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Density Score: {selected.score} / 10</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{t("map.densityScore", { score: selected.score })}</Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-                      Observed: {new Date(selected.observedAt).toLocaleDateString("en-US", { timeZone: "Asia/Yangon" })}
+                      {t("map.observed", { date: new Date(selected.observedAt).toLocaleDateString("en-US", { timeZone: "Asia/Yangon" }) })}
                     </Typography>
                   </>
                 )}
@@ -797,7 +799,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           }}
         >
           <Box sx={{ width: 40, height: 4, bgcolor: "divider", borderRadius: 2, mb: 1 }} />
-          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main" }}>Yangon Network</Typography>
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main" }}>{t("map.network")}</Typography>
         </Box>
 
         {/* Tab Controls */}
@@ -812,13 +814,13 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           <Tab
             value="centers"
             icon={<Building2 size={16} style={{ marginBottom: 2 }} />}
-            label={`Centers (${centers.length})`}
+            label={t("map.centersTab", { count: centers.length })}
             sx={{ fontWeight: 750, minHeight: 48, fontSize: "0.78rem" }}
           />
           <Tab
             value="collectors"
             icon={<Truck size={16} style={{ marginBottom: 2 }} />}
-            label={`Collectors (${visibleVehicles.length})`}
+            label={t("map.collectorsTab", { count: visibleVehicles.length })}
             sx={{ fontWeight: 750, minHeight: 48, fontSize: "0.78rem" }}
           />
         </Tabs>
@@ -853,7 +855,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
                 ))
               ) : (
                 <Typography variant="body2" align="center" color="text.secondary" sx={{ p: 3 }}>
-                  No active recycling centers are available.
+                  {t("map.noCenters")}
                 </Typography>
               )}
             </List>
@@ -874,7 +876,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
                   >
                     <ListItemText
                       primary={vehicle.label}
-                      secondary={`${vehicle.status.replaceAll("_", " ")} · ${formatUpdatedAt(vehicle.observedAt)}`}
+                      secondary={`${vehicle.status.replaceAll("_", " ")} · ${formatUpdatedAt(vehicle.observedAt, t)}`}
                       slotProps={{
                         primary: { variant: "body2", sx: { fontWeight: 800 } },
                         secondary: { variant: "caption", color: "text.secondary" }
@@ -885,7 +887,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
                 ))
               ) : (
                 <Typography variant="body2" align="center" color="text.secondary" sx={{ p: 3 }}>
-                  No active collectors are visible right now.
+                  {t("map.noCollectors")}
                 </Typography>
               )}
             </List>

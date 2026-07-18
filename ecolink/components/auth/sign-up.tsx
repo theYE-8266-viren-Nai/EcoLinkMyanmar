@@ -13,8 +13,10 @@ import { useState, type FormEvent } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
 import { sanitizeErrorMessage } from "@/lib/errors";
+import { useI18n } from "@/lib/i18n";
 
 export function EcoLinkSignUp() {
+  const { t } = useI18n();
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -51,17 +53,17 @@ export function EcoLinkSignUp() {
       return;
     }
 
-    setMessage("Check your email to confirm your EcoLink account.");
+    setMessage(t("auth.checkEmail"));
   }
 
   return (
     <Stack component="form" spacing={2.5} onSubmit={signUp} sx={{ width: "100%" }}>
       <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>
-        Create your EcoLink account
+        {t("auth.createTitle")}
       </Typography>
       <TextField
         autoComplete="name"
-        label="Name"
+        label={t("auth.name")}
         onChange={(event) => setDisplayName(event.target.value)}
         required
         value={displayName}
@@ -69,7 +71,7 @@ export function EcoLinkSignUp() {
       />
       <TextField
         autoComplete="email"
-        label="Email"
+        label={t("auth.email")}
         onChange={(event) => setEmail(event.target.value)}
         required
         type="email"
@@ -78,7 +80,7 @@ export function EcoLinkSignUp() {
       />
       <TextField
         autoComplete="new-password"
-        label="Password"
+        label={t("auth.password")}
         onChange={(event) => setPassword(event.target.value)}
         required
         slotProps={{ htmlInput: { minLength: 8 } }}
@@ -95,12 +97,12 @@ export function EcoLinkSignUp() {
         variant="contained"
         size="large"
       >
-        {isSubmitting ? "Creating account" : "Create account"}
+        {isSubmitting ? t("auth.creating") : t("auth.createShort")}
       </Button>
       <Typography variant="body2" align="center" color="text.secondary">
-        Already have an account?{" "}
+        {t("auth.already")}{" "}
         <Link style={{ color: "#087c78", fontWeight: 700, textDecoration: "none" }} href="/sign-in">
-          Sign in
+          {t("shell.signIn")}
         </Link>
       </Typography>
     </Stack>

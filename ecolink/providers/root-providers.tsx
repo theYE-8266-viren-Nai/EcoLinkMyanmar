@@ -4,21 +4,23 @@ import type { ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ThemeProvider } from "@/providers/theme-provider";
+import { I18nProvider } from "@/lib/i18n";
 import { EcoLinkProvider } from "@/providers/ecolink-provider";
 import { MuiProvider } from "@/providers/mui-theme-provider";
+import { PointerCaptureGuard } from "@/providers/pointer-capture-guard";
 
 export function RootProviders({ children }: { children: ReactNode }) {
   return (
-    <ThemeProvider>
-      <MuiProvider>
+    <MuiProvider>
+      <I18nProvider>
         <EcoLinkProvider>
           <TooltipProvider>
+            <PointerCaptureGuard />
             {children}
             <Toaster richColors />
           </TooltipProvider>
         </EcoLinkProvider>
-      </MuiProvider>
-    </ThemeProvider>
+      </I18nProvider>
+    </MuiProvider>
   );
 }

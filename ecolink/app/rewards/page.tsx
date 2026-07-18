@@ -27,12 +27,15 @@ import { useEffect, useRef, useState } from "react";
 
 import { AppShell } from "@/components/ecolink/app-shell";
 import { PARTNER_REWARDS } from "@/lib/ecolink-data";
+import { useI18n } from "@/lib/i18n";
 import { useEcoLink } from "@/providers/ecolink-context";
 import { redeemPartnerReward } from "@/actions/rewards";
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_ECOLINK_DEMO_MODE !== "false";
 
 function RewardClaimDialog({ claimCode, onClose }: { claimCode: string; onClose: () => void }) {
+  const { t } = useI18n();
+
   return (
     <Dialog
       open={Boolean(claimCode)}
@@ -64,10 +67,10 @@ function RewardClaimDialog({ claimCode, onClose }: { claimCode: string; onClose:
         </Avatar>
 
         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: 0.5 }}>
-          REWARD RESERVED
+          {t("rewards.dialogReserved")}
         </Typography>
         <Typography id="reward-claim-title" variant="h6" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.5 }}>
-          Show this code at the partner center
+          {t("rewards.dialogTitle")}
         </Typography>
 
         <Paper
@@ -88,12 +91,12 @@ function RewardClaimDialog({ claimCode, onClose }: { claimCode: string; onClose:
         </Paper>
 
         <Typography variant="caption" color="text.secondary">
-          Your points were deducted when the reservation was created.
+          {t("rewards.dialogHelp")}
         </Typography>
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0, justifyContent: "center" }}>
         <Button fullWidth onClick={onClose} variant="contained" size="large">
-          Done
+          {t("rewards.done")}
         </Button>
       </DialogActions>
     </Dialog>
@@ -101,6 +104,7 @@ function RewardClaimDialog({ claimCode, onClose }: { claimCode: string; onClose:
 }
 
 export default function RewardsPage() {
+  const { t } = useI18n();
   const { state, balance, redeemReward, contributeToCleanup } = useEcoLink();
   const [claimCode, setClaimCode] = useState("");
   const [error, setError] = useState("");
@@ -140,19 +144,19 @@ export default function RewardsPage() {
           startIcon={<ArrowLeft size={16} />}
           sx={{ width: "fit-content", alignSelf: "flex-start", ml: -1 }}
         >
-          Back home
+          {t("rewards.back")}
         </Button>
 
         {/* Intro */}
         <Box>
           <Typography variant="caption" sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase" }}>
-            Make your points useful
+            {t("rewards.kicker")}
           </Typography>
           <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.5 }}>
-            Choose what your recycling unlocks
+            {t("rewards.title")}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Reserve a practical partner reward, or help a funded community cleanup reach its goal.
+            {t("rewards.subtitle")}
           </Typography>
         </Box>
 
@@ -161,14 +165,14 @@ export default function RewardsPage() {
           <CardContent sx={{ p: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Box>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                AVAILABLE BALANCE
+                {t("rewards.balance")}
               </Typography>
               <Typography variant="h4" sx={{ fontWeight: 900, color: "primary.main", mt: 0.25 }}>
                 {balance}
               </Typography>
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-              points
+              {t("rewards.points")}
             </Typography>
           </CardContent>
         </Card>
@@ -181,13 +185,13 @@ export default function RewardsPage() {
         <Box>
           <Box sx={{ mb: 2 }}>
             <Typography variant="caption" sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase" }}>
-              Local Partner Offers
+              {t("rewards.offers")}
             </Typography>
             <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>
-              Redeem your points
+              {t("rewards.redeemPoints")}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Points are deducted when you reserve.
+              {t("rewards.deducted")}
             </Typography>
           </Box>
 
@@ -201,7 +205,7 @@ export default function RewardsPage() {
                       <Avatar sx={{ bgcolor: "rgba(8, 124, 120, 0.08)", color: "primary.main", width: 34, height: 34 }}>
                         <Gift size={16} />
                       </Avatar>
-                      <ChipLabel label={`${reward.stock} left`} color="#b97818" bgcolor="rgba(185, 120, 24, 0.08)" />
+                      <ChipLabel label={t("rewards.left", { count: reward.stock })} color="#b97818" bgcolor="rgba(185, 120, 24, 0.08)" />
                     </Stack>
 
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
@@ -231,7 +235,7 @@ export default function RewardsPage() {
                       disabled={balance < reward.points || Boolean(reserved)}
                       onClick={() => redeem(reward.id)}
                     >
-                      {reserved ? <><Check size={14} style={{ marginRight: 4 }} /> Reserved</> : `Redeem`}
+                      {reserved ? <><Check size={14} style={{ marginRight: 4 }} /> {t("rewards.reserved")}</> : t("rewards.redeem")}
                     </Button>
                   </CardActions>
 
@@ -239,7 +243,7 @@ export default function RewardsPage() {
                     <Box sx={{ p: 1.5, bgcolor: "rgba(11, 53, 88, 0.04)", borderTop: "1px solid", borderColor: "divider", display: "flex", alignItems: "center", gap: 1 }}>
                       <TicketCheck size={14} color="#0b3558" />
                       <Typography variant="caption" sx={{ fontWeight: 700, color: "secondary.main" }}>
-                        Claim Code: {reserved.claimCode}
+                        {t("rewards.claimCode", { code: reserved.claimCode })}
                       </Typography>
                     </Box>
                   )}
@@ -258,21 +262,21 @@ export default function RewardsPage() {
               </Avatar>
               <Box>
                 <Typography variant="caption" sx={{ fontWeight: 800, color: "#b97818", textTransform: "uppercase" }}>
-                  Shared Action
+                  {t("rewards.shared")}
                 </Typography>
                 <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main" }}>
-                  Help unlock a Hlaing riverbank cleanup
+                  {t("rewards.cleanupTitle")}
                 </Typography>
               </Box>
             </Stack>
 
             <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 2 }}>
-              Community points unlock a sponsor commitment; the points themselves are not money.
+              {t("rewards.cleanupHelp")}
             </Typography>
 
             <Stack spacing={0.5} sx={{ mb: 2 }}>
               <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-                <Typography variant="caption" sx={{ fontWeight: 700 }}>7,400 of 10,000 points</Typography>
+                <Typography variant="caption" sx={{ fontWeight: 700 }}>{t("rewards.progress")}</Typography>
                 <Typography variant="caption" sx={{ fontWeight: 800, color: "primary.main" }}>74%</Typography>
               </Stack>
               <LinearProgress
@@ -290,19 +294,19 @@ export default function RewardsPage() {
             <Divider sx={{ my: 2 }} />
 
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, display: "block", mb: 0.5 }}>
-              SPONSOR FUND COMMITS
+              {t("rewards.sponsor")}
             </Typography>
             <Typography variant="body2" sx={{ color: "secondary.main", mb: 2, fontWeight: 700 }}>
-              Gloves, collection bags, volunteer transport and licensed waste hauling.
+              {t("rewards.sponsorItems")}
             </Typography>
 
             <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
-              Your contribution: {state.cleanupContribution} / 300 points
+              {t("rewards.yourContribution", { current: state.cleanupContribution })}
             </Typography>
 
             <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
               <FormControl size="small" variant="filled" sx={{ flexGrow: 1 }}>
-                <InputLabel id="contribution-amount-label">Contribute Amount</InputLabel>
+                <InputLabel id="contribution-amount-label">{t("rewards.contributeAmount")}</InputLabel>
                 <Select
                   labelId="contribution-amount-label"
                   value={contribution}
@@ -315,14 +319,14 @@ export default function RewardsPage() {
                 </Select>
               </FormControl>
               <Button onClick={contribute} variant="contained" color="secondary" sx={{ minHeight: 40 }}>
-                Contribute
+                {t("rewards.contribute")}
               </Button>
             </Stack>
           </CardContent>
         </Card>
 
         <Typography variant="caption" color="text.secondary" align="center" sx={{ display: "block", fontStyle: "italic", mt: 1 }}>
-          Partner names, stock and offers shown here are illustrative. A live rollout should publish only signed, funded agreements.
+          {t("rewards.disclaimer")}
         </Typography>
 
         {claimCode && <RewardClaimDialog claimCode={claimCode} onClose={() => setClaimCode("")} />}
