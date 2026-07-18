@@ -53,6 +53,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     let cancelled = false;
     void syncCurrentProfile().then((result) => {
       if (!cancelled && result.ok) setMemberCode(result.profile.member_code);
+    }).catch((error) => {
+      if (!cancelled) console.warn("EcoLink profile sync failed", error);
     });
     return () => { cancelled = true; };
   }, [user]);

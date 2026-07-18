@@ -145,7 +145,7 @@ export function FaqAssistantScreen({ mode = "page" }: { mode?: "page" | "panel" 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: trimmed }),
       });
-      const payload = await response.json() as { error?: string; messageId?: string; response?: FaqAssistantClientResponse };
+      const payload = await response.json().catch(() => ({ error: "EcoGuide could not read the assistant response." })) as { error?: string; messageId?: string; response?: FaqAssistantClientResponse };
       if (!response.ok || !payload.response || !payload.messageId) throw new Error(payload.error ?? "Assistant unavailable");
       const assistantResponse = payload.response;
       const assistantMessageId = payload.messageId;
