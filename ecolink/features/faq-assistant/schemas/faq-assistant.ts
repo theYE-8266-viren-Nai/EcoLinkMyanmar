@@ -22,7 +22,7 @@ export const faqAssistantRequestSchema = z.object({
 });
 
 export const faqFeedbackRequestSchema = z.object({
-  messageId: z.string().uuid(),
+  messageId: z.uuid(),
   value: z.enum(["useful", "not_useful"]),
 });
 
@@ -39,6 +39,17 @@ export type FaqVideoCard = {
   category: string;
 };
 
+export type FaqRelatedContentCard = {
+  id: string;
+  title: string;
+  summary: string;
+  category: string;
+  riskLevel: "low" | "medium" | "high";
+  sourceName: string;
+  sourceUrl: string;
+};
+
 export type FaqAssistantClientResponse = Omit<FaqAssistantStructuredResponse, "videoIds"> & {
   videos: FaqVideoCard[];
+  relatedContent: FaqRelatedContentCard[];
 };

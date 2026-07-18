@@ -8,6 +8,8 @@ export type FaqArticle = {
   content: string;
   keywords: string[];
   riskLevel: "low" | "medium" | "high";
+  sourceName: string;
+  sourceUrl: string;
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;

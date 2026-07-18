@@ -581,8 +581,7 @@ function readStoredLanguage(): Language {
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  // Always match SSR with "en" on the first client render to avoid hydration mismatches.
-  const [language, setLanguageState] = useState<Language>("en");
+  const [language, setLanguageState] = useState<Language>(() => readStoredLanguage());
 
   const setLanguage = useCallback((nextLanguage: Language) => {
     setLanguageState(nextLanguage);
@@ -591,10 +590,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const storedLanguage = readStoredLanguage();
-    setLanguageState(storedLanguage);
-    document.documentElement.lang = storedLanguage === "my" ? "my" : "en";
-  }, []);
+    document.documentElement.lang = language === "my" ? "my" : "en";
+  }, [language]);
 
   const t = useCallback((key: TranslationKey, values?: TranslationValues) => {
     return renderTemplate(dictionaries[language][key], values);

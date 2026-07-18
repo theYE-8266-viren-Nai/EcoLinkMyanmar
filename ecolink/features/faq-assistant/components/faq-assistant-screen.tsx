@@ -4,7 +4,7 @@ import { AlertTriangle, CheckCircle2, CircleAlert, Leaf, Play, RefreshCcw, Send,
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-import type { FaqAssistantClientResponse, FaqVideoCard } from "@/features/faq-assistant/schemas/faq-assistant";
+import type { FaqAssistantClientResponse, FaqRelatedContentCard, FaqVideoCard } from "@/features/faq-assistant/schemas/faq-assistant";
 import type { FaqAssistantMessage } from "@/features/faq-assistant/types/faq-assistant";
 import { useI18n } from "@/lib/i18n";
 
@@ -49,6 +49,27 @@ function VideoCard({ video }: { video: FaqVideoCard }) {
   );
 }
 
+function RelatedContentCard({ item }: { item: FaqRelatedContentCard }) {
+  const label = item.riskLevel === "high" ? "Safety" : item.riskLevel === "medium" ? "Workflow" : "Recycle";
+  const external = item.sourceUrl.startsWith("http");
+
+  return (
+    <a
+      className={`faq-related-card is-${item.riskLevel}`}
+      href={item.sourceUrl}
+      rel={external ? "noopener noreferrer" : undefined}
+      target={external ? "_blank" : undefined}
+    >
+      <div>
+        <strong>{item.title}</strong>
+        <span>{label} - {item.category.replaceAll("-", " ")}</span>
+      </div>
+      <p>{item.summary}</p>
+      <small>Source: {item.sourceName}</small>
+    </a>
+  );
+}
+
 function AnswerCard({
   message,
   onFeedback,
@@ -84,8 +105,16 @@ function AnswerCard({
         <section><h3>{t("faq.warnings")}</h3><ul className="faq-warnings">{response.warnings.map((item) => <li key={item}>{item}</li>)}</ul></section>
       ) : null}
 
-      {response.videos.length > 0 ? (
-        <section><h3>{t("faq.learning")}</h3><div className="faq-video-list">{response.videos.map((video) => <VideoCard key={video.id} video={video} />)}</div></section>
+      {response.relatedContent.length > 0 || response.videos.length > 0 ? (
+        <section>
+          <h3>{t("faq.learning")}</h3>
+          {response.relatedContent.length > 0 ? (
+            <div className="faq-related-list">{response.relatedContent.map((item) => <RelatedContentCard item={item} key={item.id} />)}</div>
+          ) : null}
+          {response.videos.length > 0 ? (
+            <div className="faq-video-list">{response.videos.map((video) => <VideoCard key={video.id} video={video} />)}</div>
+          ) : null}
+        </section>
       ) : null}
 
       {response.confidence === "low" || response.needsHumanHelp ? (
@@ -126,7 +155,9 @@ export function FaqAssistantScreen({ mode = "page" }: { mode?: "page" | "panel" 
     };
   }, []);
 
-  useEffect(() => latestRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), [messages, loading]);
+  useEffect(() => {
+    latestRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, loading]);
 
   async function send(nextQuestion = question) {
     const trimmed = nextQuestion.trim();

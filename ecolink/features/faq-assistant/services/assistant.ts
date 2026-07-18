@@ -3,7 +3,7 @@ import { z } from "zod";
 import { faqAssistantStructuredResponseSchema, type FaqAssistantClientResponse, type FaqAssistantStructuredResponse } from "@/features/faq-assistant/schemas/faq-assistant";
 import { retrieveFaqContext } from "@/features/faq-assistant/services/retrieval";
 import { mapTrustedVideos } from "@/features/faq-assistant/services/videos";
-import type { FaqAssistantDependencies, RetrievedFaqContext } from "@/features/faq-assistant/types/faq-assistant";
+import type { FaqArticle, FaqAssistantDependencies, RetrievedFaqContext } from "@/features/faq-assistant/types/faq-assistant";
 import { sanitizeText } from "@/features/faq-assistant/utils/text";
 
 type OpenRouterResponse = {
@@ -95,6 +95,18 @@ function formatContext(context: RetrievedFaqContext) {
     })),
     detectedTopics: context.detectedTopics,
   });
+}
+
+function mapRelatedContent(articles: FaqArticle[]) {
+  return articles.slice(0, 4).map((article) => ({
+    id: article.id,
+    title: article.title,
+    summary: article.content.length > 170 ? `${article.content.slice(0, 167).trimEnd()}...` : article.content,
+    category: article.category,
+    riskLevel: article.riskLevel,
+    sourceName: article.sourceName,
+    sourceUrl: article.sourceUrl,
+  }));
 }
 
 export function buildFaqPrompt(input: FaqAssistantDependencies, context: RetrievedFaqContext, correction = false) {
@@ -200,6 +212,7 @@ export async function generateFaqAssistantResponse(input: FaqAssistantDependenci
       confidence: structured.confidence,
       needsHumanHelp: structured.needsHumanHelp,
       videos,
+      relatedContent: mapRelatedContent(safeContext.articles),
     },
   };
 }

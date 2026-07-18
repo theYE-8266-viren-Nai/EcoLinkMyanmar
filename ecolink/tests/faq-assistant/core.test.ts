@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { buildFaqPrompt, FALLBACK_FAQ_RESPONSE, generateFaqAssistantResponse, SYSTEM_PROMPT } from "@/features/faq-assistant/services/assistant";
 import { retrieveFaqContext } from "@/features/faq-assistant/services/retrieval";
+import { APPROVED_VIDEO_SEEDS } from "@/features/faq-assistant/services/seed-data";
 import { mapTrustedVideos } from "@/features/faq-assistant/services/videos";
 
 describe("EcoLink FAQ assistant", () => {
@@ -110,6 +111,41 @@ describe("EcoLink FAQ assistant", () => {
     expect(result.structured.answer).toContain("I need a little more detail");
     expect(result.structured.questionsToAsk).toContain("What item do you want to recycle?");
     expect(result.client.videos).toEqual([]);
+  });
+
+  it("returns related recycle content with assistant answers", async () => {
+    const result = await generateFaqAssistantResponse({
+      anonymousId: "anonymous",
+      question: "How should I recycle plastic bottles?",
+      apiKey: "test",
+      model: "test-model",
+      generateStructured: async () => ({
+        title: "Prepare plastic bottles",
+        answer: "Empty, rinse, and dry plastic bottles before drop-off. Confirm cap and label rules with the partner center.",
+        checklist: [{ text: "Keep bottles clean and dry.", status: "important" }],
+        questionsToAsk: [],
+        warnings: [],
+        videoIds: [],
+        confidence: "high",
+        needsHumanHelp: false,
+      }),
+    });
+
+    expect(result.client.relatedContent.map((item) => item.title)).toContain("Plastic bottle preparation");
+    expect(result.client.relatedContent.some((item) => item.category === "general-recycling")).toBe(true);
+    expect(result.client.relatedContent.every((item) => item.sourceName && item.sourceUrl)).toBe(true);
+    expect(result.client.relatedContent.find((item) => item.title === "Plastic bottle preparation")?.sourceUrl).toBe("https://www.recyclenow.com/recycle-an-item/plastic-bottles");
+  });
+
+  it("uses real approved source videos instead of sample placeholders", () => {
+    const videos = mapTrustedVideos(["video-plastic-prep-mm"], APPROVED_VIDEO_SEEDS);
+
+    expect(videos[0]?.youtubeUrl).toBe("https://www.youtube.com/watch?v=4dz1BLdPsFY");
+    expect(videos[0]?.thumbnailUrl).toBe("https://img.youtube.com/vi/4dz1BLdPsFY/hqdefault.jpg");
+    expect(videos[0]?.channelName).toBe("Recycle Now");
+    expect(APPROVED_VIDEO_SEEDS.map((video) => video.youtubeVideoId)).not.toContain("dQw4w9WgXcQ");
+    expect(APPROVED_VIDEO_SEEDS.map((video) => video.youtubeVideoId)).not.toContain("M7lc1UVf-VE");
+    expect(APPROVED_VIDEO_SEEDS.map((video) => video.youtubeVideoId)).not.toContain("ysz5S6PUM-U");
   });
 
   it("does not let prompt injection replace system rules", () => {
