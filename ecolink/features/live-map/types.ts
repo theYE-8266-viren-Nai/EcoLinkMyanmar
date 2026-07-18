@@ -66,6 +66,7 @@ export interface CollectorVehicleLocation {
   status: CollectorStatus;
   observedAt: string;
   isDemo?: boolean;
+  vehicleIcon?: string;
 }
 
 export interface WasteMapRpcRow {

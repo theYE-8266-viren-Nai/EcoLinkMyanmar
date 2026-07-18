@@ -7,12 +7,6 @@ import { AppShell } from "@/components/ecolink/app-shell";
 import { MATERIALS, PARTNER_CENTERS, type MaterialSlug } from "@/lib/ecolink-data";
 import type { AiScanResponse } from "@/schemas/ai-scan";
 
-const SAMPLE_RESULTS: Record<string, AiScanResponse> = {
-  bottle: { summary: { primaryMaterialLabel: "PET plastic", primaryMaterialSlug: "pet-plastic", estimatedBottleCount: 1, estimatedTotalWeightKg: 0.03, confidence: 0.96 }, detections: [{ materialLabel: "PET plastic", materialSlug: "pet-plastic", itemType: "clean drinks bottle", estimatedCount: 1, estimatedWeightKg: 0.03, confidence: 0.96, reasoning: "The clear bottle body and PET form are visible." }], warnings: [] },
-  box: { summary: { primaryMaterialLabel: "Paper and cardboard", primaryMaterialSlug: "paper-cardboard", estimatedBottleCount: 0, estimatedTotalWeightKg: 0.2, confidence: 0.82 }, detections: [{ materialLabel: "Paper and cardboard", materialSlug: "paper-cardboard", itemType: "food box", estimatedCount: 1, estimatedWeightKg: 0.2, confidence: 0.82, reasoning: "The box is cardboard, but visible grease can prevent recycling." }], warnings: ["Food residue may make this item unsuitable. Remove clean sections only."] },
-  battery: { summary: { primaryMaterialLabel: "Battery", primaryMaterialSlug: "batteries", estimatedBottleCount: 0, estimatedTotalWeightKg: 0.04, confidence: 0.98 }, detections: [{ materialLabel: "Battery", materialSlug: "batteries", itemType: "household battery", estimatedCount: 1, estimatedWeightKg: 0.04, confidence: 0.98, reasoning: "A cylindrical household battery is clearly visible." }], warnings: ["Do not place batteries in household recycling. Use a specialist collection point."] },
-};
-
 export default function RecyclePage() {
   const [query, setQuery] = useState("");
   const [materialFilter, setMaterialFilter] = useState<MaterialSlug | "all">("all");
@@ -49,14 +43,13 @@ export default function RecyclePage() {
         <header className="page-intro"><div><p>Recycle in Yangon</p><h1>Find where it belongs</h1><span>Browse every center freely, or scan an item only when you need help.</span></div><span className="network-badge"><MapPin size={17}/> Yangon network</span></header>
 
         <section className="analyzer-section" id="analyzer" aria-labelledby="analyzer-title">
-          <div className="analyzer-copy"><span className="feature-label"><Sparkles size={16}/> Optional AI assistance</span><h2 id="analyzer-title">Not sure about an item?</h2><p>Take one clear photo. EcoGuide checks the item; verified center rules decide where it can go.</p><small>Your photo is sent only after you tap Analyze. Sample checks do not use AI.</small></div>
+          <div className="analyzer-copy"><span className="feature-label"><Sparkles size={16}/> Optional AI assistance</span><h2 id="analyzer-title">Not sure about an item?</h2><p>Take one clear photo. EcoGuide checks the item; verified center rules decide where it can go.</p><small>Your photo is sent only after you tap Analyze.</small></div>
           <div className="analyzer-workspace">
             <div className="photo-actions">
               <label className="upload-button"><Camera size={19}/><span><strong>Take a photo</strong><small>Open the camera</small></span><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(event) => setFile(event.target.files?.[0])}/></label>
               <label className="upload-button"><ImagePlus size={19}/><span><strong>Choose a photo</strong><small>Pick from your device</small></span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setFile(event.target.files?.[0])}/></label>
             </div>
             {file ? <div className="selected-file"><CheckCircle2 size={18}/><span><strong>{file.name}</strong><small>{(file.size / 1024 / 1024).toFixed(2)} MB</small></span><button className="button button--primary" type="button" disabled={analyzing} onClick={analyze}>{analyzing ? <LoaderCircle className="spin" size={17}/> : <Sparkles size={17}/>} {analyzing ? "Analyzing" : "Analyze item"}</button></div> : <p className="photo-tip">Show one item close up, in clear light.</p>}
-            <div className="sample-row"><span>Try a sample</span><button type="button" onClick={() => { setResult(SAMPLE_RESULTS.bottle); setError(""); }}>Clean bottle</button><button type="button" onClick={() => { setResult(SAMPLE_RESULTS.box); setError(""); }}>Greasy box</button><button type="button" onClick={() => { setResult(SAMPLE_RESULTS.battery); setError(""); }}>Battery</button></div>
             {error ? <div className="inline-message inline-message--error" role="alert"><TriangleAlert size={18}/><span><strong>Analysis unavailable</strong>{error}</span></div> : null}
             {result ? <div className="analysis-result" role="status"><div><span className="result-icon"><CheckCircle2 size={22}/></span><div><small>EcoGuide result</small><h3>{result.summary.primaryMaterialLabel ?? "Item unclear"}</h3><p>{result.detections[0]?.reasoning ?? "Try another photo with the item closer to the camera."}</p></div><strong>{Math.round(result.summary.confidence * 100)}%</strong></div>{result.warnings.map((warning) => <p className="result-warning" key={warning}><TriangleAlert size={15}/>{warning}</p>)}<div className="result-centers"><span>{matchingCenters.length > 0 ? `${matchingCenters.length} partner centers accept this material` : "No verified center match yet"}</span>{matchingCenters.slice(0, 3).map((center) => <button type="button" key={center.id} onClick={() => setSelectedCenterId(center.id)}>{center.name}</button>)}</div></div> : null}
           </div>

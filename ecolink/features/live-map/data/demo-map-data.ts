@@ -34,13 +34,39 @@ export const DEMO_COLLECTOR_ROUTES = [
     vehicleId: "demo-collector-1",
     label: "Collector 12",
     centerId: "hlaing-ecopoint",
-    route: [[96.120, 16.849], [96.132, 16.847], [96.143, 16.839], [96.131, 16.833]] as Array<[number, number]>,
+    route: [
+      [96.120, 16.849],
+      [96.124, 16.849],
+      [96.128, 16.848],
+      [96.132, 16.847],
+      [96.136, 16.844],
+      [96.140, 16.842],
+      [96.143, 16.839],
+      [96.140, 16.837],
+      [96.136, 16.835],
+      [96.131, 16.833],
+      [96.127, 16.836],
+      [96.123, 16.842],
+    ] as Array<[number, number]>,
   },
   {
     vehicleId: "demo-collector-2",
     label: "Collector 07",
     centerId: "tamwe-community-dropoff",
-    route: [[96.169, 16.806], [96.181, 16.812], [96.185, 16.823], [96.173, 16.829]] as Array<[number, number]>,
+    route: [
+      [96.169, 16.806],
+      [96.173, 16.807],
+      [96.177, 16.809],
+      [96.181, 16.812],
+      [96.183, 16.816],
+      [96.185, 16.820],
+      [96.185, 16.823],
+      [96.182, 16.825],
+      [96.178, 16.827],
+      [96.173, 16.829],
+      [96.171, 16.824],
+      [96.170, 16.816],
+    ] as Array<[number, number]>,
   },
 ] as const;
 
@@ -84,7 +110,7 @@ export function createDemoWasteResponse(query: WasteMapQuery) {
 
 export function createDemoVehicles(elapsedMilliseconds: number, now = new Date()): CollectorVehicleLocation[] {
   return DEMO_COLLECTOR_ROUTES.map((vehicle, index) => {
-    const position = interpolateRoute(vehicle.route, elapsedMilliseconds + index * 2400);
+    const position = interpolateRoute(vehicle.route, elapsedMilliseconds + index * 9000);
     return {
       vehicleId: vehicle.vehicleId,
       label: vehicle.label,
@@ -96,6 +122,7 @@ export function createDemoVehicles(elapsedMilliseconds: number, now = new Date()
       status: index === 0 ? "collecting" : "en_route",
       observedAt: now.toISOString(),
       isDemo: true,
+      vehicleIcon: "recycle-car",
     };
   });
 }
