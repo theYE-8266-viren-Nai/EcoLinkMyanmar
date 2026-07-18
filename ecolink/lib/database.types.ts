@@ -448,6 +448,129 @@ export type Database = {
         };
         Relationships: [];
       };
+      recycling_route_submission_locks: {
+        Row: {
+          id: string;
+          profile_id: string;
+          route_type: "pickup" | "center_dropoff";
+          request_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          route_type: "pickup" | "center_dropoff";
+          request_id: string;
+          created_at?: string;
+        };
+        Update: {
+          profile_id?: string;
+          route_type?: "pickup" | "center_dropoff";
+          request_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      recycling_pickup_requests: {
+        Row: {
+          id: string;
+          profile_id: string;
+          selected_items: Json;
+          estimated_weight_kg: number;
+          estimated_points: number;
+          notes: string | null;
+          status: "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED" | "REJECTED";
+          pickup_address: string;
+          route_window: string;
+          route_area: string;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          selected_items?: Json;
+          estimated_weight_kg?: number;
+          estimated_points?: number;
+          notes?: string | null;
+          status?: "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED" | "REJECTED";
+          pickup_address: string;
+          route_window: string;
+          route_area: string;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          profile_id?: string;
+          selected_items?: Json;
+          estimated_weight_kg?: number;
+          estimated_points?: number;
+          notes?: string | null;
+          status?: "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED" | "REJECTED";
+          pickup_address?: string;
+          route_window?: string;
+          route_area?: string;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      recycling_center_dropoff_requests: {
+        Row: {
+          id: string;
+          profile_id: string;
+          selected_items: Json;
+          estimated_weight_kg: number;
+          estimated_points: number;
+          notes: string | null;
+          status: "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED" | "REJECTED";
+          center_id: string | null;
+          center_name: string;
+          center_address: string;
+          center_township: string;
+          center_hours: string;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          selected_items?: Json;
+          estimated_weight_kg?: number;
+          estimated_points?: number;
+          notes?: string | null;
+          status?: "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED" | "REJECTED";
+          center_id?: string | null;
+          center_name: string;
+          center_address: string;
+          center_township: string;
+          center_hours: string;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          profile_id?: string;
+          selected_items?: Json;
+          estimated_weight_kg?: number;
+          estimated_points?: number;
+          notes?: string | null;
+          status?: "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED" | "REJECTED";
+          center_id?: string | null;
+          center_name?: string;
+          center_address?: string;
+          center_township?: string;
+          center_hours?: string;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -513,9 +636,75 @@ export type Database = {
         Args: { target_report_id: string; reason?: string | null };
         Returns: string;
       };
+      submit_recycling_pickup_request: {
+        Args: {
+          pickup_address: string;
+          route_window: string;
+          route_area: string;
+          selected_items: Json;
+          estimated_weight_kg: number;
+          estimated_points: number;
+          request_notes?: string | null;
+        };
+        Returns: Array<{
+          request_id: string;
+          status: "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED" | "REJECTED";
+          created_at: string;
+        }>;
+      };
+      submit_recycling_center_dropoff_request: {
+        Args: {
+          target_center_id: string | null;
+          center_name: string;
+          center_address: string;
+          center_township: string;
+          center_hours: string;
+          selected_items: Json;
+          estimated_weight_kg: number;
+          estimated_points: number;
+          request_notes?: string | null;
+        };
+        Returns: Array<{
+          request_id: string;
+          status: "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED" | "REJECTED";
+          created_at: string;
+        }>;
+      };
+      admin_update_recycling_pickup_request: {
+        Args: {
+          target_request_id: string;
+          next_status: "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED" | "REJECTED";
+          next_pickup_address: string;
+          next_route_window: string;
+          next_route_area: string;
+          next_notes?: string | null;
+        };
+        Returns: string;
+      };
+      admin_update_recycling_center_dropoff_request: {
+        Args: {
+          target_request_id: string;
+          next_status: "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED" | "REJECTED";
+          next_center_name: string;
+          next_center_address: string;
+          next_center_township: string;
+          next_center_hours: string;
+          next_notes?: string | null;
+        };
+        Returns: string;
+      };
+      admin_delete_recycling_pickup_request: {
+        Args: { target_request_id: string };
+        Returns: string;
+      };
+      admin_delete_recycling_center_dropoff_request: {
+        Args: { target_request_id: string };
+        Returns: string;
+      };
     };
     Enums: {
       report_status: "PENDING" | "APPROVED" | "REJECTED";
+      recycling_route_request_status: "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED" | "REJECTED";
       environment_waste_type:
         | "MIXED"
         | "PLASTIC"

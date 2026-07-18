@@ -51,6 +51,14 @@ const welcomePointsBackfillMigration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260718194000_backfill_welcome_points_for_existing_profiles.sql"),
   "utf8",
 );
+const recyclingRouteSubmissionMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718210000_recycling_route_submission_crud.sql"),
+  "utf8",
+);
+const recyclingRouteRpcRepairMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718213000_repair_recycling_route_rpcs.sql"),
+  "utf8",
+);
 
 describe("EcoLink Supabase migration", () => {
   it("enables RLS on every new user-data table", () => {
@@ -186,5 +194,34 @@ describe("EcoLink Supabase migration", () => {
     expect(reportPhotoLocationMigration).toContain("report_photo_storage_path text");
     expect(reportPhotoLocationMigration).toContain("raise exception 'Report image is required'");
     expect(reportPhotoLocationMigration).toContain("photo_storage_path");
+  });
+
+  it("creates recycling route tables with RLS and a shared one-time submission lock", () => {
+    const compactMigration = recyclingRouteSubmissionMigration.replace(/\s+/g, " ");
+    for (const table of ["recycling_pickup_requests", "recycling_center_dropoff_requests", "recycling_route_submission_locks"]) {
+      expect(recyclingRouteSubmissionMigration).toContain(`alter table public.${table} enable row level security`);
+    }
+    expect(recyclingRouteSubmissionMigration).toContain("constraint recycling_route_submission_locks_profile_id_key unique (profile_id)");
+    expect(recyclingRouteSubmissionMigration).toContain("profile_id uuid not null references public.profiles(id) on delete restrict");
+    expect(compactMigration).toContain("if exists ( select 1 from public.recycling_route_submission_locks lock where lock.profile_id = member_profile_id ) then");
+    expect(recyclingRouteSubmissionMigration).toContain("insert into public.recycling_route_submission_locks");
+  });
+
+  it("protects recycling route RPCs from anonymous access", () => {
+    expect(recyclingRouteSubmissionMigration).toContain("revoke all on function public.submit_recycling_pickup_request(text, text, text, jsonb, numeric, numeric, text) from public, anon");
+    expect(recyclingRouteSubmissionMigration).toContain("revoke all on function public.submit_recycling_center_dropoff_request(text, text, text, text, text, jsonb, numeric, numeric, text) from public, anon");
+    expect(recyclingRouteSubmissionMigration).toContain("revoke all on function public.admin_update_recycling_pickup_request(uuid, public.recycling_route_request_status, text, text, text, text) from public, anon");
+    expect(recyclingRouteSubmissionMigration).toContain("revoke all on function public.admin_update_recycling_center_dropoff_request(uuid, public.recycling_route_request_status, text, text, text, text, text) from public, anon");
+    expect(recyclingRouteSubmissionMigration).toContain("revoke all on function public.admin_delete_recycling_pickup_request(uuid) from public, anon");
+    expect(recyclingRouteSubmissionMigration).toContain("revoke all on function public.admin_delete_recycling_center_dropoff_request(uuid) from public, anon");
+  });
+
+  it("repairs recycling RPCs with an atomic cross-route lock and refreshes PostgREST", () => {
+    expect(recyclingRouteRpcRepairMigration).toContain("insert into public.recycling_route_submission_locks");
+    expect(recyclingRouteRpcRepairMigration).toContain("when unique_violation then");
+    expect(recyclingRouteRpcRepairMigration).toContain("recycling_route_submission_locks_profile_id_key");
+    expect(recyclingRouteRpcRepairMigration).toContain("set deleted_at = coalesce(request.deleted_at, now())");
+    expect(recyclingRouteRpcRepairMigration).toContain("revoke insert, update, delete on public.recycling_pickup_requests from anon, authenticated");
+    expect(recyclingRouteRpcRepairMigration).toContain("notify pgrst, 'reload schema'");
   });
 });

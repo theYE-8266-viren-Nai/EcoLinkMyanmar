@@ -80,7 +80,13 @@ export function AdminReportsPage({
         <button className="button button--secondary" type="button" onClick={loadReports} disabled={refreshing}><RefreshCw size={17}/> {refreshing ? t("admin.refreshing") : t("admin.refresh")}</button>
       </header>
       <div className="admin-container admin-reports-container">
-        <div className="admin-title"><div><p>{t("admin.mvp")}</p><h1>{t("admin.pendingReports")}</h1><span>{t("admin.approveHelp")}</span></div><Link className="back-link" href="/"><ShieldCheck size={17}/> {t("admin.citizen")}</Link></div>
+        <div className="admin-title">
+          <div><p>{t("admin.mvp")}</p><h1>{t("admin.pendingReports")}</h1><span>{t("admin.approveHelp")}</span></div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <Link className="back-link" href="/admin/recycling"><ShieldCheck size={17}/> Recycling submissions</Link>
+            <Link className="back-link" href="/"><ShieldCheck size={17}/> {t("admin.citizen")}</Link>
+          </div>
+        </div>
         {message ? <p className={message.kind === "success" ? "admin-message is-success" : "admin-message is-error"} role="status">{message.text}</p> : null}
         <section className="admin-report-list" aria-label={t("admin.queue")}>
           {reports.length === 0 ? <p className="empty-copy">{t("admin.empty")}</p> : reports.map((report) => (

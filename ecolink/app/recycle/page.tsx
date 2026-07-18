@@ -11,17 +11,13 @@ import Checkbox from "@mui/material/Checkbox";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemAvatar from "@mui/material/ListItemAvatar";
 import ListItemButton from "@mui/material/ListItemButton";
 import IconButton from "@mui/material/IconButton";
 import ListItemText from "@mui/material/ListItemText";
-import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
-import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -30,7 +26,6 @@ import {
   CalendarClock,
   Camera,
   CheckCircle2,
-  ChevronRight,
   ImagePlus,
   LoaderCircle,
   MapPin,
@@ -46,11 +41,13 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/ecolink/app-shell";
+import type { MemberRouteSubmission, SelectedRecyclingItem } from "@/features/recycling-routes/types";
 import { calculatePoints, MATERIALS, PARTNER_CENTERS, type MaterialSlug } from "@/lib/ecolink-data";
 import { useI18n } from "@/lib/i18n";
 import type { AiScanResponse } from "@/schemas/ai-scan";
 
 type FulfillmentOption = "truck" | "center" | null;
+type RouteSubmittingState = "pickup" | "center_dropoff" | null;
 
 type PickupFormState = {
   address: string;
@@ -116,6 +113,13 @@ function materialInitials(label: string) {
     .join("");
 }
 
+function routeSubmissionSummary(submission: MemberRouteSubmission) {
+  if (submission.kind === "pickup") {
+    return `Pickup request ${submission.status.toLowerCase()} for ${submission.routeWindow} in ${submission.routeArea}.`;
+  }
+  return `Center drop-off request ${submission.status.toLowerCase()} at ${submission.centerName}.`;
+}
+
 export default function RecyclePage() {
   const { t } = useI18n();
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -129,6 +133,9 @@ export default function RecyclePage() {
   const [pickupPrepared, setPickupPrepared] = useState(false);
   const [pickupForm, setPickupForm] = useState<PickupFormState>(initialPickupForm);
   const [fulfillmentOption, setFulfillmentOption] = useState<FulfillmentOption>(null);
+  const [existingRouteSubmission, setExistingRouteSubmission] = useState<MemberRouteSubmission | null>(null);
+  const [routeSubmitting, setRouteSubmitting] = useState<RouteSubmittingState>(null);
+  const [routeStatusLoading, setRouteStatusLoading] = useState(true);
   const [submissionState, setSubmissionState] = useState<"idle" | "submitted">("idle");
   const [error, setError] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
@@ -155,6 +162,30 @@ export default function RecyclePage() {
     return () => {
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     };
+  }, []);
+
+  async function loadCurrentRouteSubmission(markLoading = true) {
+    if (markLoading) setRouteStatusLoading(true);
+    try {
+      const response = await fetch("/api/recycling-route", { cache: "no-store" });
+      const body = await response.json() as { submission?: MemberRouteSubmission | null; error?: string };
+      if (!response.ok) {
+        if (response.status !== 401) setError(body.error ?? "Your recycling route status could not be loaded.");
+        return;
+      }
+      setExistingRouteSubmission(body.submission ?? null);
+    } catch {
+      setError("Your recycling route status could not be loaded.");
+    } finally {
+      setRouteStatusLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadCurrentRouteSubmission(false);
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   async function analyze() {
@@ -217,15 +248,19 @@ export default function RecyclePage() {
   }, [result, t]);
 
   const selectedDetectionKeySet = useMemo(() => new Set(selectedDetectionKeys), [selectedDetectionKeys]);
-  const selectedDetections = selectableDetections.filter((detection) => selectedDetectionKeySet.has(detection.key));
-  const selectedMaterialSlugs = [...new Set(selectedDetections.flatMap((detection) => detection.materialSlug ? [detection.materialSlug] : []))];
+  const selectedDetections = useMemo(
+    () => selectableDetections.filter((detection) => selectedDetectionKeySet.has(detection.key)),
+    [selectableDetections, selectedDetectionKeySet],
+  );
+  const selectedMaterialSlugs = useMemo(
+    () => [...new Set(selectedDetections.flatMap((detection) => detection.materialSlug ? [detection.materialSlug] : []))],
+    [selectedDetections],
+  );
+  const selectedMaterialSlugSet = useMemo(() => new Set(selectedMaterialSlugs), [selectedMaterialSlugs]);
   const estimatedSelectedWeightKg = selectedDetections.reduce((total, detection) => total + detection.estimatedWeightKg, 0);
   const estimatedSelectedPoints = selectedDetections.reduce((total, detection) => total + detection.estimatedPoints, 0);
   const matchingCenters = selectedMaterialSlugs.length > 0
-    ? PARTNER_CENTERS.filter((center) => {
-      const centerMaterialSet = new Set(center.materials);
-      return selectedMaterialSlugs.some((slug) => centerMaterialSet.has(slug));
-    })
+    ? PARTNER_CENTERS.filter((center) => center.materials.some((slug) => selectedMaterialSlugSet.has(slug)))
     : [];
 
   function submitSelectedRecyclables() {
@@ -244,18 +279,108 @@ export default function RecyclePage() {
     setPickupPrepared(false);
   }
 
-  function preparePickup() {
+  function selectedItemSummary(): SelectedRecyclingItem[] {
+    return selectedDetections.map((detection) => ({
+      itemType: detection.itemType,
+      materialLabel: detection.materialLabel,
+      materialSlug: detection.materialSlug,
+      estimatedCount: detection.estimatedCount,
+      estimatedWeightKg: detection.estimatedWeightKg,
+      estimatedPoints: detection.estimatedPoints,
+    }));
+  }
+
+  async function submitPickupRoute() {
+    if (existingRouteSubmission) {
+      setError("You already submitted a recycling route request.");
+      return;
+    }
+    if (selectedDetections.length === 0) {
+      setError("Select at least one recyclable item before scheduling pickup.");
+      return;
+    }
+    if (pickupForm.address.trim().length < 6) {
+      setError("Add a complete pickup address before scheduling pickup.");
+      return;
+    }
+
+    setRouteSubmitting("pickup");
+    setError("");
     setPickupForm((current) => ({
       ...current,
       date: t("recycle.routeLabel"),
       window: t("recycle.routeWindow"),
     }));
-    setPickupPrepared(true);
-    setFulfillmentOption("truck");
-    setPickupDrawerOpen(false);
+    try {
+      const response = await fetch("/api/recycling-route", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          type: "pickup",
+          pickupAddress: pickupForm.address,
+          routeWindow: nextEcoLinkSchedule.window,
+          routeArea: nextEcoLinkSchedule.area,
+          selectedItems: selectedItemSummary(),
+          estimatedWeightKg: estimatedSelectedWeightKg,
+          estimatedPoints: estimatedSelectedPoints,
+          notes: pickupForm.notes || null,
+        }),
+      });
+      const body = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "The pickup request could not be submitted.");
+      setPickupPrepared(true);
+      setFulfillmentOption("truck");
+      setPickupDrawerOpen(false);
+      await loadCurrentRouteSubmission();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The pickup request could not be submitted.");
+    } finally {
+      setRouteSubmitting(null);
+    }
+  }
+
+  async function submitCenterDropoffRoute(center: (typeof PARTNER_CENTERS)[number]) {
+    if (existingRouteSubmission) {
+      setError("You already submitted a recycling route request.");
+      return;
+    }
+    if (selectedDetections.length === 0) {
+      setError("Select at least one recyclable item before choosing a center.");
+      return;
+    }
+
+    setRouteSubmitting("center_dropoff");
+    setError("");
+    try {
+      const response = await fetch("/api/recycling-route", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          type: "center_dropoff",
+          centerId: center.id,
+          centerName: center.name,
+          centerAddress: center.address,
+          centerTownship: center.township,
+          centerHours: center.hours,
+          selectedItems: selectedItemSummary(),
+          estimatedWeightKg: estimatedSelectedWeightKg,
+          estimatedPoints: estimatedSelectedPoints,
+          notes: null,
+        }),
+      });
+      const body = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "The center drop-off request could not be submitted.");
+      setFulfillmentOption("center");
+      await loadCurrentRouteSubmission();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "The center drop-off request could not be submitted.");
+    } finally {
+      setRouteSubmitting(null);
+    }
   }
 
   const submitted = submissionState === "submitted";
+  const routeLocked = existingRouteSubmission !== null;
   const nextEcoLinkSchedule = {
     area: t("recycle.routeArea"),
     label: t("recycle.routeLabel"),
@@ -304,6 +429,27 @@ export default function RecyclePage() {
         {submitted ? (
           /* Submission Results / Next Steps Panel */
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+            {error && (
+              <Alert severity="error" sx={{ borderRadius: 2 }} icon={<TriangleAlert size={18} />}>
+                {error}
+              </Alert>
+            )}
+
+            {routeStatusLoading && (
+              <Alert severity="info" sx={{ borderRadius: 2 }}>
+                Checking whether you already submitted a route request...
+              </Alert>
+            )}
+
+            {existingRouteSubmission && (
+              <Alert severity="success" sx={{ borderRadius: 2 }}>
+                <strong>Route request already submitted.</strong>
+                <Typography variant="caption" sx={{ display: "block" }}>
+                  {routeSubmissionSummary(existingRouteSubmission)} You cannot submit another route request.
+                </Typography>
+              </Alert>
+            )}
+
             <Card variant="outlined" sx={{ borderRadius: 3, bgcolor: "rgba(8, 124, 120, 0.04)" }}>
               <CardContent sx={{ p: 2 }}>
                 <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
@@ -370,7 +516,11 @@ export default function RecyclePage() {
                   bgcolor: "background.paper",
                 }}
               >
-                <CardActionArea onClick={() => { setFulfillmentOption("truck"); setPickupDrawerOpen(true); }} sx={{ p: 2 }}>
+                <CardActionArea
+                  disabled={routeLocked || routeStatusLoading || routeSubmitting !== null}
+                  onClick={() => { setFulfillmentOption("truck"); setPickupDrawerOpen(true); }}
+                  sx={{ p: 2 }}
+                >
                   <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
                     <Avatar sx={{ bgcolor: "rgba(8, 124, 120, 0.1)", color: "primary.main", width: 38, height: 38 }}>
                       <Truck size={20} />
@@ -396,7 +546,11 @@ export default function RecyclePage() {
                   bgcolor: "background.paper",
                 }}
               >
-                <CardActionArea onClick={() => setFulfillmentOption("center")} sx={{ p: 2 }}>
+                <CardActionArea
+                  disabled={routeLocked || routeStatusLoading || routeSubmitting !== null}
+                  onClick={() => setFulfillmentOption("center")}
+                  sx={{ p: 2 }}
+                >
                   <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
                     <Avatar sx={{ bgcolor: "rgba(11, 53, 88, 0.1)", color: "secondary.main", width: 38, height: 38 }}>
                       <Building2 size={20} />
@@ -436,7 +590,8 @@ export default function RecyclePage() {
 
                 <Stack spacing={1.5}>
                   {matchingCenters.map((center) => {
-                    const acceptedSelectedMaterials = selectedMaterialSlugs.filter((slug) => center.materials.includes(slug));
+                    const centerMaterialSet = new Set(center.materials);
+                    const acceptedSelectedMaterials = selectedMaterialSlugs.filter((slug) => centerMaterialSet.has(slug));
                     return (
                       <Card key={center.id} variant="outlined" sx={{ borderRadius: 3, borderLeft: "4px solid", borderLeftColor: "primary.main" }}>
                         <CardContent sx={{ p: 2 }}>
@@ -458,6 +613,17 @@ export default function RecyclePage() {
                                   <Chip key={slug} label={materialName(slug)} />
                                 ))}
                               </Stack>
+
+                              <Button
+                                fullWidth
+                                disabled={routeLocked || routeSubmitting !== null}
+                                onClick={() => submitCenterDropoffRoute(center)}
+                                startIcon={routeSubmitting === "center_dropoff" ? <LoaderCircle className="spin" size={14} /> : <CheckCircle2 size={14} />}
+                                sx={{ mt: 2, minHeight: 38 }}
+                                variant="contained"
+                              >
+                                {routeSubmitting === "center_dropoff" ? "Submitting" : "Submit this center"}
+                              </Button>
 
                               <Button
                                 fullWidth
@@ -756,7 +922,7 @@ export default function RecyclePage() {
           onClose={() => setPickupDrawerOpen(false)}
           slotProps={{ paper: { sx: { borderTopLeftRadius: 16, borderTopRightRadius: 16, maxWidth: 480, mx: "auto" } } }}
         >
-          <Box sx={{ p: 2 }} component="form" onSubmit={(e) => { e.preventDefault(); preparePickup(); }}>
+          <Box sx={{ p: 2 }} component="form" onSubmit={(e) => { e.preventDefault(); void submitPickupRoute(); }}>
             <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 2 }}>
               <Box>
                 <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{t("recycle.confirmPickup")}</Typography>
@@ -797,13 +963,14 @@ export default function RecyclePage() {
               />
 
               <Button
+                disabled={routeLocked || routeSubmitting !== null}
                 type="submit"
                 variant="contained"
-                startIcon={<CalendarClock size={16} />}
+                startIcon={routeSubmitting === "pickup" ? <LoaderCircle className="spin" size={16} /> : <CalendarClock size={16} />}
                 fullWidth
                 size="large"
               >
-                {t("recycle.confirmSchedule")}
+                {routeSubmitting === "pickup" ? "Submitting pickup" : t("recycle.confirmSchedule")}
               </Button>
             </Stack>
           </Box>

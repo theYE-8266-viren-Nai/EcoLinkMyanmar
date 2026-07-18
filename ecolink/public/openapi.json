@@ -6,6 +6,18 @@
     "description": "Public EcoLink APIs for AI recyclable-item and environment image analysis."
   },
   "paths": {
+    "/api/admin/recycling": {
+      "get": {
+        "operationId": "get-admin-recycling",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [],
+        "responses": {}
+      }
+    },
     "/api/admin/reports": {
       "get": {
         "operationId": "get-admin-reports",
@@ -16,6 +28,102 @@
         ],
         "parameters": [],
         "responses": {}
+      }
+    },
+    "/api/admin/recycling/center/{id}": {
+      "patch": {
+        "operationId": "patch-admin-recycling-center-{id}",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "123",
+            "description": "Path parameter: id"
+          }
+        ],
+        "responses": {}
+      },
+      "delete": {
+        "operationId": "delete-admin-recycling-center-{id}",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "123",
+            "description": "Path parameter: id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/admin/recycling/pickup/{id}": {
+      "patch": {
+        "operationId": "patch-admin-recycling-pickup-{id}",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "123",
+            "description": "Path parameter: id"
+          }
+        ],
+        "responses": {}
+      },
+      "delete": {
+        "operationId": "delete-admin-recycling-pickup-{id}",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "123",
+            "description": "Path parameter: id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
       }
     },
     "/api/admin/reports/{id}/approve": {
@@ -276,6 +384,28 @@
         "responses": {}
       }
     },
+    "/api/recycling-route": {
+      "get": {
+        "operationId": "get-recycling-route",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Recycling-route"
+        ],
+        "parameters": [],
+        "responses": {}
+      },
+      "post": {
+        "operationId": "post-recycling-route",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Recycling-route"
+        ],
+        "parameters": [],
+        "responses": {}
+      }
+    },
     "/api/reports": {
       "get": {
         "operationId": "get-reports",
@@ -320,6 +450,9 @@
     },
     {
       "name": "Map"
+    },
+    {
+      "name": "Recycling-route"
     },
     {
       "name": "Reports"
@@ -1664,6 +1797,226 @@
           "status"
         ]
       },
+      "routeBaseSchema": {
+        "type": "object",
+        "properties": {
+          "selectedItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/selectedRecyclingItemSchema"
+            },
+            "minItems": 1,
+            "maxItems": 50
+          },
+          "estimatedWeightKg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 500
+          },
+          "estimatedPoints": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "selectedItems",
+          "estimatedWeightKg",
+          "estimatedPoints"
+        ]
+      },
+      "routeRequestIdSchema": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "selectedRecyclingItemSchema": {
+        "type": "object",
+        "properties": {
+          "itemType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "materialLabel": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "materialSlug": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "estimatedCount": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "estimatedWeightKg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 500
+          },
+          "estimatedPoints": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100000
+          }
+        },
+        "required": [
+          "itemType",
+          "materialLabel",
+          "materialSlug",
+          "estimatedCount",
+          "estimatedWeightKg",
+          "estimatedPoints"
+        ]
+      },
+      "submitCenterDropoffRouteSchema": {
+        "type": "object",
+        "properties": {
+          "selectedItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/selectedRecyclingItemSchema"
+            },
+            "minItems": 1,
+            "maxItems": 50
+          },
+          "estimatedWeightKg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 500
+          },
+          "estimatedPoints": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "center_dropoff"
+            ]
+          },
+          "centerId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "centerName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "centerAddress": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "centerTownship": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "centerHours": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "selectedItems",
+          "estimatedWeightKg",
+          "estimatedPoints",
+          "type",
+          "centerId",
+          "centerName",
+          "centerAddress",
+          "centerTownship",
+          "centerHours"
+        ]
+      },
+      "submitPickupRouteSchema": {
+        "type": "object",
+        "properties": {
+          "selectedItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/selectedRecyclingItemSchema"
+            },
+            "minItems": 1,
+            "maxItems": 50
+          },
+          "estimatedWeightKg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 500
+          },
+          "estimatedPoints": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "pickup"
+            ]
+          },
+          "pickupAddress": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 500
+          },
+          "routeWindow": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "routeArea": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "selectedItems",
+          "estimatedWeightKg",
+          "estimatedPoints",
+          "type",
+          "pickupAddress",
+          "routeWindow",
+          "routeArea"
+        ]
+      },
       "submitReportLocationSchema": {
         "type": "object",
         "properties": {
@@ -1681,6 +2034,98 @@
         "required": [
           "latitude",
           "longitude"
+        ]
+      },
+      "submitRouteRequestSchema": {
+        "type": "object",
+        "discriminator": {
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/submitPickupRouteSchema"
+          },
+          {
+            "$ref": "#/components/schemas/submitCenterDropoffRouteSchema"
+          }
+        ]
+      },
+      "updateCenterDropoffRouteRequestSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "centerName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "centerAddress": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "centerTownship": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "centerHours": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "status",
+          "centerName",
+          "centerAddress",
+          "centerTownship",
+          "centerHours"
+        ]
+      },
+      "updatePickupRouteRequestSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "pickupAddress": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 500
+          },
+          "routeWindow": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "routeArea": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "status",
+          "pickupAddress",
+          "routeWindow",
+          "routeArea"
         ]
       },
       "uuidSchema": {
