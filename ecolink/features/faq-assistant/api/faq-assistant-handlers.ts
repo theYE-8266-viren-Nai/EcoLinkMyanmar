@@ -9,9 +9,9 @@ import { insertFaqMessage, listRecentFaqMessages, upsertFaqFeedback } from "@/fe
 import { sanitizeText } from "@/features/faq-assistant/utils/text";
 
 export const FAQ_ERROR_MESSAGES = {
-  malformed: "မေးခွန်းပုံစံ မမှန်သေးပါ။ စာတိုတိုနဲ့ ထပ်မေးကြည့်ပါ။",
-  unavailable: "AI assistant ကို လောလောဆယ် အသုံးပြုမရသေးပါ။ ခဏနားပြီး ထပ်ကြိုးစားပါ။",
-  feedbackFailed: "Feedback သိမ်းဆည်းလို့ မရသေးပါ။",
+  malformed: "The question format is invalid. Please ask a shorter, clearer question.",
+  unavailable: "The AI assistant is temporarily unavailable. Please try again shortly.",
+  feedbackFailed: "Feedback could not be saved yet.",
 } as const;
 
 async function getAnonymousFaqId() {

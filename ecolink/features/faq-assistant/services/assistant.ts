@@ -11,9 +11,9 @@ type OpenRouterResponse = {
   error?: { message?: string };
 };
 
-export const SYSTEM_PROMPT = `You are EcoGuide, a Myanmar-first recycling and EcoLink system FAQ assistant.
+export const SYSTEM_PROMPT = `You are EcoGuide, an English-only recycling and EcoLink system FAQ assistant for Myanmar users.
 
-Reply primarily in natural, casual Burmese. Keep familiar technical words such as Plastic, PET, HDPE, E-waste, Battery, QR, AI, confidence, estimate, workflow and Points in English where clearer.
+Reply only in clear, natural English. Do not answer in Burmese or mix Burmese into the title, answer, checklist, questionsToAsk, or warnings. Keep terms such as PET, HDPE, E-waste, Battery, QR, AI, confidence, estimate, workflow, and Points in English.
 
 Help users understand EcoLink workflows:
 - AI scanner: image input -> material estimate -> confidence/warnings -> not a verified record
@@ -43,7 +43,7 @@ Output JSON only with this exact shape:
 
 Answer style:
 - Make title short and user-friendly.
-- Make answer two to four short Burmese sentences.
+- Make answer two to four short English sentences.
 - Answer the user's direct question first. Avoid abstract "system engineering", "workflow analysis", or internal architecture wording unless the user explicitly asks for technical implementation.
 - Checklist should contain practical next steps or verification checks.
 - Warnings should be concrete uncertainty or safety boundaries.
@@ -53,17 +53,17 @@ const SCHEMA_CORRECTION_PROMPT =
   "Previous output did not match the required JSON schema. Return only valid JSON with title, answer, checklist, questionsToAsk, warnings, videoIds, confidence, and needsHumanHelp.";
 
 export const FALLBACK_FAQ_RESPONSE: FaqAssistantStructuredResponse = {
-  title: "နည်းနည်းထပ်ပြောပြပါ",
-  answer: "ဘာပစ္စည်းအကြောင်းမေးချင်တာလဲဆိုတာ ပြောပေးရင် ပိုတိကျအောင်ကူညီနိုင်ပါတယ်။ ဥပမာ Plastic bottle လား၊ Battery လား၊ Paper/Cardboard လား၊ ဒါမှမဟုတ် အမှိုက်ပုံ report လုပ်ချင်တာလား ဆိုတာရေးပေးပါ။ ဓာတ်ပုံရှိရင် AI scanner နဲ့အရင်စစ်လို့ရပြီး၊ points နဲ့ center လက်ခံမှုကိုတော့ drop-off လုပ်တဲ့အချိန်မှာအတည်ယူရပါမယ်။",
+  title: "Tell me a bit more",
+  answer: "I need a little more detail to answer accurately. Tell me the item or EcoLink action you mean, such as a plastic bottle, battery, paper, cardboard, drop-off, reward, or environment report. If you have a photo, use the AI scanner first; points and center acceptance still need confirmation at drop-off.",
   checklist: [
-    { text: "ပစ္စည်းအမျိုးအစားကိုအရင်သတ်မှတ်ပါ", status: "important" },
-    { text: "ညစ်နေ၊ စိုနေ၊ အစားအစာကပ်နေမနေ စစ်ပါ", status: "recommended" },
-    { text: "ဓာတ်ပုံရှိရင် AI scanner နဲ့ခန့်မှန်းချက်ယူပါ", status: "recommended" },
-    { text: "လက်ခံမလက်ခံနဲ့ points ကို center မှာအတည်ယူပါ", status: "important" },
-    { text: "Battery, chemical, sharp item ဖြစ်ရင် သီးခြားကိုင်တွယ်ပါ", status: "warning" },
+    { text: "Identify the item type or EcoLink action first.", status: "important" },
+    { text: "Check whether the item is dirty, wet, mixed, or damaged.", status: "recommended" },
+    { text: "Use the AI scanner for an estimate when a photo is available.", status: "recommended" },
+    { text: "Confirm acceptance and points with the partner center at drop-off.", status: "important" },
+    { text: "Handle batteries, chemicals, and sharp items separately.", status: "warning" },
   ],
-  questionsToAsk: ["ဘာပစ္စည်း recycle လုပ်ချင်တာလဲ?", "ဓာတ်ပုံရှိလား?", "ဘယ် center ကိုသွားမလဲ?", "ပစ္စည်းက စိုနေလား၊ ညစ်နေလား?"],
-  warnings: ["AI scanner ရလဒ်က ခန့်မှန်းချက်သာဖြစ်ပြီး points သို့မဟုတ် center လက်ခံမှုကိုအာမခံမထားပါ။"],
+  questionsToAsk: ["What item do you want to recycle?", "Do you have a photo?", "Which center are you going to?", "Is the item wet, dirty, mixed, or damaged?"],
+  warnings: ["AI scanner results are estimates and do not guarantee points or center acceptance."],
   videoIds: [],
   confidence: "low",
   needsHumanHelp: true,

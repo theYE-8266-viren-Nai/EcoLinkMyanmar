@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 /**
  * Ask the FAQ assistant
  * @summary Ask the FAQ assistant
- * @description Returns a validated Burmese marketplace FAQ response with trusted approved video cards.
+ * @description Returns a validated English EcoLink FAQ response with trusted approved video cards.
  * @tag FAQ Assistant
  * @body faqAssistantRequestSchema
  * @response 200:faqAssistantStructuredResponseSchema:Assistant response.
