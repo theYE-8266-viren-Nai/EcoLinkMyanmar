@@ -43,6 +43,14 @@ const approvedReportPointBackfillMigration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260718184500_backfill_approved_report_points.sql"),
   "utf8",
 );
+const welcomePointsMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718193000_award_welcome_points_on_profile_create.sql"),
+  "utf8",
+);
+const welcomePointsBackfillMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718194000_backfill_welcome_points_for_existing_profiles.sql"),
+  "utf8",
+);
 
 describe("EcoLink Supabase migration", () => {
   it("enables RLS on every new user-data table", () => {
@@ -86,6 +94,31 @@ describe("EcoLink Supabase migration", () => {
     expect(profileRpcRepairMigration).toContain("add column if not exists preferred_language");
     expect(profileRpcRepairMigration).toContain("add column if not exists updated_at");
     expect(profileRpcRepairMigration).toContain("add column if not exists deleted_at");
+  });
+
+  it("awards a one-time welcome bonus when a profile is first created", () => {
+    expect(welcomePointsMigration).toContain("point_ledger_entries_profile_welcome_bonus_key");
+    expect(welcomePointsMigration).toContain("where entry_type = 'earned' and description = 'Welcome bonus'");
+    expect(welcomePointsMigration).toContain("pg_advisory_xact_lock(hashtext(current_user_id))");
+    expect(welcomePointsMigration).toContain("created_new_profile := true");
+    expect(welcomePointsMigration).toContain("insert into public.point_ledger_entries");
+    expect(welcomePointsMigration).toContain("50");
+    expect(welcomePointsMigration).toContain("where ledger.profile_id = ensured_profile_id");
+    expect(welcomePointsMigration).toContain("and ledger.description = 'Welcome bonus'");
+    expect(welcomePointsMigration).toContain("revoke all on function public.ensure_current_profile(text, text) from public, anon");
+  });
+
+  it("backfills welcome points for existing linked profiles", () => {
+    expect(migration).toContain("profile_id uuid not null references public.profiles(id) on delete restrict");
+    expect(welcomePointsBackfillMigration).toContain("point_ledger_entries_profile_id_fkey");
+    expect(welcomePointsBackfillMigration).toContain("foreign key (profile_id)");
+    expect(welcomePointsBackfillMigration).toContain("references public.profiles(id)");
+    expect(welcomePointsBackfillMigration).toContain("insert into public.point_ledger_entries");
+    expect(welcomePointsBackfillMigration).toContain("from public.profiles profile");
+    expect(welcomePointsBackfillMigration).toContain("where profile.deleted_at is null");
+    expect(welcomePointsBackfillMigration).toContain("50");
+    expect(welcomePointsBackfillMigration).toContain("where ledger.profile_id = profile.id");
+    expect(welcomePointsBackfillMigration).toContain("and ledger.description = 'Welcome bonus'");
   });
 
   it("protects report review and awards points only through admin approval", () => {
