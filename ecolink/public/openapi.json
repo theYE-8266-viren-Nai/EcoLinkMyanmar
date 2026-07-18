@@ -129,6 +129,70 @@
           }
         }
       }
+    },
+    "/api/faq-assistant": {
+      "post": {
+        "operationId": "post-faq-assistant",
+        "summary": "Ask the FAQ assistant",
+        "description": "Returns a validated Burmese marketplace FAQ response with trusted approved video cards.",
+        "tags": [
+          "FAQ Assistant"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/faqAssistantRequestSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Assistant response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/faqAssistantStructuredResponseSchema"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseSchema"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Assistant unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseSchema"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/faq-assistant/feedback": {
+      "post": {
+        "operationId": "post-faq-assistant-feedback",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Faq-assistant"
+        ],
+        "parameters": [],
+        "responses": {}
+      }
     }
   },
   "tags": [
@@ -137,6 +201,12 @@
     },
     {
       "name": "Environment Reports"
+    },
+    {
+      "name": "FAQ Assistant"
+    },
+    {
+      "name": "Faq-assistant"
     }
   ],
   "servers": [
@@ -458,6 +528,14 @@
           "participationStatus"
         ]
       },
+      "checklistStatusSchema": {
+        "type": "string",
+        "enum": [
+          "recommended",
+          "warning",
+          "important"
+        ]
+      },
       "communityCampaignSchema": {
         "type": "object",
         "properties": {
@@ -506,6 +584,14 @@
           "description",
           "startsAt",
           "status"
+        ]
+      },
+      "confidenceSchema": {
+        "type": "string",
+        "enum": [
+          "high",
+          "medium",
+          "low"
         ]
       },
       "CreateEnvironmentReportRequestBodySchema": {
@@ -671,6 +757,118 @@
         },
         "required": [
           "error"
+        ]
+      },
+      "faqAssistantRequestSchema": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 700
+          }
+        },
+        "required": [
+          "question"
+        ]
+      },
+      "faqAssistantStructuredResponseSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "answer": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 900
+          },
+          "checklist": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 180
+                },
+                "status": {
+                  "$ref": "#/components/schemas/checklistStatusSchema"
+                }
+              },
+              "required": [
+                "text",
+                "status"
+              ]
+            },
+            "maxItems": 6
+          },
+          "questionsToAsk": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 180
+            },
+            "maxItems": 4
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 220
+            },
+            "maxItems": 5
+          },
+          "videoIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "maxItems": 3
+          },
+          "confidence": {
+            "$ref": "#/components/schemas/confidenceSchema"
+          },
+          "needsHumanHelp": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "title",
+          "answer",
+          "checklist",
+          "questionsToAsk",
+          "warnings",
+          "videoIds",
+          "confidence",
+          "needsHumanHelp"
+        ]
+      },
+      "faqFeedbackRequestSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "value": {
+            "type": "string",
+            "enum": [
+              "useful",
+              "not_useful"
+            ]
+          }
+        },
+        "required": [
+          "messageId",
+          "value"
         ]
       },
       "finiteNumber": {
@@ -1266,6 +1464,10 @@
         "required": [
           "error"
         ]
+      },
+      "youtubeUrlSchema": {
+        "type": "string",
+        "format": "uri"
       }
     },
     "responses": {}

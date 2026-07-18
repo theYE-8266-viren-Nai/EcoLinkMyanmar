@@ -6,8 +6,8 @@ import { AiScannerProviderError } from "@/lib/services/ai-scanner-errors";
 import type { AiScannerInference } from "@/lib/services/ai-scanner-inference";
 
 const config: AiScannerConfig = {
-  geminiApiKey: "test-key",
-  model: "gemini-test-model",
+  openRouterApiKey: "test-key",
+  model: "openrouter-test-model",
   maxUploadMb: 10,
 };
 
@@ -116,7 +116,7 @@ describe("POST /api/ai/scans", () => {
     const inference: AiScannerInference = vi.fn(async () => {
       throw new AiScannerProviderError(
         "AI_CREDITS_EXHAUSTED",
-        "The Gemini project does not have enough quota for this analysis.",
+        "The OpenRouter account does not have enough quota for this analysis.",
       );
     });
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -128,7 +128,7 @@ describe("POST /api/ai/scans", () => {
     await expect(response.json()).resolves.toEqual({
       error: "AI image analysis failed.",
       code: "AI_CREDITS_EXHAUSTED",
-      reason: "The Gemini project does not have enough quota for this analysis.",
+      reason: "The OpenRouter account does not have enough quota for this analysis.",
     });
     consoleError.mockRestore();
   });

@@ -16,11 +16,11 @@ type Failure = [code: AiScannerProviderErrorCode, reason: string];
 const FAILURES = {
   authentication: [
     "AI_AUTHENTICATION_FAILED",
-    "Gemini rejected the API credentials. Check GEMINI_API_KEY.",
+    "OpenRouter rejected the API credentials. Check OPENROUTER_API_KEY.",
   ],
   credits: [
     "AI_CREDITS_EXHAUSTED",
-    "The Gemini project does not have enough quota for this analysis.",
+    "The OpenRouter account does not have enough quota for this analysis.",
   ],
   input: [
     "AI_INPUT_REJECTED",
@@ -32,13 +32,13 @@ const FAILURES = {
   ],
   rateLimit: [
     "AI_PROVIDER_RATE_LIMITED",
-    "Gemini or the selected model is currently rate-limiting requests.",
+    "OpenRouter or the selected model is currently rate-limiting requests.",
   ],
   timeout: ["AI_REQUEST_TIMEOUT", "The AI provider did not finish the image analysis in time."],
-  unreachable: ["AI_PROVIDER_UNREACHABLE", "The server could not connect to Gemini."],
+  unreachable: ["AI_PROVIDER_UNREACHABLE", "The server could not connect to OpenRouter."],
   unavailable: [
     "AI_PROVIDER_UNREACHABLE",
-    "Gemini or the selected model is temporarily unavailable.",
+    "OpenRouter or the selected model is temporarily unavailable.",
   ],
 } as const satisfies Record<string, Failure>;
 

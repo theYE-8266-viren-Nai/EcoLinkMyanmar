@@ -23,7 +23,7 @@ describe("toAiScannerProviderError", () => {
     });
 
     expect(result.code).toBe("AI_PROVIDER_UNREACHABLE");
-    expect(result.reason).toBe("The server could not connect to Gemini.");
+    expect(result.reason).toBe("The server could not connect to OpenRouter.");
   });
 
   it("uses a safe fallback instead of exposing an unknown provider message", () => {

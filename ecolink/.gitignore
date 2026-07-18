@@ -42,6 +42,9 @@ dev-server*.log
 # vercel
 .vercel
 
+# local auth tooling state
+.clerk/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -45,6 +45,8 @@ describe("generated OpenAPI document", () => {
     expect(Object.keys(document.paths)).toEqual([
       "/api/ai/scans",
       "/api/environment-reports",
+      "/api/faq-assistant",
+      "/api/faq-assistant/feedback",
     ]);
     expect(operation.summary).toBe("Analyze a recyclable-items image");
     expect(requestBody.content["multipart/form-data"].schema.$ref).toContain(

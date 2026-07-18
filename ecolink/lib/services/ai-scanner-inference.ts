@@ -1,6 +1,6 @@
 import { toAiScannerProviderError } from "@/lib/services/ai-scanner-errors";
 import type { AiScannerConfig } from "@/lib/services/ai-scanner-config";
-import { generateGeminiStructured } from "@/lib/services/gemini-structured";
+import { generateOpenRouterStructured } from "@/lib/services/openrouter-structured";
 import { aiScanProviderOutputSchema, type AiScanProviderOutput } from "@/schemas/ai-scan";
 
 const PROMPT = `Analyze only the visible recyclable items in the image. Return structured JSON only.
@@ -30,9 +30,9 @@ const RESPONSE_SCHEMA = {
 
 export type AiScannerInference = (file: File, config: AiScannerConfig) => Promise<AiScanProviderOutput>;
 
-export async function analyzeImageWithGemini(file: File, config: AiScannerConfig): Promise<AiScanProviderOutput> {
+export async function analyzeImageWithOpenRouter(file: File, config: AiScannerConfig): Promise<AiScanProviderOutput> {
   try {
-    return await generateGeminiStructured({ apiKey: config.geminiApiKey, model: config.model, prompt: PROMPT, file, responseSchema: RESPONSE_SCHEMA, outputSchema: aiScanProviderOutputSchema });
+    return await generateOpenRouterStructured({ apiKey: config.openRouterApiKey, model: config.model, prompt: `${PROMPT}\nReturn JSON matching this schema: ${JSON.stringify(RESPONSE_SCHEMA)}`, file, outputSchema: aiScanProviderOutputSchema });
   } catch (error) {
     throw toAiScannerProviderError(error);
   }

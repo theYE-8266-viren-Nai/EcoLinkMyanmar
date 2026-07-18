@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createEnvironmentReportSubmissionSchema } from "@/features/environment-reports/schemas/environment-report";
-import type { AiScannerConfig } from "@/lib/services/ai-scanner-config";
+import { assertValidAiScannerConfig, getAiScannerConfig, type AiScannerConfig } from "@/lib/services/ai-scanner-config";
 import {
   AiScannerProviderError,
   AiScannerRequestError,
@@ -29,14 +29,11 @@ function validationError(error: z.ZodError) {
 function readEnvironmentReportConfig(config?: AiScannerConfig): AiScannerConfig {
   if (config) return config;
 
+  const scannerConfig = getAiScannerConfig();
   return {
-    geminiApiKey: process.env.GEMINI_API_KEY ?? "",
-    model: process.env.AI_ENVIRONMENT_REPORT_MODEL ?? process.env.AI_SCANNER_MODEL ?? "gemini-3.1-flash-lite",
-    maxUploadMb: Number(
-      process.env.AI_ENVIRONMENT_REPORT_MAX_UPLOAD_MB ??
-        process.env.AI_SCANNER_MAX_UPLOAD_MB ??
-        10,
-    ),
+    ...scannerConfig,
+    model: process.env.AI_ENVIRONMENT_REPORT_MODEL ?? scannerConfig.model,
+    maxUploadMb: Number(process.env.AI_ENVIRONMENT_REPORT_MAX_UPLOAD_MB ?? scannerConfig.maxUploadMb),
   };
 }
 
@@ -45,10 +42,10 @@ async function resolveEnvironmentImageRater(
 ) {
   if (rateEnvironmentImage) return rateEnvironmentImage;
 
-  const { rateEnvironmentImageWithGemini } = await import(
+  const { rateEnvironmentImageWithOpenRouter } = await import(
     "@/lib/services/environment-report-rating"
   );
-  return rateEnvironmentImageWithGemini;
+  return rateEnvironmentImageWithOpenRouter;
 }
 
 function getSingleFormValue(formData: FormData, field: string) {
@@ -86,9 +83,7 @@ export async function handleCreateEnvironmentReport(
 ) {
   try {
     const config = readEnvironmentReportConfig(dependencies.aiConfig);
-    if (!config.geminiApiKey || !config.model || !Number.isFinite(config.maxUploadMb) || config.maxUploadMb <= 0) {
-      throw new Error("Environment report AI configuration is invalid.");
-    }
+    assertValidAiScannerConfig(config);
 
     const { file, formData } = await readSingleImageFromMultipartRequest(
       request,

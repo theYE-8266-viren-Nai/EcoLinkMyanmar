@@ -4,7 +4,7 @@ import { handleCreateEnvironmentReport } from "@/features/environment-reports/ap
 import type { EnvironmentReportRating } from "@/schemas/environment-report-rating";
 
 const aiConfig = {
-  geminiApiKey: "test-key",
+  openRouterApiKey: "test-key",
   model: "test-model",
   maxUploadMb: 10,
 };
