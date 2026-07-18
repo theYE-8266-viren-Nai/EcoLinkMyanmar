@@ -62,8 +62,11 @@ async function readJson(request: Request) {
 export async function handleGetCurrentRouteSubmission(_request: Request, dependencies: HandlerDependencies = {}) {
   try {
     const service = await getService(dependencies);
-    const submission = await service.getCurrentSubmission();
-    return NextResponse.json({ submission });
+    const [submission, schedule] = await Promise.all([
+      service.getCurrentSubmission(),
+      service.getUpcomingSchedule(),
+    ]);
+    return NextResponse.json({ submission, schedule });
   } catch (error) {
     return safeError(error);
   }
@@ -84,8 +87,11 @@ export async function handleSubmitRouteRequest(request: Request, dependencies: H
 export async function handleListAdminRouteRequests(_request: Request, dependencies: HandlerDependencies = {}) {
   try {
     const service = await getService(dependencies);
-    const requests = await service.listAdminRequests();
-    return NextResponse.json({ requests });
+    const [requests, routing] = await Promise.all([
+      service.listAdminRequests(),
+      service.getAdminRoutingDashboard(),
+    ]);
+    return NextResponse.json({ requests, routing });
   } catch (error) {
     return safeError(error);
   }
@@ -98,8 +104,28 @@ export async function handleUpdatePickupRouteRequest(request: Request, requestId
     const parsed = updatePickupRouteRequestSchema.safeParse(await readJson(request));
     if (!parsed.success) return validationError(parsed.error);
     const service = await getService(dependencies);
-    await service.updatePickupRequest(id.data, parsed.data);
-    return NextResponse.json({ ok: true });
+    const result = await service.updatePickupRequest(id.data, parsed.data);
+    return NextResponse.json({ ok: true, ...result });
+  } catch (error) {
+    return safeError(error);
+  }
+}
+
+const routePlanActionSchema = z.object({ action: z.enum(["dispatch", "unlock", "replan"]) });
+
+export async function handlePickupRoutePlanAction(request: Request, dependencies: HandlerDependencies = {}) {
+  try {
+    const parsed = routePlanActionSchema.safeParse(await readJson(request));
+    if (!parsed.success) return validationError(parsed.error);
+    const service = await getService(dependencies);
+    if (parsed.data.action === "dispatch") {
+      await service.dispatchPickupRoutes();
+      return NextResponse.json({ ok: true });
+    }
+    const result = parsed.data.action === "unlock"
+      ? await service.unlockPickupRoutes()
+      : await service.replanPickupRoutes();
+    return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     return safeError(error);
   }

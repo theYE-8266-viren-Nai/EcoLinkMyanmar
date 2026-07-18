@@ -41,6 +41,14 @@ function isGenericMaterialLabel(label: string): boolean {
   );
 }
 
+function normalizeMaterialLabel(label: string): string {
+  const slug = toSlug(label);
+  if (new Set(["business", "commercial", "company", "brand", "logo"]).has(slug)) {
+    return "Recycle";
+  }
+  return label;
+}
+
 function clampNumber(value: number, maximum: number, decimals = 0): number {
   const clamped = Math.min(Math.max(value, 0), maximum);
   return Number(clamped.toFixed(decimals));
@@ -57,16 +65,22 @@ export function normalizeAiScanResult(payload: unknown): AiScanResponse {
     );
   }
 
-  const detections = parsed.data.detections.map((item) => ({
-    materialLabel: item.materialLabel,
-    materialSlug: toMaterialSlug(item.materialLabel),
-    itemType: item.itemType,
-    estimatedCount: clampNumber(item.estimatedCount, 1000),
-    estimatedWeightKg: clampNumber(item.estimatedWeightKg, 1000, 3),
-    confidence: clampNumber(item.confidence, 1, 4),
-    reasoning: item.reasoning,
-  }));
+  const detections = parsed.data.detections.map((item) => {
+    const materialLabel = normalizeMaterialLabel(item.materialLabel);
+    return {
+      materialLabel,
+      materialSlug: toMaterialSlug(materialLabel),
+      itemType: item.itemType,
+      estimatedCount: clampNumber(item.estimatedCount, 1000),
+      estimatedWeightKg: clampNumber(item.estimatedWeightKg, 1000, 3),
+      confidence: clampNumber(item.confidence, 1, 4),
+      reasoning: item.reasoning,
+    };
+  });
   const confidence = clampNumber(parsed.data.summary.confidence, 1, 4);
+  const primaryMaterialLabel = parsed.data.summary.primaryMaterialLabel
+    ? normalizeMaterialLabel(parsed.data.summary.primaryMaterialLabel)
+    : null;
   const warnings = new Set(parsed.data.warnings);
 
   if (detections.length === 0) {
@@ -93,7 +107,7 @@ export function normalizeAiScanResult(payload: unknown): AiScanResponse {
   const modelWeight = clampNumber(parsed.data.summary.estimatedTotalWeightKg, 1000, 3);
   const modelBottleCount = clampNumber(parsed.data.summary.estimatedBottleCount, 1000);
 
-  if (primaryDetection && isGenericMaterialLabel(parsed.data.summary.primaryMaterialLabel ?? "")) {
+  if (primaryDetection && isGenericMaterialLabel(primaryMaterialLabel ?? "")) {
     warnings.add("The model returned a generic material label; the summary uses the detected material.");
   }
 
@@ -107,10 +121,10 @@ export function normalizeAiScanResult(payload: unknown): AiScanResponse {
 
   return {
     summary: {
-      primaryMaterialLabel: primaryDetection?.materialLabel ?? parsed.data.summary.primaryMaterialLabel,
+      primaryMaterialLabel: primaryDetection?.materialLabel ?? primaryMaterialLabel,
       primaryMaterialSlug: primaryDetection?.materialSlug ??
-        (parsed.data.summary.primaryMaterialLabel
-          ? toMaterialSlug(parsed.data.summary.primaryMaterialLabel)
+        (primaryMaterialLabel
+          ? toMaterialSlug(primaryMaterialLabel)
           : null),
       estimatedBottleCount: detections.length > 0 ? detectedBottleCount : modelBottleCount,
       estimatedTotalWeightKg: detections.length > 0 ? detectedWeight : modelWeight,

@@ -41,7 +41,9 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/ecolink/app-shell";
-import type { MemberRouteSubmission, SelectedRecyclingItem } from "@/features/recycling-routes/types";
+import { PickupLocationPicker } from "@/features/recycling-routes/components/pickup-location-picker";
+import type { MemberRouteSubmission, PickupSchedule, SelectedRecyclingItem } from "@/features/recycling-routes/types";
+import { formatPickupSchedule } from "@/features/recycling-routes/utils/weekly-schedule";
 import { calculatePoints, MATERIALS, PARTNER_CENTERS, type MaterialSlug } from "@/lib/ecolink-data";
 import { useI18n } from "@/lib/i18n";
 import type { AiScanResponse } from "@/schemas/ai-scan";
@@ -115,7 +117,10 @@ function materialInitials(label: string) {
 
 function routeSubmissionSummary(submission: MemberRouteSubmission) {
   if (submission.kind === "pickup") {
-    return `Pickup request ${submission.status.toLowerCase()} for ${submission.routeWindow} in ${submission.routeArea}.`;
+    const assignment = submission.routeAssignment
+      ? ` Route ${submission.routeAssignment.routeCode}, stop ${submission.routeAssignment.stopOrder}${submission.routeAssignment.estimatedArrivalAt ? `, ETA ${new Date(submission.routeAssignment.estimatedArrivalAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Yangon" })}` : ""}.`
+      : " Route assignment will appear after acceptance.";
+    return `Pickup request ${submission.status.toLowerCase()} for ${submission.routeWindow} in ${submission.routeArea}.${assignment}`;
   }
   return `Center drop-off request ${submission.status.toLowerCase()} at ${submission.centerName}.`;
 }
@@ -132,6 +137,8 @@ export default function RecyclePage() {
   const [pickupDrawerOpen, setPickupDrawerOpen] = useState(false);
   const [pickupPrepared, setPickupPrepared] = useState(false);
   const [pickupForm, setPickupForm] = useState<PickupFormState>(initialPickupForm);
+  const [pickupCoordinates, setPickupCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [pickupSchedule, setPickupSchedule] = useState<PickupSchedule>();
   const [fulfillmentOption, setFulfillmentOption] = useState<FulfillmentOption>(null);
   const [existingRouteSubmission, setExistingRouteSubmission] = useState<MemberRouteSubmission | null>(null);
   const [routeSubmitting, setRouteSubmitting] = useState<RouteSubmittingState>(null);
@@ -154,6 +161,7 @@ export default function RecyclePage() {
     setFulfillmentOption(null);
     setPickupPrepared(false);
     setPickupForm(initialPickupForm);
+    setPickupCoordinates(null);
     setError("");
     setUploadOptionsOpen(false);
   }
@@ -168,12 +176,13 @@ export default function RecyclePage() {
     if (markLoading) setRouteStatusLoading(true);
     try {
       const response = await fetch("/api/recycling-route", { cache: "no-store" });
-      const body = await response.json() as { submission?: MemberRouteSubmission | null; error?: string };
+      const body = await response.json() as { submission?: MemberRouteSubmission | null; schedule?: PickupSchedule; error?: string };
       if (!response.ok) {
         if (response.status !== 401) setError(body.error ?? "Your recycling route status could not be loaded.");
         return;
       }
       setExistingRouteSubmission(body.submission ?? null);
+      setPickupSchedule(body.schedule);
     } catch {
       setError("Your recycling route status could not be loaded.");
     } finally {
@@ -303,6 +312,14 @@ export default function RecyclePage() {
       setError("Add a complete pickup address before scheduling pickup.");
       return;
     }
+    if (!pickupSchedule) {
+      setError("The next Saturday pickup schedule is still loading.");
+      return;
+    }
+    if (!pickupCoordinates) {
+      setError("Confirm the exact pickup point on the map before scheduling.");
+      return;
+    }
 
     setRouteSubmitting("pickup");
     setError("");
@@ -318,8 +335,9 @@ export default function RecyclePage() {
         body: JSON.stringify({
           type: "pickup",
           pickupAddress: pickupForm.address,
-          routeWindow: nextEcoLinkSchedule.window,
-          routeArea: nextEcoLinkSchedule.area,
+          scheduleId: pickupSchedule.id,
+          latitude: pickupCoordinates.latitude,
+          longitude: pickupCoordinates.longitude,
           selectedItems: selectedItemSummary(),
           estimatedWeightKg: estimatedSelectedWeightKg,
           estimatedPoints: estimatedSelectedPoints,
@@ -382,42 +400,38 @@ export default function RecyclePage() {
   const submitted = submissionState === "submitted";
   const routeLocked = existingRouteSubmission !== null;
   const nextEcoLinkSchedule = {
-    area: t("recycle.routeArea"),
-    label: t("recycle.routeLabel"),
-    window: t("recycle.routeWindow"),
+    area: pickupSchedule?.routeArea ?? t("recycle.routeArea"),
+    label: "Next Saturday EcoLink pickup",
+    window: pickupSchedule ? formatPickupSchedule(pickupSchedule) : "Loading Saturday 8:00–11:00 AM schedule…",
   };
 
   return (
     <AppShell>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 3, width: "100%" }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2, width: "100%" }}>
         {/* Intro */}
-        <Box sx={{ mt: 0.5 }}>
-          <Typography
-            variant="caption"
-            sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase", letterSpacing: 0.4 }}
-          >
-            {t("recycle.kicker")}
-          </Typography>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.75, fontSize: { xs: "1.35rem", sm: "1.5rem" }, lineHeight: 1.25 }}>
-            {t("recycle.title")}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.55 }}>
-            {t("recycle.subtitle")}
-          </Typography>
-
-          <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1.5, alignItems: "center", flexWrap: "wrap" }}>
+        <Box sx={{ mt: 0.25 }}>
+          <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", justifyContent: "space-between" }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h5" sx={{ fontWeight: 850, color: "secondary.main", fontSize: { xs: "1.35rem", sm: "1.5rem" }, lineHeight: 1.2 }}>
+                {t("recycle.title")}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
+                {t("recycle.subtitle")}
+              </Typography>
+            </Box>
             <Box
               sx={{
                 bgcolor: "rgba(8, 124, 120, 0.08)",
                 color: "primary.main",
-                px: 1.5,
+                px: 1,
                 py: 0.5,
-                borderRadius: "12px",
+                borderRadius: "999px",
                 fontSize: "0.7rem",
                 fontWeight: 800,
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 0.75,
+                gap: 0.5,
+                flexShrink: 0,
               }}
             >
               <Scale size={13} />
@@ -658,86 +672,85 @@ export default function RecyclePage() {
           </Box>
         ) : (
           /* Analyzer Workspace / Upload Photo Page */
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, width: "100%" }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, width: "100%" }}>
             <Card variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
-              <CardActionArea
-                onClick={() => setUploadOptionsOpen(true)}
-                sx={{
-                  minHeight: { xs: 220, sm: 200 },
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  bgcolor: previewUrl ? "black" : "rgba(0, 0, 0, 0.02)",
-                  color: previewUrl ? "white" : "text.secondary",
-                  border: "2px dashed",
-                  borderColor: previewUrl ? "transparent" : "divider",
-                  m: 1.5,
-                  borderRadius: 2,
-                  position: "relative",
-                }}
-              >
-                {previewUrl ? (
-                  <Box sx={{ width: "100%", height: { xs: 220, sm: 200 }, position: "relative" }}>
-                    <Image
-                      alt="Uploaded preview"
-                      src={previewUrl}
-                      fill
-                      sizes="448px"
-                      style={{ objectFit: "contain" }}
-                      unoptimized
-                    />
-                  </Box>
-                ) : (
-                  <Stack spacing={1} sx={{ alignItems: "center", p: 3, textAlign: "center" }}>
-                    <Avatar sx={{ bgcolor: "rgba(8, 124, 120, 0.08)", color: "primary.main", width: 52, height: 52 }}>
-                      <Camera size={24} />
-                    </Avatar>
-                    <Typography variant="body2" sx={{ fontWeight: 800 }}>{t("recycle.tapPhoto")}</Typography>
-                    <Typography variant="caption" color="text.secondary">{t("recycle.cameraGallery")}</Typography>
-                  </Stack>
-                )}
-              </CardActionArea>
+              <Box sx={{ p: 1.5 }}>
+                <CardActionArea
+                  aria-label={t("recycle.tapPhoto")}
+                  onClick={() => setUploadOptionsOpen(true)}
+                  sx={{
+                    minHeight: { xs: 180, sm: 190 },
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor: previewUrl ? "black" : "rgba(0, 0, 0, 0.02)",
+                    color: previewUrl ? "white" : "text.secondary",
+                    border: "2px dashed",
+                    borderColor: previewUrl ? "transparent" : "divider",
+                    borderRadius: 2,
+                    position: "relative",
+                  }}
+                >
+                  {previewUrl ? (
+                    <Box sx={{ width: "100%", height: { xs: 180, sm: 190 }, position: "relative" }}>
+                      <Image
+                        alt="Uploaded preview"
+                        src={previewUrl}
+                        fill
+                        sizes="448px"
+                        style={{ objectFit: "contain" }}
+                        unoptimized
+                      />
+                    </Box>
+                  ) : (
+                    <Stack spacing={0.75} sx={{ alignItems: "center", p: 2.5, textAlign: "center" }}>
+                      <Avatar sx={{ bgcolor: "rgba(8, 124, 120, 0.08)", color: "primary.main", width: 48, height: 48 }}>
+                        <Camera size={24} />
+                      </Avatar>
+                      <Typography variant="body2" sx={{ fontWeight: 800 }}>{t("recycle.tapPhoto")}</Typography>
+                      <Typography variant="caption" color="text.secondary">{t("recycle.cameraGallery")}</Typography>
+                    </Stack>
+                  )}
+                </CardActionArea>
+              </Box>
 
-              <CardContent sx={{ p: 2, pt: 1.5 }}>
-                <Stack spacing={1.5}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                      {file ? t("recycle.photoReady") : t("recycle.startClear")}
-                    </Typography>
-                    <Typography
-                      variant="subtitle2"
-                      sx={{
-                        fontWeight: 800,
-                        color: "secondary.main",
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {file ? file.name : t("recycle.scanItem")}
-                    </Typography>
-                    {file && (
+              {file && (
+                <CardContent sx={{ p: 2, pt: 0.5 }}>
+                  <Stack spacing={1.25}>
+                    <Box>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{
+                          fontWeight: 800,
+                          color: "secondary.main",
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {file.name}
+                      </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
                         {t("recycle.selectedMb", { size: (file.size / 1024 / 1024).toFixed(2) })}
                       </Typography>
-                    )}
-                  </Box>
-                  <Button
-                    disabled={!file || analyzing}
-                    fullWidth
-                    onClick={analyze}
-                    size="large"
-                    variant="contained"
-                    startIcon={analyzing ? <CircularProgress size={18} color="inherit" /> : <Sparkles size={18} />}
-                    sx={{
-                      minHeight: 48,
-                      fontWeight: 800,
-                      borderRadius: 2,
-                    }}
-                  >
-                    {analyzing ? t("recycle.analyzing") : t("recycle.analyzePhoto")}
-                  </Button>
-                </Stack>
-              </CardContent>
+                    </Box>
+                    <Button
+                      disabled={analyzing}
+                      fullWidth
+                      onClick={analyze}
+                      size="large"
+                      variant="contained"
+                      startIcon={analyzing ? <CircularProgress size={18} color="inherit" /> : <Sparkles size={18} />}
+                      sx={{
+                        minHeight: 48,
+                        fontWeight: 800,
+                        borderRadius: 2,
+                      }}
+                    >
+                      {analyzing ? t("recycle.analyzing") : t("recycle.analyzePhoto")}
+                    </Button>
+                  </Stack>
+                </CardContent>
+              )}
             </Card>
 
             <input
@@ -956,6 +969,8 @@ export default function RecyclePage() {
                 variant="filled"
               />
 
+              <PickupLocationPicker value={pickupCoordinates} onChange={setPickupCoordinates} />
+
               <TextField
                 multiline
                 rows={2}
@@ -967,7 +982,7 @@ export default function RecyclePage() {
               />
 
               <Button
-                disabled={routeLocked || routeSubmitting !== null}
+                disabled={routeLocked || routeSubmitting !== null || !pickupSchedule || !pickupCoordinates}
                 type="submit"
                 variant="contained"
                 startIcon={routeSubmitting === "pickup" ? <LoaderCircle className="spin" size={16} /> : <CalendarClock size={16} />}

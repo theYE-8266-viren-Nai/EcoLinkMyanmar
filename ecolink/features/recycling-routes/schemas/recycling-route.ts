@@ -21,8 +21,9 @@ const routeBaseSchema = z.object({
 export const submitPickupRouteSchema = routeBaseSchema.extend({
   type: z.literal("pickup"),
   pickupAddress: z.string().trim().min(6).max(500),
-  routeWindow: z.string().trim().min(1).max(120),
-  routeArea: z.string().trim().min(1).max(120),
+  scheduleId: z.uuid(),
+  latitude: z.number().finite().min(-90).max(90),
+  longitude: z.number().finite().min(-180).max(180),
 });
 
 export const submitCenterDropoffRouteSchema = routeBaseSchema.extend({
@@ -44,8 +45,9 @@ export const routeRequestIdSchema = z.uuid();
 export const updatePickupRouteRequestSchema = z.object({
   status: z.enum(RECYCLING_ROUTE_STATUSES),
   pickupAddress: z.string().trim().min(6).max(500),
-  routeWindow: z.string().trim().min(1).max(120),
-  routeArea: z.string().trim().min(1).max(120),
+  scheduleId: z.uuid(),
+  latitude: z.number().finite().min(-90).max(90),
+  longitude: z.number().finite().min(-180).max(180),
   notes: z.string().trim().max(500).optional().nullable(),
 });
 

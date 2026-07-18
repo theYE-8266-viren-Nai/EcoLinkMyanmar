@@ -43,7 +43,11 @@ describe("generated OpenAPI document", () => {
 
     expect(document.openapi).toBe("3.1.0");
     expect(Object.keys(document.paths)).toEqual([
+      "/api/admin/recycling",
       "/api/admin/reports",
+      "/api/admin/recycling/routes",
+      "/api/admin/recycling/center/{id}",
+      "/api/admin/recycling/pickup/{id}",
       "/api/admin/reports/{id}/approve",
       "/api/admin/reports/{id}/reject",
       "/api/ai/scans",
@@ -52,6 +56,7 @@ describe("generated OpenAPI document", () => {
       "/api/faq-assistant",
       "/api/faq-assistant/feedback",
       "/api/map/waste",
+      "/api/recycling-route",
       "/api/reports",
     ]);
     expect(document.paths).not.toHaveProperty("/api/reports/{id}/claim");

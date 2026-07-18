@@ -30,6 +30,18 @@
         "responses": {}
       }
     },
+    "/api/admin/recycling/routes": {
+      "post": {
+        "operationId": "post-admin-recycling-routes",
+        "summary": "",
+        "description": "",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [],
+        "responses": {}
+      }
+    },
     "/api/admin/recycling/center/{id}": {
       "patch": {
         "operationId": "patch-admin-recycling-center-{id}",
@@ -1832,6 +1844,22 @@
           "estimatedPoints"
         ]
       },
+      "routePlanActionSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "dispatch",
+              "unlock",
+              "replan"
+            ]
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
       "routeRequestIdSchema": {
         "type": "string",
         "format": "uuid"
@@ -1996,15 +2024,19 @@
             "minLength": 6,
             "maxLength": 500
           },
-          "routeWindow": {
+          "scheduleId": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 120
+            "format": "uuid"
           },
-          "routeArea": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
           }
         },
         "required": [
@@ -2013,8 +2045,9 @@
           "estimatedPoints",
           "type",
           "pickupAddress",
-          "routeWindow",
-          "routeArea"
+          "scheduleId",
+          "latitude",
+          "longitude"
         ]
       },
       "submitReportLocationSchema": {
@@ -2103,15 +2136,19 @@
             "minLength": 6,
             "maxLength": 500
           },
-          "routeWindow": {
+          "scheduleId": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 120
+            "format": "uuid"
           },
-          "routeArea": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
           },
           "notes": {
             "type": [
@@ -2124,8 +2161,9 @@
         "required": [
           "status",
           "pickupAddress",
-          "routeWindow",
-          "routeArea"
+          "scheduleId",
+          "latitude",
+          "longitude"
         ]
       },
       "uuidSchema": {

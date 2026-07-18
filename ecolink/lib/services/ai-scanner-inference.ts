@@ -5,6 +5,7 @@ import { aiScanProviderOutputSchema, type AiScanProviderOutput } from "@/schemas
 
 const PROMPT = `Analyze only the visible recyclable items in the image. Return structured JSON only.
 Use real material labels such as PET plastic, Paper and cardboard, Glass, Aluminium, E-waste, or Batteries.
+Do not use business, commercial, brand, logo, or scene categories as material labels; use Recycle only when the recyclable material cannot be determined.
 Identify each visible item group with material, item type, count, estimated empty weight in kilograms, confidence, and brief visual reasoning.
 Estimate empty item weight only. Use conservative non-negative estimates and confidence values from 0 to 1.
 Add warnings for contamination, blur, occlusion, uncertainty, or when the image lacks enough detail.`;

@@ -130,7 +130,14 @@ export function createDemoWasteResponse(query: WasteMapQuery) {
       mode,
       feature_id: report.id,
       geometry: { type: "Point", coordinates: [Number(report.longitude.toFixed(3)), Number(report.latitude.toFixed(3))] },
-      properties: { score: report.score, wasteType: report.wasteType, status: "submitted", observedAt: new Date().toISOString(), demo: true },
+      properties: {
+        score: report.score,
+        wasteType: report.wasteType,
+        status: "submitted",
+        observedAt: new Date().toISOString(),
+        photoUrl: "/map-waste-report.svg",
+        demo: true,
+      },
     })), query.zoom);
   }
 

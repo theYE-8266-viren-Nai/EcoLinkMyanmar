@@ -351,6 +351,61 @@ Indexes:
 - `status`
 - Composite index on `organizationId` and `scheduledStartAt`.
 
+### PickupSchedule
+
+Purpose: Defines the structured weekly Yangon collection window used to group accepted pickup requests.
+
+Key fields:
+
+- `id`
+- `startsAt`
+- `endsAt`
+- `routeArea`
+- `status`
+- `dispatchedAt`
+
+Notes: EcoLink currently creates the next Saturday 8:00–11:00 AM window in `Asia/Yangon`. Dispatch locks its route plans until an admin explicitly unlocks them.
+
+### PickupRoutePlan
+
+Purpose: Stores one private, closed collection loop for a pickup schedule.
+
+Key fields:
+
+- `scheduleId`
+- `routeCode`
+- `centerId`
+- `status`
+- `geometry`
+- `distanceMeters`
+- `durationSeconds`
+- `planVersion`
+- `generationError`
+
+Relationships:
+
+- Belongs to a pickup schedule and recycling center.
+- Has many pickup route stops.
+
+Notes: Route A begins and ends at Hlaing EcoPoint; Route B begins and ends at Tamwe Community Drop-off. Complete geometry and other members' stops are admin-only.
+
+### PickupRouteStop
+
+Purpose: Assigns an accepted pickup request to a numbered position and ETA on one collection loop.
+
+Key fields:
+
+- `routePlanId`
+- `scheduleId`
+- `pickupRequestId`
+- `routeCode`
+- `stopOrder`
+- `estimatedArrivalAt`
+- `latitude`
+- `longitude`
+
+Notes: Members may read only the stop associated with their own pickup request.
+
 ### RewardOffer
 
 Purpose: Defines available rewards funded by EcoLink, partners, NGOs, or businesses.

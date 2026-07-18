@@ -27,6 +27,7 @@ import {
 import Link from "next/link";
 
 import type { ImpactDashboardData } from "@/features/impact/types";
+import { useI18n } from "@/lib/i18n";
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -40,18 +41,20 @@ function formatPoints(points: number) {
 }
 
 export function ImpactDashboard({ data }: { data: ImpactDashboardData }) {
+  const { t } = useI18n();
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       {/* Intro Header */}
       <Box sx={{ mt: 1 }}>
         <Typography variant="caption" sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase", letterSpacing: 0.5 }}>
-          Citizen Dashboard
+          {t("impact.kicker")}
         </Typography>
         <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.5 }}>
-          {data.displayName}&apos;s verified impact
+          {t("impact.title", { name: data.displayName })}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          Points come from your point ledger after an admin approves your reports.
+          {t("impact.subtitle")}
         </Typography>
         <ChipLabel label={data.memberCode} />
       </Box>
@@ -70,7 +73,7 @@ export function ImpactDashboard({ data }: { data: ImpactDashboardData }) {
                 <Award size={20} />
               </Avatar>
               <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "text.secondary" }}>
-                Impact Points
+                {t("impact.points")}
               </Typography>
             </Stack>
             
@@ -80,7 +83,7 @@ export function ImpactDashboard({ data }: { data: ImpactDashboardData }) {
 
             <Stack direction="row" sx={{ justifyContent: "space-between", mb: 1 }}>
               <Typography variant="caption" color="text.secondary">
-                {data.pointsToNextMilestone} points to next milestone
+                {t("impact.pointsToNext", { count: data.pointsToNextMilestone })}
               </Typography>
               <Typography variant="caption" sx={{ fontWeight: 700, color: "secondary.main" }}>
                 {data.nextMilestone}
@@ -111,9 +114,9 @@ export function ImpactDashboard({ data }: { data: ImpactDashboardData }) {
               <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
                 <Gift size={20} color="#087c78" />
                 <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 800 }}>Use points</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 800 }}>{t("impact.usePoints")}</Typography>
                   <Typography variant="caption" color="text.secondary">
-                    Reward redemptions subtract from this balance
+                    {t("impact.usePointsHelp")}
                   </Typography>
                 </Box>
               </Stack>
@@ -128,24 +131,24 @@ export function ImpactDashboard({ data }: { data: ImpactDashboardData }) {
             <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 2 }}>
               <Box>
                 <Typography variant="caption" sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase" }}>
-                  Reports
+                  {t("impact.reports")}
                 </Typography>
                 <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>
-                  Review Status
+                  {t("impact.reviewStatus")}
                 </Typography>
               </Box>
               <Box sx={{ textAlign: "right" }}>
                 <Typography variant="h5" sx={{ fontWeight: 900, color: "secondary.main" }}>
                   {data.totalReportCount}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">Total Reports</Typography>
+                <Typography variant="caption" color="text.secondary">{t("impact.totalReports")}</Typography>
               </Box>
             </Stack>
 
             <Stack direction="row" spacing={2} sx={{ mb: 2, justifyContent: "space-around" }}>
-              <StatusLegendDot color="#2d7350" label="Approved" count={data.approvedReportCount} />
-              <StatusLegendDot color="#b97818" label="Pending" count={data.pendingReportCount} />
-              <StatusLegendDot color="#b42318" label="Rejected" count={data.rejectedReportCount} />
+              <StatusLegendDot color="#2d7350" label={t("impact.approved")} count={data.approvedReportCount} />
+              <StatusLegendDot color="#b97818" label={t("impact.pending")} count={data.pendingReportCount} />
+              <StatusLegendDot color="#b42318" label={t("impact.rejected")} count={data.rejectedReportCount} />
             </Stack>
 
             <Alert
@@ -154,7 +157,7 @@ export function ImpactDashboard({ data }: { data: ImpactDashboardData }) {
               sx={{ bgcolor: "rgba(8, 124, 120, 0.05)", border: 0, color: "secondary.main", py: 0.5 }}
             >
               <Typography variant="caption">
-                Pending and rejected reports do not change your point balance.
+                {t("impact.noBalanceChange")}
               </Typography>
             </Alert>
           </CardContent>
@@ -165,16 +168,16 @@ export function ImpactDashboard({ data }: { data: ImpactDashboardData }) {
       <Box>
         <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>
-            Points Activity
+            {t("impact.pointsActivity")}
           </Typography>
-          <Chip label="Supabase Ledger" color="success" size="small" />
+          <Chip label={t("impact.ledger")} color="success" size="small" />
         </Stack>
 
         <Card variant="outlined" sx={{ borderRadius: 3 }}>
           <List disablePadding>
             {data.ledger.length === 0 ? (
               <Typography variant="body2" sx={{ p: 3, textAlign: "center", color: "text.secondary" }}>
-                No point ledger entries yet.
+                {t("impact.noLedger")}
               </Typography>
             ) : (
               data.ledger.slice(0, 6).map((item, index) => (
@@ -223,7 +226,7 @@ export function ImpactDashboard({ data }: { data: ImpactDashboardData }) {
           fullWidth
           sx={{ mt: 1.5, justifyContent: "center" }}
         >
-          View rewards
+          {t("impact.viewRewards")}
         </Button>
       </Box>
 

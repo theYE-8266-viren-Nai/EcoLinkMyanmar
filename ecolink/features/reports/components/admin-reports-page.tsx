@@ -1,10 +1,24 @@
 "use client";
 
-import { CheckCircle2, ImageIcon, LoaderCircle, MapPin, Search, UserRound, XCircle } from "lucide-react";
+import Accordion from "@mui/material/Accordion";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import AccordionSummary from "@mui/material/AccordionSummary";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import CircularProgress from "@mui/material/CircularProgress";
+import Divider from "@mui/material/Divider";
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import { CheckCircle2, ChevronDown, ImageIcon, MapPin, Search, UserRound, XCircle } from "lucide-react";
 import Image from "next/image";
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
-import { AdminMetric, AdminShell } from "@/features/admin/components/admin-shell";
+import { AdminMetric, AdminMetrics, AdminShell } from "@/features/admin/components/admin-shell";
 import type { AdminPendingReport } from "@/features/reports/types";
 import { useI18n } from "@/lib/i18n";
 
@@ -60,7 +74,7 @@ export function AdminReportsPage({
     const body = await readJsonResponse<PendingReportsResponse>(response);
     setRefreshing(false);
     if (!response.ok || !body || "error" in body) {
-      setMessage({ kind: "error", text: body && "error" in body ? body.error : "Could not load pending reports." });
+      setMessage({ kind: "error", text: body && "error" in body ? body.error : t("admin.loadPendingError") });
       return;
     }
     setReports(body.reports);
@@ -77,10 +91,10 @@ export function AdminReportsPage({
     const body = await readJsonResponse<{ error?: string }>(response);
     setActingId(undefined);
     if (!response.ok) {
-      setMessage({ kind: "error", text: body?.error ?? "The report could not be reviewed." });
+      setMessage({ kind: "error", text: body?.error ?? t("admin.reviewError") });
       return;
     }
-    setMessage({ kind: "success", text: action === "approve" ? "Report approved." : "Report rejected." });
+    setMessage({ kind: "success", text: action === "approve" ? t("admin.reportApproved") : t("admin.reportRejected") });
     await loadReports();
   }
 
@@ -92,72 +106,93 @@ export function AdminReportsPage({
       onRefresh={loadReports}
       title={t("admin.pendingReports")}
     >
-      <div className="admin-metrics" aria-label="Moderation summary">
-        <AdminMetric label="Pending" value={reports.length} detail="Awaiting a decision" />
-        <AdminMetric label="High priority" value={highPriorityCount} detail="High or critical severity" />
-        <AdminMetric label="With evidence" value={evidenceCount} detail="Photo attached" />
-      </div>
-        {message ? <p className={message.kind === "success" ? "admin-message is-success" : "admin-message is-error"} role="status">{message.text}</p> : null}
-        <section className="admin-data-section" aria-label={t("admin.queue")}>
-          <div className="admin-data-toolbar">
-            <div>
-              <h2>Moderation queue</h2>
-              <span>{filteredReports.length} of {reports.length} reports</span>
-            </div>
-            <label className="admin-search">
-              <span className="sr-only">Search pending reports</span>
-              <Search size={16} aria-hidden="true" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search title, location, or member…" type="search" />
-            </label>
-          </div>
+      <AdminMetrics label={t("admin.moderationSummary")}>
+        <AdminMetric label={t("admin.pending")} value={reports.length} detail={t("admin.awaitingDecision")} />
+        <AdminMetric label={t("admin.highPriority")} value={highPriorityCount} detail={t("admin.highPriorityDetail")} />
+        <AdminMetric label={t("admin.withEvidence")} value={evidenceCount} detail={t("admin.photoAttached")} />
+      </AdminMetrics>
+      {message ? <Alert severity={message.kind} role="status" variant="outlined">{message.text}</Alert> : null}
+      <Paper component="section" aria-label={t("admin.queue")} variant="outlined" sx={{ overflow: "hidden" }}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ alignItems: { sm: "center" }, bgcolor: "#fbfdfd", borderBottom: 1, borderColor: "divider", justifyContent: "space-between", p: 2 }}>
+          <Box>
+            <Typography component="h2" variant="subtitle1" sx={{ color: "secondary.main", fontWeight: 800 }}>{t("admin.moderationQueue")}</Typography>
+            <Typography color="text.secondary" variant="caption">{t("admin.reportCount", { visible: filteredReports.length, total: reports.length })}</Typography>
+          </Box>
+          <TextField
+            aria-label={t("admin.searchPending")}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t("admin.searchPlaceholder")}
+            size="small"
+            slotProps={{ input: { startAdornment: <Search size={17} aria-hidden="true" /> } }}
+            sx={{ maxWidth: { sm: 340 }, minWidth: { sm: 280 }, "& .MuiInputBase-root": { gap: 1, minHeight: 48 } }}
+            type="search"
+            value={query}
+            variant="outlined"
+          />
+        </Stack>
 
           {reports.length === 0 ? (
-            <div className="admin-empty"><CheckCircle2 size={22} aria-hidden="true" /><h3>Queue cleared</h3><p>{t("admin.empty")}</p></div>
+            <EmptyQueue icon={<CheckCircle2 size={24} aria-hidden="true" />} title={t("admin.queueCleared")} description={t("admin.empty")} />
           ) : filteredReports.length === 0 ? (
-            <div className="admin-empty"><Search size={22} aria-hidden="true" /><h3>No matching reports</h3><p>Try a different title, member, issue type, or location.</p></div>
+            <EmptyQueue icon={<Search size={24} aria-hidden="true" />} title={t("admin.noMatches")} description={t("admin.noMatchesHelp")} />
           ) : (
-            <div className="admin-record-list">
+            <Box>
               {filteredReports.map((report) => (
-                <details className="admin-record" key={report.id}>
-                  <summary>
-                    <span className="admin-record-primary">
-                      <span className="report-status report-status--pending">{t("admin.pending")}</span>
-                      <strong>{report.title}</strong>
-                      <small><MapPin size={13} aria-hidden="true" />{report.locationText}</small>
-                    </span>
-                    <span className="admin-record-meta">
-                      <span><UserRound size={14} aria-hidden="true" />{report.submittedBy.displayName}</span>
-                      <span>{report.issueType} · {report.severity}</span>
-                      <time dateTime={report.createdAt}>{DATE_FORMATTER.format(new Date(report.createdAt))}</time>
-                    </span>
-                  </summary>
-                  <div className="admin-record-body">
-                    <div className="admin-report-detail">
-                      {report.photoUrl ? <Image alt="Submitted report evidence" className="admin-report-photo" height={293} src={report.photoUrl} unoptimized width={520} /> : <div className="admin-photo-placeholder"><ImageIcon size={22} aria-hidden="true" /><span>{t("admin.noImage")}</span></div>}
-                      <dl>
-                        <div><dt>{t("admin.submittedBy")}</dt><dd>{report.submittedBy.displayName}<br/><span>{report.submittedBy.email}</span></dd></div>
-                        <div><dt>{t("admin.date")}</dt><dd>{DATE_FORMATTER.format(new Date(report.createdAt))}</dd></div>
-                        <div><dt>{t("admin.issue")}</dt><dd>{report.issueType}</dd></div>
-                        <div><dt>{t("admin.severity")}</dt><dd>{report.severity}</dd></div>
-                        <div><dt>{t("admin.location")}</dt><dd>{report.locationText}</dd></div>
-                        <div><dt>{t("admin.image")}</dt><dd>{report.photoStoragePath ? report.photoStoragePath.split("/").pop() : t("admin.noImage")}</dd></div>
-                        <div className="admin-detail-wide"><dt>{t("admin.details")}</dt><dd>{report.details ?? t("admin.noDetails")}</dd></div>
-                      </dl>
-                    </div>
-                    <div className="admin-review-actions">
-                      <div className="admin-action-heading"><strong>Review decision</strong><span>Approve verified reports or record a reason before rejecting.</span></div>
-                      <label><span>{t("admin.rejectReason")} <small>{t("admin.optional")}</small></span><textarea value={rejectionReasons[report.id] ?? ""} onChange={(event) => setRejectionReasons((current) => ({ ...current, [report.id]: event.target.value }))} maxLength={300} placeholder="Add context for the member…"/></label>
-                      <div className="admin-action-row">
-                        <button className="button button--primary" type="button" disabled={actingId === report.id} onClick={() => reviewReport(report.id, "approve")}>{actingId === report.id ? <LoaderCircle className="spin" size={17}/> : <CheckCircle2 size={17}/>} {t("admin.approve")}</button>
-                        <button className="button button--danger" type="button" disabled={actingId === report.id} onClick={() => reviewReport(report.id, "reject")}><XCircle size={17}/> {t("admin.reject")}</button>
-                      </div>
-                    </div>
-                  </div>
-                </details>
+                <Accordion disableGutters elevation={0} key={report.id} sx={{ "&:before": { display: "none" }, borderBottom: 1, borderColor: "divider", "&:last-child": { borderBottom: 0 } }}>
+                  <AccordionSummary expandIcon={<ChevronDown size={19} aria-hidden="true" />} sx={{ minHeight: 72, px: { xs: 2, md: 2.5 }, "& .MuiAccordionSummary-content": { my: 1.5, minWidth: 0 } }}>
+                    <Stack direction={{ xs: "column", md: "row" }} spacing={{ xs: 1, md: 3 }} sx={{ justifyContent: "space-between", minWidth: 0, width: "100%" }}>
+                      <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start", minWidth: 0 }}>
+                        <Chip color="warning" label={t("admin.pending")} size="small" variant="outlined" />
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography sx={{ fontWeight: 750 }} noWrap>{report.title}</Typography>
+                          <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", color: "text.secondary" }}><MapPin size={14} aria-hidden="true" /><Typography variant="caption" noWrap>{report.locationText}</Typography></Stack>
+                        </Box>
+                      </Stack>
+                      <Stack direction="row" spacing={{ xs: 1.5, sm: 3 }} sx={{ alignItems: "center", color: "text.secondary", flexWrap: "wrap", pr: 1 }}>
+                        <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}><UserRound size={14} aria-hidden="true" /><Typography variant="caption">{report.submittedBy.displayName}</Typography></Stack>
+                        <Typography variant="caption">{report.issueType} · {report.severity}</Typography>
+                        <Typography component="time" dateTime={report.createdAt} variant="caption">{DATE_FORMATTER.format(new Date(report.createdAt))}</Typography>
+                      </Stack>
+                    </Stack>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ bgcolor: "#fbfdfd", borderTop: 1, borderColor: "divider", p: { xs: 2, md: 3 } }}>
+                    <Stack direction={{ xs: "column", lg: "row" }} spacing={3}>
+                      <Stack spacing={2.5} sx={{ flex: "1 1 60%", minWidth: 0 }}>
+                        {report.photoUrl ? <Image alt={t("admin.submittedEvidenceAlt")} height={293} src={report.photoUrl} style={{ borderRadius: 8, height: "auto", maxHeight: 360, objectFit: "cover", width: "100%" }} unoptimized width={520} /> : <Box sx={{ alignItems: "center", bgcolor: "action.hover", borderRadius: 1, color: "text.secondary", display: "flex", gap: 1, justifyContent: "center", minHeight: 180 }}><ImageIcon size={22} aria-hidden="true" /><Typography variant="body2">{t("admin.noImage")}</Typography></Box>}
+                        <Box component="dl" sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" }, m: 0 }}>
+                          <Detail label={t("admin.submittedBy")} value={`${report.submittedBy.displayName} · ${report.submittedBy.email}`} />
+                          <Detail label={t("admin.date")} value={DATE_FORMATTER.format(new Date(report.createdAt))} />
+                          <Detail label={t("admin.issue")} value={report.issueType} />
+                          <Detail label={t("admin.severity")} value={report.severity} />
+                          <Detail label={t("admin.location")} value={report.locationText} />
+                          <Detail label={t("admin.image")} value={report.photoStoragePath ? report.photoStoragePath.split("/").pop() ?? t("admin.noImage") : t("admin.noImage")} />
+                          <Box sx={{ gridColumn: { sm: "1 / -1" } }}><Detail label={t("admin.details")} value={report.details ?? t("admin.noDetails")} /></Box>
+                        </Box>
+                      </Stack>
+                      <Divider flexItem orientation="vertical" sx={{ display: { xs: "none", lg: "block" } }} />
+                      <Stack spacing={2} sx={{ flex: "0 1 360px" }}>
+                        <Box><Typography sx={{ fontWeight: 800 }}>{t("admin.reviewDecision")}</Typography><Typography color="text.secondary" variant="body2">{t("admin.reviewDecisionHelp")}</Typography></Box>
+                        <TextField label={`${t("admin.rejectReason")} (${t("admin.optional")})`} value={rejectionReasons[report.id] ?? ""} onChange={(event) => setRejectionReasons((current) => ({ ...current, [report.id]: event.target.value }))} minRows={3} maxRows={6} multiline slotProps={{ htmlInput: { maxLength: 300 } }} placeholder={t("admin.rejectPlaceholder")} variant="outlined" />
+                        <Stack direction={{ xs: "column", sm: "row", lg: "column" }} spacing={1.5}>
+                          <Button disabled={actingId === report.id} onClick={() => reviewReport(report.id, "approve")} startIcon={actingId === report.id ? <CircularProgress color="inherit" size={17} /> : <CheckCircle2 size={17} />} variant="contained">{t("admin.approve")}</Button>
+                          <Button color="error" disabled={actingId === report.id} onClick={() => reviewReport(report.id, "reject")} startIcon={<XCircle size={17} />} variant="outlined">{t("admin.reject")}</Button>
+                        </Stack>
+                      </Stack>
+                    </Stack>
+                  </AccordionDetails>
+                </Accordion>
               ))}
-            </div>
+            </Box>
           )}
-        </section>
+      </Paper>
     </AdminShell>
   );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return <Box><Typography component="dt" color="text.secondary" variant="caption" sx={{ fontWeight: 700 }}>{label}</Typography><Typography component="dd" variant="body2" sx={{ m: 0, mt: 0.25, overflowWrap: "anywhere" }}>{value}</Typography></Box>;
+}
+
+function EmptyQueue({ description, icon, title }: { description: string; icon: ReactNode; title: string }) {
+  return <Stack spacing={1} sx={{ alignItems: "center", color: "text.secondary", px: 2, py: 7, textAlign: "center" }}>{icon}<Typography color="text.primary" sx={{ fontWeight: 800 }}>{title}</Typography><Typography variant="body2">{description}</Typography></Stack>;
 }

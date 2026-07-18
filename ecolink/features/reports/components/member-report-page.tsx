@@ -92,11 +92,11 @@ export function MemberReportPage() {
   async function submitReport(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!form.image) {
-      setMessage({ kind: "error", text: "Add a report image before submitting." });
+      setMessage({ kind: "error", text: t("report.addImageError") });
       return;
     }
     if (!hasLocation) {
-      setMessage({ kind: "error", text: "We need your current location before you can submit this report." });
+      setMessage({ kind: "error", text: t("report.locationRequired") });
       return;
     }
 
@@ -111,7 +111,7 @@ export function MemberReportPage() {
     const body = await readJsonResponse<{ error?: string }>(response);
     setSubmitting(false);
     if (!response.ok) {
-      setMessage({ kind: "error", text: body?.error ?? "The report could not be submitted." });
+      setMessage({ kind: "error", text: body?.error ?? t("report.submitError") });
       return;
     }
 
@@ -122,8 +122,8 @@ export function MemberReportPage() {
     locationStatus === "ready"
       ? t("report.locationCaptured")
       : locationStatus === "locating"
-        ? "Finding your GPS location…"
-        : "Location permission is needed to attach this report to the map.";
+        ? t("report.locating")
+        : t("report.locationPermission");
 
   return (
     <AppShell>
@@ -173,7 +173,7 @@ export function MemberReportPage() {
                   {form.image ? t("report.changePhoto") : t("report.uploadPhoto")}
                 </Typography>
                 <Typography component="span" variant="caption" color="text.secondary">
-                  {form.image ? `${form.image.name} · ${Math.max(1, Math.round(form.image.size / 1024))} KB` : "Camera or photo library"}
+                  {form.image ? `${form.image.name} · ${Math.max(1, Math.round(form.image.size / 1024))} KB` : t("report.cameraLibrary")}
                 </Typography>
                 <input type="file" hidden accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(event) => updateForm({ image: event.target.files?.[0] })} />
               </Button>
@@ -191,7 +191,7 @@ export function MemberReportPage() {
                       <Typography variant="caption" color="text.secondary">{t("report.coordinates", { lat: form.latitude?.toFixed(6) ?? "", lng: form.longitude?.toFixed(6) ?? "" })}</Typography>
                     ) : null}
                   </Box>
-                  {locationStatus === "error" || locationStatus === "unsupported" ? <Button type="button" onClick={requestLocation} size="small" sx={{ minHeight: 36 }}>Retry</Button> : null}
+                  {locationStatus === "error" || locationStatus === "unsupported" ? <Button type="button" onClick={requestLocation} size="small" sx={{ minHeight: 36 }}>{t("report.retry")}</Button> : null}
                 </Stack>
               </Box>
 

@@ -11,6 +11,7 @@ export interface WasteMapHandlerDependencies {
   demoMode?: boolean;
   loadRows?: (query: WasteMapQuery) => Promise<WasteMapRpcRow[]>;
   now?: () => Date;
+  createPhotoUrl?: (path: string) => Promise<string | null>;
 }
 
 async function loadWasteMapRows(query: WasteMapQuery, now: Date) {
@@ -33,6 +34,39 @@ async function loadWasteMapRows(query: WasteMapQuery, now: Date) {
 
   if (error) throw error;
   return wasteMapRpcRowsSchema.parse(data ?? []);
+}
+
+function readPhotoStoragePath(value: unknown) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.startsWith("pending-report-photos/")) return null;
+  return trimmed;
+}
+
+async function createSignedReportPhotoUrl(path: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.storage.from("report-photos").createSignedUrl(path, 60 * 10);
+  if (error) return null;
+  return data.signedUrl;
+}
+
+async function withReportPhotoUrls(
+  rows: WasteMapRpcRow[],
+  createPhotoUrl: (path: string) => Promise<string | null>,
+) {
+  return Promise.all(rows.map(async (row) => {
+    const path = readPhotoStoragePath(row.properties.photoStoragePath);
+    if (!path) return row;
+    const photoUrl = await createPhotoUrl(path);
+    if (!photoUrl) return row;
+    return {
+      ...row,
+      properties: {
+        ...row.properties,
+        photoUrl,
+      },
+    };
+  }));
 }
 
 function validationError(error: z.ZodError) {
@@ -72,7 +106,10 @@ export async function handleGetWasteMap(
     const rows = dependencies.loadRows
       ? await dependencies.loadRows(parsed.data)
       : await loadWasteMapRows(parsed.data, now);
-    return Response.json(rowsToWasteMapResponse(rows, parsed.data.zoom, now.toISOString()), {
+    const publicRows = parsed.data.zoom >= 12
+      ? await withReportPhotoUrls(rows, dependencies.createPhotoUrl ?? createSignedReportPhotoUrl)
+      : rows;
+    return Response.json(rowsToWasteMapResponse(publicRows, parsed.data.zoom, now.toISOString()), {
       headers: { "Cache-Control": "public, max-age=15, stale-while-revalidate=30" },
     });
   } catch (error) {

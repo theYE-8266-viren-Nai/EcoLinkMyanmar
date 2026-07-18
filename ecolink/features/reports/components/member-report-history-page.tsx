@@ -42,7 +42,7 @@ export function MemberReportHistoryPage({ initialReports, initialError }: { init
     const body = await readJsonResponse<ReportsResponse>(response);
     setRefreshing(false);
     if (!response.ok || !body || "error" in body) {
-      setMessage(body && "error" in body ? body.error : "Could not load reports.");
+      setMessage(body && "error" in body ? body.error : t("report.loadError"));
       return;
     }
     setReports(body.reports);
@@ -56,7 +56,7 @@ export function MemberReportHistoryPage({ initialReports, initialError }: { init
           <Button component={Link} href="/report" startIcon={<ArrowLeft size={18} />} sx={{ minHeight: 44, fontWeight: 800, px: 0.5 }}>
             {t("report.submitTitle")}
           </Button>
-          <IconButton onClick={refreshReports} disabled={refreshing} aria-label="Refresh report history" color="primary" sx={{ minWidth: 44, minHeight: 44 }}>
+          <IconButton onClick={refreshReports} disabled={refreshing} aria-label={t("report.refreshHistory")} color="primary" sx={{ minWidth: 44, minHeight: 44 }}>
             <RefreshCw size={19} className={refreshing ? "spin" : ""} />
           </IconButton>
         </Stack>
@@ -77,7 +77,7 @@ export function MemberReportHistoryPage({ initialReports, initialError }: { init
             const statusBackground = report.status === "APPROVED" ? "rgba(45, 115, 80, 0.08)" : report.status === "PENDING" ? "rgba(185, 120, 24, 0.08)" : "rgba(180, 35, 24, 0.08)";
             return (
               <Card key={report.id} variant="outlined" sx={{ borderRadius: 3, overflow: "hidden", borderColor: "divider" }}>
-                {report.photoUrl ? <Box sx={{ width: "100%", height: 168, position: "relative", bgcolor: "muted.main" }}><Image alt="Submitted report photo" src={report.photoUrl} fill sizes="448px" style={{ objectFit: "cover" }} unoptimized /></Box> : null}
+                {report.photoUrl ? <Box sx={{ width: "100%", height: 168, position: "relative", bgcolor: "muted.main" }}><Image alt={t("report.submittedPhotoAlt")} src={report.photoUrl} fill sizes="448px" style={{ objectFit: "cover" }} unoptimized /></Box> : null}
                 <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
                   <Stack direction="row" spacing={1} sx={{ justifyContent: "space-between", alignItems: "flex-start" }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 850, pr: 1 }}>{report.title}</Typography>

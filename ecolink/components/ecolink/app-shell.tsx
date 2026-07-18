@@ -34,55 +34,51 @@ import { useEcoLink } from "@/providers/ecolink-context";
 const DEMO_MODE = process.env.NEXT_PUBLIC_ECOLINK_DEMO_MODE === "true";
 
 const NAV_ITEMS = [
-  { href: "/", labelKey: "nav.home", Icon: House },
-  { href: "/dashboard", labelKey: "nav.impact", Icon: CircleGauge },
-  { href: "/recycle", labelKey: "nav.recycle", Icon: MapPinned },
-  { href: "/report", labelKey: "nav.report", Icon: Recycle },
+  { href: "/", label: "Home", Icon: House },
+  { href: "/dashboard", label: "Impact", Icon: CircleGauge },
+  { href: "/recycle", label: "Recycle", Icon: MapPinned },
+  { href: "/report", label: "Report", Icon: Recycle },
 ] as const;
 
 export function EcoLinkMark({ compact = false }: { compact?: boolean }) {
-  const { t } = useI18n();
+  const size = compact ? 40 : 48;
 
   return (
-    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
-      <Box
+    <Box
+      aria-label="EcoLink"
+      role="img"
+      sx={{
+        alignItems: "center",
+        display: "inline-flex",
+        gap: compact ? 0.75 : 1,
+        minWidth: 0,
+      }}
+    >
+      <Image
+        alt=""
+        aria-hidden="true"
+        height={size}
+        priority
+        src="/ecolink-logo-mark.png"
+        style={{ display: "block", height: size, objectFit: "contain", width: size }}
+        width={size}
+      />
+      <Typography
+        aria-hidden="true"
+        component="span"
         sx={{
-          width: compact ? 32 : 38,
-          height: compact ? 32 : 38,
-          display: "grid",
-          placeItems: "center",
-          borderRadius: "50%",
-          color: "primary.main",
-          bgcolor: "rgba(8, 124, 120, 0.1)",
+          color: "#0f4c67",
+          display: "block",
+          fontSize: compact ? 18 : 22,
+          fontWeight: 800,
+          letterSpacing: 0,
+          lineHeight: 1,
+          textTransform: "uppercase",
+          whiteSpace: "nowrap",
         }}
       >
-        <Recycle size={compact ? 16 : 20} />
-      </Box>
-      <Box sx={{ display: "flex", flexDirection: "column" }}>
-        <Typography
-          variant="body1"
-          sx={{
-            fontWeight: 800,
-            color: "secondary.main",
-            lineHeight: 1,
-            fontSize: compact ? "0.95rem" : "1.05rem",
-          }}
-        >
-          Eco<Box component="span" sx={{ color: "primary.main" }}>Link</Box>
-        </Typography>
-        {!compact && (
-          <Typography
-            variant="caption"
-            sx={{
-              color: "text.secondary",
-              fontSize: "0.65rem",
-              fontWeight: 650,
-            }}
-          >
-            {t("shell.tagline")}
-          </Typography>
-        )}
-      </Box>
+        EcoLink
+      </Typography>
     </Box>
   );
 }
@@ -271,13 +267,15 @@ export function AppShell({
           component="main"
           sx={{
             flexGrow: 1,
+            minHeight: 0,
             overflowY: disableScroll ? "hidden" : "auto",
             position: "relative",
             bgcolor: "background.default",
             p: disablePadding ? 0 : { xs: 1.5, sm: 2 },
             pl: disablePadding ? 0 : "max(12px, calc(12px + var(--ecolink-safe-area-left)))",
             pr: disablePadding ? 0 : "max(12px, calc(12px + var(--ecolink-safe-area-right)))",
-            pb: disableScroll ? 0 : "calc(var(--ecolink-bottom-nav-clearance) + 24px)",
+            pb: disableScroll ? 0 : "24px",
+            mb: disableScroll ? 0 : "var(--ecolink-bottom-nav-clearance)",
             display: "flex",
             flexDirection: "column",
           }}
@@ -363,13 +361,13 @@ export function AppShell({
               },
             }}
           >
-            {NAV_ITEMS.map(({ href, labelKey, Icon }) => (
+            {NAV_ITEMS.map(({ href, label, Icon }) => (
               <BottomNavigationAction
                 component={Link}
                 href={href}
                 icon={<Icon size={20} />}
                 key={href}
-                label={t(labelKey)}
+                label={label}
                 value={href}
                 sx={{
                   color: "text.secondary",

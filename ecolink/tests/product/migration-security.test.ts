@@ -59,6 +59,10 @@ const recyclingRouteRpcRepairMigration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260718213000_repair_recycling_route_rpcs.sql"),
   "utf8",
 );
+const weeklyPickupRoutesMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718220000_weekly_two_loop_pickup_routes.sql"),
+  "utf8",
+);
 
 describe("EcoLink Supabase migration", () => {
   it("enables RLS on every new user-data table", () => {
@@ -223,5 +227,18 @@ describe("EcoLink Supabase migration", () => {
     expect(recyclingRouteRpcRepairMigration).toContain("set deleted_at = coalesce(request.deleted_at, now())");
     expect(recyclingRouteRpcRepairMigration).toContain("revoke insert, update, delete on public.recycling_pickup_requests from anon, authenticated");
     expect(recyclingRouteRpcRepairMigration).toContain("notify pgrst, 'reload schema'");
+  });
+
+  it("protects weekly pickup schedules, route loops, and member stop assignments", () => {
+    for (const table of ["pickup_schedules", "pickup_route_plans", "pickup_route_stops"]) {
+      expect(weeklyPickupRoutesMigration).toContain(`alter table public.${table} enable row level security`);
+    }
+    expect(weeklyPickupRoutesMigration).toContain("Members can read their pickup route stop");
+    expect(weeklyPickupRoutesMigration).toContain("request.profile_id = (select public.current_profile_id())");
+    expect(weeklyPickupRoutesMigration).toContain("Admins can manage pickup route stops");
+    expect(weeklyPickupRoutesMigration).toContain("revoke all on public.pickup_schedules, public.pickup_route_plans, public.pickup_route_stops from anon");
+    expect(weeklyPickupRoutesMigration).toContain("at time zone 'Asia/Yangon'");
+    expect(weeklyPickupRoutesMigration).toContain("pickup_latitude");
+    expect(weeklyPickupRoutesMigration).toContain("pickup_longitude");
   });
 });

@@ -16,7 +16,6 @@ import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
 import {
-  AlertTriangle,
   Building2,
   ChevronRight,
   Layers3,
@@ -52,6 +51,7 @@ import type {
 } from "@/features/live-map/types";
 import {
   getVehicleFreshness,
+  getWasteMapRequestZooms,
   routesToFeatureCollection,
   vehiclesToFeatureCollection,
   YANGON_BOUNDS,
@@ -80,7 +80,6 @@ const mapFilterChipSx = {
 type SelectedMapItem =
   | { kind: "center"; center: RecyclingCenterMapItem }
   | { kind: "vehicle"; vehicle: CollectorVehicleLocation }
-  | { kind: "report"; score: number; wasteType: string; observedAt: string }
   | null;
 
 type MobilePanelTab = "centers" | "collectors";
@@ -223,10 +222,10 @@ async function addMapSourcesAndLayers(map: MapboxMap, centers: RecyclingCenterMa
     maxzoom: 17,
     filter: ["has", "point_count"],
     paint: {
-      "circle-color": "#b7374c",
-      "circle-radius": ["step", ["get", "point_count"], 16, 5, 20, 12, 25],
-      "circle-stroke-color": "#ffffff",
-      "circle-stroke-width": 2,
+      "circle-color": "#ffffff",
+      "circle-radius": ["step", ["get", "point_count"], 18, 5, 22, 12, 28],
+      "circle-stroke-color": "#b7374c",
+      "circle-stroke-width": 3,
     },
   });
 
@@ -238,9 +237,22 @@ async function addMapSourcesAndLayers(map: MapboxMap, centers: RecyclingCenterMa
     maxzoom: 17,
     filter: ["has", "point_count"],
     layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 12 },
-    paint: { "text-color": "#ffffff" },
+    paint: { "text-color": "#b7374c" },
   });
 
+  map.addLayer({
+    id: "waste-story-halos",
+    type: "circle",
+    source: "waste-reports",
+    minzoom: 12,
+    filter: ["!", ["has", "point_count"]],
+    paint: {
+      "circle-color": "rgba(255,255,255,0.9)",
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 13, 18, 21],
+      "circle-stroke-color": "rgba(11,53,88,0.18)",
+      "circle-stroke-width": 1,
+    },
+  });
   map.addLayer({
     id: "waste-report-points",
     type: "circle",
@@ -249,24 +261,10 @@ async function addMapSourcesAndLayers(map: MapboxMap, centers: RecyclingCenterMa
     filter: ["!", ["has", "point_count"]],
     paint: {
       "circle-color": ["interpolate", ["linear"], ["get", "score"], 1, "#2d9689", 5, "#efb94f", 10, "#b7374c"],
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 15, 7, 18, 12],
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 8, 18, 14],
       "circle-stroke-color": "#ffffff",
-      "circle-stroke-width": 2,
+      "circle-stroke-width": 3,
     },
-  });
-  map.addLayer({
-    id: "waste-report-icons",
-    type: "symbol",
-    source: "waste-reports",
-    minzoom: 12,
-    filter: ["!", ["has", "point_count"]],
-    layout: {
-      "icon-image": "waste-report-glyph",
-      "icon-size": ["interpolate", ["linear"], ["zoom"], 15, 0.5, 18, 0.72],
-      "icon-allow-overlap": true,
-      "icon-ignore-placement": true,
-    },
-    paint: { "icon-color": "#ffffff" },
   });
 
   map.addLayer({
@@ -348,7 +346,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
   const [wasteLoading, setWasteLoading] = useState(true);
   const [wasteMode, setWasteMode] = useState<WasteMapResponse["mode"]>("heatmap");
   const [wasteCount, setWasteCount] = useState(0);
-  const [showWaste, setShowWaste] = useState(true);
+  const [showReports, setShowReports] = useState(true);
   const [showCenters, setShowCenters] = useState(true);
   const [showCollectors, setShowCollectors] = useState(true);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
@@ -370,7 +368,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
     const styleController = new AbortController();
     mapContainerRef.current.replaceChildren();
     mapboxgl.accessToken = MAPBOX_TOKEN;
-    const interactiveLayers = ["center-points", "collector-vehicle-icons", "waste-report-points", "waste-clusters"];
+    const interactiveLayers = ["center-points", "collector-vehicle-icons", "waste-clusters"];
 
     void resolveMapStyle(MAP_STYLE, MAPBOX_TOKEN, styleController.signal)
       .then((style) => {
@@ -407,7 +405,9 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         const handleCenterClick = (event: mapboxgl.MapLayerMouseEvent) => {
           const id = String(event.features?.[0]?.properties?.id ?? "");
           const center = centers.find((item) => item.id === id);
-          if (center) setSelected({ kind: "center", center });
+          if (center) {
+            setSelected({ kind: "center", center });
+          }
         };
         const handleCollectorClick = (event: mapboxgl.MapLayerMouseEvent) => {
           const properties = event.features?.[0]?.properties;
@@ -429,16 +429,6 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
             },
           });
         };
-        const handleWasteReportClick = (event: mapboxgl.MapLayerMouseEvent) => {
-          const properties = event.features?.[0]?.properties;
-          if (!properties || properties.cluster) return;
-          setSelected({
-            kind: "report",
-            score: Number(properties.score),
-            wasteType: String(properties.wasteType ?? "Waste report"),
-            observedAt: String(properties.observedAt),
-          });
-        };
         const handleWasteClusterClick = (event: mapboxgl.MapLayerMouseEvent) => {
           const feature = event.features?.[0];
           const clusterId = Number(feature?.properties?.cluster_id);
@@ -458,7 +448,6 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         map.on("error", handleError);
         map.on("click", "center-points", handleCenterClick);
         map.on("click", "collector-vehicle-icons", handleCollectorClick);
-        map.on("click", "waste-report-points", handleWasteReportClick);
         map.on("click", "waste-clusters", handleWasteClusterClick);
 
         for (const layer of interactiveLayers) {
@@ -490,32 +479,43 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
     abortRef.current = controller;
     const bounds = map.getBounds();
     if (!bounds) return;
-    const params = new URLSearchParams({
+    const currentZoom = map.getZoom();
+    const baseParams = new URLSearchParams({
       west: String(bounds.getWest()),
       south: String(bounds.getSouth()),
       east: String(bounds.getEast()),
       north: String(bounds.getNorth()),
-      zoom: String(map.getZoom()),
       window: "30d",
     });
     setWasteLoading(true);
     setMapError("");
 
     try {
-      const response = await fetch(`/api/map/waste?${params}`, { signal: controller.signal });
-      const body = await response.json() as WasteMapResponse | { error?: string };
-      if (!response.ok || !("mode" in body)) throw new Error("error" in body ? body.error : t("map.errorWaste"));
+      const fetchWasteMap = async (zoom: number) => {
+        const params = new URLSearchParams(baseParams);
+        params.set("zoom", String(zoom));
+        const response = await fetch(`/api/map/waste?${params}`, { signal: controller.signal });
+        const body = await response.json() as WasteMapResponse | { error?: string };
+        if (!response.ok || !("mode" in body)) {
+          throw new Error("error" in body ? body.error : t("map.errorWaste"));
+        }
+        return body;
+      };
+
+      const { densityZoom, reportsZoom } = getWasteMapRequestZooms(currentZoom);
+      const [densityResponse, reportsResponse] = reportsZoom !== null
+        ? await Promise.all([
+            fetchWasteMap(densityZoom),
+            fetchWasteMap(reportsZoom),
+          ])
+        : [await fetchWasteMap(densityZoom), null];
+
       const densitySource = map.getSource("waste-density") as GeoJSONSource;
       const reportsSource = map.getSource("waste-reports") as GeoJSONSource;
-      if (body.mode === "reports") {
-        densitySource.setData(EMPTY_FEATURES);
-        reportsSource.setData(body.data as Parameters<GeoJSONSource["setData"]>[0]);
-      } else {
-        reportsSource.setData(EMPTY_FEATURES);
-        densitySource.setData(body.data as Parameters<GeoJSONSource["setData"]>[0]);
-      }
-      setWasteMode(body.mode);
-      setWasteCount(body.data.features.length);
+      densitySource.setData(densityResponse.data as Parameters<GeoJSONSource["setData"]>[0]);
+      reportsSource.setData((reportsResponse?.data ?? EMPTY_FEATURES) as Parameters<GeoJSONSource["setData"]>[0]);
+      setWasteMode(reportsResponse?.mode ?? densityResponse.mode);
+      setWasteCount((reportsResponse ?? densityResponse).data.features.length);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       setMapError(error instanceof Error ? error.message : t("map.errorDensity"));
@@ -545,10 +545,11 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
   useEffect(() => {
     const map = mapRef.current;
     if (!mapReady || !map) return;
-    setLayerVisibility(map, ["waste-clusters", "waste-cluster-count", "waste-report-points", "waste-report-icons"], showWaste);
+    setLayerVisibility(map, ["waste-heatmap"], true);
+    setLayerVisibility(map, ["waste-clusters", "waste-cluster-count", "waste-story-halos", "waste-report-points"], showReports);
     setLayerVisibility(map, ["center-halo", "center-points", "center-icons", "center-labels"], showCenters);
     setLayerVisibility(map, ["collector-route-casing", "collector-route-dots", "collector-vehicle-icons"], showCollectors);
-  }, [mapReady, showCenters, showCollectors, showWaste]);
+  }, [mapReady, showCenters, showCollectors, showReports]);
 
   useEffect(() => {
     const source = mapRef.current?.getSource("collector-vehicles") as GeoJSONSource | undefined;
@@ -726,9 +727,9 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         >
           <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
             <Chip
-              onClick={() => setShowWaste((val) => !val)}
-              variant={showWaste ? "filled" : "outlined"}
-              color={showWaste ? "error" : "default"}
+              onClick={() => setShowReports((visible) => !visible)}
+              variant={showReports ? "filled" : "outlined"}
+              color={showReports ? "error" : "default"}
               size="small"
               icon={<MapPinned size={15} strokeWidth={2.2} />}
               label={t("map.reports")}
@@ -898,16 +899,6 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{t("map.status", { status: selected.vehicle.status.replaceAll("_", " ") })}</Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
                       {t("map.heading", { speed: Math.round(selected.vehicle.speedKph), updated: formatUpdatedAt(selected.vehicle.observedAt, t) })}
-                    </Typography>
-                  </>
-                )}
-                {selected.kind === "report" && (
-                  <>
-                    <Chip size="small" icon={<AlertTriangle size={12} />} label={t("map.communityWasteReport")} color="error" sx={{ mb: 1, height: 20, fontSize: "0.65rem", fontWeight: 700 }} />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>{selected.wasteType.replaceAll("_", " ")}</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{t("map.densityScore", { score: selected.score })}</Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-                      {t("map.observed", { date: new Date(selected.observedAt).toLocaleDateString("en-US", { timeZone: "Asia/Yangon" }) })}
                     </Typography>
                   </>
                 )}

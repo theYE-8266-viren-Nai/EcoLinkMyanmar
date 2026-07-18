@@ -10,6 +10,7 @@ import type {
 
 export const YANGON_CENTER: [number, number] = [96.1561, 16.8409];
 export const YANGON_ZOOM = 11.5;
+const AGGREGATED_HEATMAP_ZOOM = 11.99;
 export const YANGON_BOUNDS: [[number, number], [number, number]] = [
   [95.82, 16.55],
   [96.42, 17.15],
@@ -24,6 +25,13 @@ const WINDOW_MILLISECONDS: Record<WasteWindow, number> = {
 export function getWasteMapMode(zoom: number): WasteMapMode {
   if (zoom < 12) return "heatmap";
   return "reports";
+}
+
+export function getWasteMapRequestZooms(zoom: number) {
+  if (getWasteMapMode(zoom) === "heatmap") {
+    return { densityZoom: zoom, reportsZoom: null };
+  }
+  return { densityZoom: AGGREGATED_HEATMAP_ZOOM, reportsZoom: zoom };
 }
 
 export function getObservedSince(window: WasteWindow, now = new Date()) {
@@ -48,6 +56,7 @@ export function rowsToWasteMapResponse(
             wasteType: String(row.properties.wasteType ?? "OTHER"),
             status: String(row.properties.status ?? "submitted"),
             observedAt: String(row.properties.observedAt ?? generatedAt),
+            ...(typeof row.properties.photoUrl === "string" && row.properties.photoUrl ? { photoUrl: row.properties.photoUrl } : {}),
             ...(row.properties.demo === true ? { demo: true } : {}),
           }
         : {

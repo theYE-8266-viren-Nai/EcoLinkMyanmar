@@ -9,6 +9,14 @@ import {
 import { RecyclingRouteWorkflowError, type RecyclingRouteWorkflowService } from "@/features/recycling-routes/services/recycling-route-service";
 
 const requestId = "11111111-1111-4111-8111-111111111111";
+const scheduleId = "22222222-2222-4222-8222-222222222222";
+const schedule = {
+  id: scheduleId,
+  startsAt: "2026-07-25T01:30:00.000Z",
+  endsAt: "2026-07-25T04:30:00.000Z",
+  routeArea: "Yangon partner route",
+  status: "OPEN" as const,
+};
 
 function jsonRequest(body: unknown) {
   return new Request("http://localhost/api/recycling-route", {
@@ -33,8 +41,9 @@ function pickupPayload() {
   return {
     type: "pickup",
     pickupAddress: "Bahan Township, Yangon",
-    routeWindow: "Tomorrow 8:00 AM-11:00 AM",
-    routeArea: "Yangon partner route",
+    scheduleId,
+    latitude: 16.818,
+    longitude: 96.158,
     selectedItems: selectedItems(),
     estimatedWeightKg: 0.1,
     estimatedPoints: 4,
@@ -45,12 +54,17 @@ function pickupPayload() {
 function service(overrides: Partial<RecyclingRouteWorkflowService> = {}): RecyclingRouteWorkflowService {
   return {
     getCurrentSubmission: vi.fn(async () => null),
+    getUpcomingSchedule: vi.fn(async () => schedule),
     submitRouteRequest: vi.fn(async () => ({ requestId, status: "PENDING" as const, createdAt: "2026-07-18T00:00:00Z" })),
     listAdminRequests: vi.fn(async () => ({ pickups: [], centerDropoffs: [] })),
-    updatePickupRequest: vi.fn(async () => undefined),
+    updatePickupRequest: vi.fn(async () => ({})),
     updateCenterDropoffRequest: vi.fn(async () => undefined),
     deletePickupRequest: vi.fn(async () => undefined),
     deleteCenterDropoffRequest: vi.fn(async () => undefined),
+    getAdminRoutingDashboard: vi.fn(async () => ({ schedule, routes: [], unroutableAcceptedCount: 0 })),
+    replanPickupRoutes: vi.fn(async () => ({})),
+    dispatchPickupRoutes: vi.fn(async () => undefined),
+    unlockPickupRoutes: vi.fn(async () => ({})),
     ...overrides,
   };
 }
@@ -131,8 +145,9 @@ describe("recycling route handlers", () => {
     const response = await handleUpdatePickupRouteRequest(jsonRequest({
       status: "ACCEPTED",
       pickupAddress: "Bahan Township, Yangon",
-      routeWindow: "Tomorrow 8:00 AM-11:00 AM",
-      routeArea: "Yangon partner route",
+      scheduleId,
+      latitude: 16.818,
+      longitude: 96.158,
       notes: null,
     }), "not-a-uuid", { service: service() });
 

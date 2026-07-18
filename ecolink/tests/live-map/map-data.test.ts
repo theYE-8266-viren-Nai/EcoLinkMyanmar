@@ -5,6 +5,7 @@ import {
   getObservedSince,
   getVehicleFreshness,
   getWasteMapMode,
+  getWasteMapRequestZooms,
   interpolateRoute,
   routesToFeatureCollection,
   rowsToWasteMapResponse,
@@ -16,6 +17,12 @@ describe("live map data", () => {
     expect(getWasteMapMode(12)).toBe("reports");
     expect(getWasteMapMode(14.99)).toBe("reports");
     expect(getWasteMapMode(15)).toBe("reports");
+  });
+
+  it("requests aggregated heatmap data at every zoom level", () => {
+    expect(getWasteMapRequestZooms(11)).toEqual({ densityZoom: 11, reportsZoom: null });
+    expect(getWasteMapRequestZooms(12)).toEqual({ densityZoom: 11.99, reportsZoom: 12 });
+    expect(getWasteMapRequestZooms(18)).toEqual({ densityZoom: 11.99, reportsZoom: 18 });
   });
 
   it("calculates stable time windows", () => {
@@ -49,6 +56,8 @@ describe("live map data", () => {
         wasteType: "MIXED",
         status: "submitted",
         observedAt: "2026-07-18T12:00:00.000Z",
+        photoStoragePath: "private/storage/path.jpg",
+        photoUrl: "https://signed.example/report.jpg",
         notes: "private note",
         reporterProfileId: "private-id",
       },
@@ -59,6 +68,7 @@ describe("live map data", () => {
       wasteType: "MIXED",
       status: "submitted",
       observedAt: "2026-07-18T12:00:00.000Z",
+      photoUrl: "https://signed.example/report.jpg",
     });
   });
 

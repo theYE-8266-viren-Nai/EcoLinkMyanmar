@@ -483,6 +483,9 @@ export type Database = {
           pickup_address: string;
           route_window: string;
           route_area: string;
+          schedule_id: string | null;
+          latitude: number | null;
+          longitude: number | null;
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
@@ -498,6 +501,9 @@ export type Database = {
           pickup_address: string;
           route_window: string;
           route_area: string;
+          schedule_id?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -512,9 +518,140 @@ export type Database = {
           pickup_address?: string;
           route_window?: string;
           route_area?: string;
+          schedule_id?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      pickup_schedules: {
+        Row: {
+          id: string;
+          starts_at: string;
+          ends_at: string;
+          route_area: string;
+          status: "OPEN" | "DISPATCHED" | "COMPLETED";
+          created_at: string;
+          updated_at: string;
+          dispatched_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          starts_at: string;
+          ends_at: string;
+          route_area?: string;
+          status?: "OPEN" | "DISPATCHED" | "COMPLETED";
+          created_at?: string;
+          updated_at?: string;
+          dispatched_at?: string | null;
+        };
+        Update: {
+          starts_at?: string;
+          ends_at?: string;
+          route_area?: string;
+          status?: "OPEN" | "DISPATCHED" | "COMPLETED";
+          updated_at?: string;
+          dispatched_at?: string | null;
+        };
+        Relationships: [];
+      };
+      pickup_route_plans: {
+        Row: {
+          id: string;
+          schedule_id: string;
+          route_code: "A" | "B";
+          center_id: string;
+          center_name: string;
+          center_latitude: number;
+          center_longitude: number;
+          status: "DRAFT" | "ERROR" | "DISPATCHED";
+          geometry: Json;
+          distance_meters: number;
+          duration_seconds: number;
+          plan_version: number;
+          generation_error: string | null;
+          generated_at: string | null;
+          dispatched_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          schedule_id: string;
+          route_code: "A" | "B";
+          center_id: string;
+          center_name: string;
+          center_latitude: number;
+          center_longitude: number;
+          status?: "DRAFT" | "ERROR" | "DISPATCHED";
+          geometry?: Json;
+          distance_meters?: number;
+          duration_seconds?: number;
+          plan_version?: number;
+          generation_error?: string | null;
+          generated_at?: string | null;
+          dispatched_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          schedule_id?: string;
+          route_code?: "A" | "B";
+          center_id?: string;
+          center_name?: string;
+          center_latitude?: number;
+          center_longitude?: number;
+          status?: "DRAFT" | "ERROR" | "DISPATCHED";
+          geometry?: Json;
+          distance_meters?: number;
+          duration_seconds?: number;
+          plan_version?: number;
+          generation_error?: string | null;
+          generated_at?: string | null;
+          dispatched_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      pickup_route_stops: {
+        Row: {
+          id: string;
+          route_plan_id: string;
+          schedule_id: string;
+          pickup_request_id: string;
+          route_code: "A" | "B";
+          stop_order: number;
+          estimated_arrival_at: string | null;
+          latitude: number;
+          longitude: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          route_plan_id: string;
+          schedule_id: string;
+          pickup_request_id: string;
+          route_code: "A" | "B";
+          stop_order: number;
+          estimated_arrival_at?: string | null;
+          latitude: number;
+          longitude: number;
+          created_at?: string;
+        };
+        Update: {
+          route_plan_id?: string;
+          schedule_id?: string;
+          pickup_request_id?: string;
+          route_code?: "A" | "B";
+          stop_order?: number;
+          estimated_arrival_at?: string | null;
+          latitude?: number;
+          longitude?: number;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -639,8 +776,9 @@ export type Database = {
       submit_recycling_pickup_request: {
         Args: {
           pickup_address: string;
-          route_window: string;
-          route_area: string;
+          target_schedule_id: string;
+          pickup_latitude: number;
+          pickup_longitude: number;
           selected_items: Json;
           estimated_weight_kg: number;
           estimated_points: number;
@@ -675,8 +813,9 @@ export type Database = {
           target_request_id: string;
           next_status: "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED" | "REJECTED";
           next_pickup_address: string;
-          next_route_window: string;
-          next_route_area: string;
+          next_schedule_id: string;
+          next_latitude: number;
+          next_longitude: number;
           next_notes?: string | null;
         };
         Returns: string;
@@ -701,10 +840,16 @@ export type Database = {
         Args: { target_request_id: string };
         Returns: string;
       };
+      get_or_create_next_pickup_schedule: {
+        Args: { reference_time?: string };
+        Returns: Array<Database["public"]["Tables"]["pickup_schedules"]["Row"]>;
+      };
     };
     Enums: {
       report_status: "PENDING" | "APPROVED" | "REJECTED";
       recycling_route_request_status: "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED" | "REJECTED";
+      pickup_schedule_status: "OPEN" | "DISPATCHED" | "COMPLETED";
+      pickup_route_plan_status: "DRAFT" | "ERROR" | "DISPATCHED";
       environment_waste_type:
         | "MIXED"
         | "PLASTIC"

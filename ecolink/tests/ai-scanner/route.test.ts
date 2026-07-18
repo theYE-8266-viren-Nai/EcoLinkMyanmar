@@ -144,7 +144,7 @@ describe("POST /api/ai/scans", () => {
     expect(body).toEqual({
       summary: {
         primaryMaterialLabel: "Plastic",
-        primaryMaterialSlug: "plastic",
+        primaryMaterialSlug: "pet-plastic",
         estimatedBottleCount: 2,
         estimatedTotalWeightKg: 0.08,
         confidence: 0.9,
@@ -152,7 +152,7 @@ describe("POST /api/ai/scans", () => {
       detections: [
         {
           materialLabel: "Plastic",
-          materialSlug: "plastic",
+          materialSlug: "pet-plastic",
           itemType: "bottle",
           estimatedCount: 2,
           estimatedWeightKg: 0.08,

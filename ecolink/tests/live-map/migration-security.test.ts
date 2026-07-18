@@ -14,6 +14,10 @@ const reportStatusRepairMigration = readFileSync(
   fileURLToPath(new URL("../../supabase/migrations/20260718071726_repair_public_waste_map_report_status.sql", import.meta.url)),
   "utf8",
 ).toLowerCase();
+const reportPhotoPathMigration = readFileSync(
+  fileURLToPath(new URL("../../supabase/migrations/20260718160001_add_report_photo_paths_to_public_waste_map.sql", import.meta.url)),
+  "utf8",
+).toLowerCase();
 
 describe("live map migration security", () => {
   it("enables RLS and restricts vehicle writes to assigned staff", () => {
@@ -43,5 +47,11 @@ describe("live map migration security", () => {
   it("filters public map reports with the current report status enum", () => {
     expect(reportStatusRepairMigration).toContain("'rejected'::public.report_status");
     expect(reportStatusRepairMigration).not.toContain("'resolved'");
+  });
+
+  it("only exposes report photo paths in close-zoom report rows", () => {
+    expect(reportPhotoPathMigration).toContain("'photostoragepath', report.photo_storage_path");
+    const heatmapBranch = reportPhotoPathMigration.split("else")[0] ?? "";
+    expect(heatmapBranch).not.toContain("photo_storage_path");
   });
 });

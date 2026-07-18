@@ -12,6 +12,7 @@ export function createSupabaseAdminClient() {
 
   return createClient<Database>(url, serviceRoleKey, {
     auth: {
+      autoRefreshToken: false,
       persistSession: false,
     },
   });

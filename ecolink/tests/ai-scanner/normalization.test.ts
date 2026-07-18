@@ -27,13 +27,13 @@ describe("normalizeAiScanResult", () => {
 
     expect(result.summary).toEqual({
       primaryMaterialLabel: "paper-cardboard",
-      primaryMaterialSlug: "paper-cardboard",
+      primaryMaterialSlug: "cardboard",
       estimatedBottleCount: 0,
       estimatedTotalWeightKg: 0.333,
       confidence: 1,
     });
     expect(result.detections[0]).toMatchObject({
-      materialSlug: "paper-cardboard",
+      materialSlug: "cardboard",
       estimatedCount: 0,
       estimatedWeightKg: 0.333,
       confidence: 0,
@@ -63,7 +63,7 @@ describe("normalizeAiScanResult", () => {
 
     expect(result.summary).toMatchObject({
       primaryMaterialLabel: "Plastic",
-      primaryMaterialSlug: "plastic",
+      primaryMaterialSlug: "pet-plastic",
       estimatedBottleCount: 11,
       estimatedTotalWeightKg: 0.15,
     });
@@ -73,6 +73,32 @@ describe("normalizeAiScanResult", () => {
     expect(result.warnings).toContain(
       "The model returned a generic material label; the summary uses the detected material.",
     );
+  });
+
+  it("normalizes business-style provider labels back to recycle", () => {
+    const result = normalizeAiScanResult({
+      summary: {
+        primaryMaterialLabel: "Business",
+        estimatedBottleCount: 0,
+        estimatedTotalWeightKg: 0.2,
+        confidence: 0.7,
+      },
+      detections: [
+        {
+          materialLabel: "Business",
+          itemType: "recyclable packaging",
+          estimatedCount: 1,
+          estimatedWeightKg: 0.2,
+          confidence: 0.7,
+          reasoning: "The provider returned a scene/category label instead of a material.",
+        },
+      ],
+      warnings: [],
+    });
+
+    expect(result.summary.primaryMaterialLabel).toBe("Recycle");
+    expect(result.detections[0]?.materialLabel).toBe("Recycle");
+    expect(result.detections[0]?.materialSlug).toBeNull();
   });
 
   it("keeps free-text labels and warns when no static category matches", () => {
@@ -96,11 +122,8 @@ describe("normalizeAiScanResult", () => {
       warnings: [],
     });
 
-    expect(result.summary.primaryMaterialSlug).toBeNull();
-    expect(result.detections[0]?.materialSlug).toBeNull();
-    expect(result.warnings).toContain(
-      "Detected materials could not be matched to an EcoLink material category.",
-    );
+    expect(result.summary.primaryMaterialSlug).toBe("glass");
+    expect(result.detections[0]?.materialSlug).toBe("glass");
     expect(result.warnings).toContain("The image is ambiguous; estimates may be unreliable.");
   });
 
@@ -134,8 +157,8 @@ describe("normalizeAiScanResult", () => {
     });
 
     expect(result.detections.map((detection) => detection.materialSlug)).toEqual([
-      "plastic",
-      "metal",
+      "pet-plastic",
+      "steel",
     ]);
   });
 
