@@ -7,6 +7,11 @@ import { useEffect, useRef, useState } from "react";
 import type { FaqAssistantClientResponse, FaqRelatedContentCard, FaqVideoCard } from "@/features/faq-assistant/schemas/faq-assistant";
 import type { FaqAssistantMessage } from "@/features/faq-assistant/types/faq-assistant";
 import { useI18n } from "@/lib/i18n";
+import styles from "./faq-assistant-screen.module.css";
+
+function cx(...classes: Array<string | false | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
 
 async function sendFeedback(messageId: string, value: "useful" | "not_useful") {
   await fetch("/api/faq-assistant/feedback", {
@@ -29,18 +34,18 @@ function VideoCard({ video }: { video: FaqVideoCard }) {
   return (
     <button
       aria-label={t("faq.openYoutube", { title: video.title })}
-      className="faq-video-card"
+      className={styles.videoCard}
       type="button"
       onClick={() => {
         const opened = window.open(video.youtubeUrl, "_blank", "noopener,noreferrer");
         if (!opened) setError(t("faq.youtubeError"));
       }}
     >
-      <span className="faq-video-thumb">
+      <span className={styles.videoThumb}>
         <Image alt="" fill sizes="112px" src={video.thumbnailUrl} />
         <i><Play fill="currentColor" size={18} /></i>
       </span>
-      <span className="faq-video-copy">
+      <span className={styles.videoCopy}>
         <strong>{video.title}</strong>
         <small>{video.channelName} - YouTube</small>
         {error ? <em>{error}</em> : null}
@@ -55,7 +60,11 @@ function RelatedContentCard({ item }: { item: FaqRelatedContentCard }) {
 
   return (
     <a
-      className={`faq-related-card is-${item.riskLevel}`}
+      className={cx(
+        styles.relatedCard,
+        item.riskLevel === "high" && styles.highRisk,
+        item.riskLevel === "medium" && styles.mediumRisk,
+      )}
       href={item.sourceUrl}
       rel={external ? "noopener noreferrer" : undefined}
       target={external ? "_blank" : undefined}
@@ -82,16 +91,25 @@ function AnswerCard({
   if (!response) return null;
 
   return (
-    <article className="faq-answer-card">
-      <div className="faq-answer-title"><Leaf aria-hidden="true" size={18} /><h2>{response.title}</h2></div>
+    <article className={styles.answerCard}>
+      <div className={styles.answerTitle}><Leaf aria-hidden="true" size={18} /><h2>{response.title}</h2></div>
       <p>{response.answer}</p>
 
       {response.checklist.length > 0 ? (
         <section>
           <h3>{t("faq.checklist")}</h3>
-          <ul className="faq-checklist">
+          <ul className={styles.checklist}>
             {response.checklist.map((item) => (
-              <li className={`is-${item.status}`} key={item.text}><ChecklistIcon status={item.status} /><span>{item.text}</span></li>
+              <li
+                className={cx(
+                  item.status === "recommended" && styles.recommended,
+                  item.status === "important" && styles.important,
+                  item.status === "warning" && styles.warning,
+                )}
+                key={item.text}
+              >
+                <ChecklistIcon status={item.status} /><span>{item.text}</span>
+              </li>
             ))}
           </ul>
         </section>
@@ -102,26 +120,26 @@ function AnswerCard({
       ) : null}
 
       {response.warnings.length > 0 ? (
-        <section><h3>{t("faq.warnings")}</h3><ul className="faq-warnings">{response.warnings.map((item) => <li key={item}>{item}</li>)}</ul></section>
+        <section><h3>{t("faq.warnings")}</h3><ul className={styles.warnings}>{response.warnings.map((item) => <li key={item}>{item}</li>)}</ul></section>
       ) : null}
 
       {response.relatedContent.length > 0 || response.videos.length > 0 ? (
         <section>
           <h3>{t("faq.learning")}</h3>
           {response.relatedContent.length > 0 ? (
-            <div className="faq-related-list">{response.relatedContent.map((item) => <RelatedContentCard item={item} key={item.id} />)}</div>
+            <div className={styles.relatedList}>{response.relatedContent.map((item) => <RelatedContentCard item={item} key={item.id} />)}</div>
           ) : null}
           {response.videos.length > 0 ? (
-            <div className="faq-video-list">{response.videos.map((video) => <VideoCard key={video.id} video={video} />)}</div>
+            <div className={styles.videoList}>{response.videos.map((video) => <VideoCard key={video.id} video={video} />)}</div>
           ) : null}
         </section>
       ) : null}
 
       {response.confidence === "low" || response.needsHumanHelp ? (
-        <p className="faq-confidence">{t("faq.confidence")}</p>
+        <p className={styles.confidence}>{t("faq.confidence")}</p>
       ) : null}
 
-      <div className="faq-feedback" aria-label={t("faq.feedback")}>
+      <div className={styles.feedback} aria-label={t("faq.feedback")}>
         <button type="button" onClick={() => onFeedback(message.id, "useful")}><ThumbsUp size={15} />{t("faq.useful")}</button>
         <button type="button" onClick={() => onFeedback(message.id, "not_useful")}><ThumbsDown size={15} />{t("faq.notUseful")}</button>
       </div>
@@ -192,31 +210,31 @@ export function FaqAssistantScreen({ mode = "page" }: { mode?: "page" | "panel" 
   }
 
   return (
-    <section className={mode === "panel" ? "faq-page faq-page--panel" : "content-container faq-page"}>
-      <header className="faq-header">
+    <section className={cx(styles.faqPage, mode === "panel" ? styles.panel : "content-container")}>
+      <header className={styles.header}>
         <div><span><Leaf size={16} /> EcoGuide</span><h1>{t("faq.title")}</h1><p>{t("faq.subtitle")}</p></div>
-        <strong className={offline ? "is-offline" : ""}>{offline ? <WifiOff size={15} /> : <span />} {offline ? t("faq.offline") : t("faq.online")}</strong>
+        <strong className={offline ? styles.offlineStatus : undefined}>{offline ? <WifiOff size={15} /> : <span />} {offline ? t("faq.offline") : t("faq.online")}</strong>
       </header>
 
-      <section className="faq-chat-shell" aria-label={t("faq.chatLabel")}>
-        <div className="faq-message-list">
+      <section className={styles.chatShell} aria-label={t("faq.chatLabel")}>
+        <div className={styles.messageList}>
           {messages.length === 0 ? (
-            <div className="faq-empty">
+            <div className={styles.empty}>
               <Leaf size={30} />
               <h2>{t("faq.emptyTitle")}</h2>
               <div>{starters.map((starter) => <button key={starter} type="button" onClick={() => send(starter)}>{starter}</button>)}</div>
             </div>
           ) : messages.map((message) => (
-            <div className={`faq-message is-${message.role}`} key={message.id}>
+            <div className={cx(styles.message, message.role === "user" ? styles.userMessage : styles.assistantMessage)} key={message.id}>
               {message.role === "user" ? <p>{message.content}</p> : <AnswerCard message={message} onFeedback={sendFeedback} />}
             </div>
           ))}
-          {loading ? <div className="faq-loading"><RefreshCcw size={16} />{t("faq.loading")}</div> : null}
-          {error ? <div className="faq-error"><span>{error}</span><button type="button" onClick={() => send(messages.filter((item) => item.role === "user").at(-1)?.content ?? "")}>{t("faq.retry")}</button></div> : null}
+          {loading ? <div className={styles.loading}><RefreshCcw size={16} />{t("faq.loading")}</div> : null}
+          {error ? <div className={styles.error}><span>{error}</span><button type="button" onClick={() => send(messages.filter((item) => item.role === "user").at(-1)?.content ?? "")}>{t("faq.retry")}</button></div> : null}
           <div ref={latestRef} />
         </div>
 
-        <form className="faq-composer" onSubmit={(event) => { event.preventDefault(); void send(); }}>
+        <form className={styles.composer} onSubmit={(event) => { event.preventDefault(); void send(); }}>
           <label className="sr-only" htmlFor={inputId}>{t("faq.askLabel")}</label>
           <textarea id={inputId} value={question} maxLength={700} placeholder={t("faq.placeholder")} onChange={(event) => setQuestion(event.target.value)} />
           <button aria-label={t("faq.send")} type="submit" disabled={loading || !question.trim()}><Send size={18} /></button>
