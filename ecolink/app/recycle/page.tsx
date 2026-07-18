@@ -11,6 +11,7 @@ import {
   MapPin,
   Navigation,
   RotateCcw,
+  Scale,
   Sparkles,
   Truck,
   TriangleAlert,
@@ -56,6 +57,23 @@ function detectionKey(index: number) {
 function estimatePoints(materialSlug: MaterialSlug | null, weightKg: number) {
   if (!materialSlug || !Number.isFinite(weightKg) || weightKg <= 0) return 0;
   return calculatePoints(materialSlug, weightKg);
+}
+
+function isPlasticBottleDetection(detection: { itemType: string; materialLabel: string; materialSlug: MaterialSlug | null }) {
+  const searchableLabel = `${detection.itemType} ${detection.materialLabel}`.toLowerCase();
+  return detection.materialSlug === "pet-plastic" && searchableLabel.includes("bottle");
+}
+
+function estimateDetectionPoints(detection: { estimatedCount: number; estimatedWeightKg: number; itemType: string; materialLabel: string; materialSlug: MaterialSlug | null }) {
+  if (isPlasticBottleDetection(detection)) {
+    return Number.isFinite(detection.estimatedCount) && detection.estimatedCount > 0 ? detection.estimatedCount : 0;
+  }
+  return estimatePoints(detection.materialSlug, detection.estimatedWeightKg);
+}
+
+function formatPoints(points: number) {
+  if (!Number.isFinite(points)) return "0";
+  return Number.isInteger(points) ? points.toString() : points.toFixed(1);
 }
 
 function materialName(slug: MaterialSlug) {
@@ -135,12 +153,13 @@ export default function RecyclePage() {
 
   const selectableDetections = useMemo(() => (result?.detections ?? []).map((detection, index) => {
     const materialSlug = isMaterialSlug(detection.materialSlug) ? detection.materialSlug : null;
-    const estimatedPoints = estimatePoints(materialSlug, detection.estimatedWeightKg);
+    const estimatedPoints = estimateDetectionPoints({ ...detection, materialSlug });
     return {
       ...detection,
       key: detectionKey(index),
       materialSlug,
       estimatedPoints,
+      pointRuleLabel: isPlasticBottleDetection({ ...detection, materialSlug }) ? "1 point per bottle" : "Estimated by weight",
     };
   }), [result]);
 
@@ -185,7 +204,7 @@ export default function RecyclePage() {
             <h1>Scan recyclables. Choose what happens next.</h1>
             <span>Use EcoGuide to identify recyclable items, submit what you plan to recycle, then schedule Eco pickup or head to a matching center.</span>
           </div>
-          <span className="network-badge"><Sparkles size={17}/> Recycle flow</span>
+          <span className="network-badge"><Scale size={17}/> 1 plastic bottle = 1 point</span>
         </header>
 
         <section className="analyzer-section recycle-flow-section" id="analyzer" aria-label="Recycle submission flow">
@@ -211,7 +230,7 @@ export default function RecyclePage() {
                 </div>
                 <div>
                   <span>Estimated points</span>
-                  <strong>~{estimatedSelectedPoints}</strong>
+                  <strong>~{formatPoints(estimatedSelectedPoints)}</strong>
                 </div>
               </div>
 
@@ -317,10 +336,10 @@ export default function RecyclePage() {
               {error ? <div className="inline-message inline-message--error" role="alert"><TriangleAlert size={18}/><span><strong>Analysis unavailable</strong>{error}</span></div> : null}
               {result ? (
                 <div className="analysis-result" role="status">
-                  <div><span className="result-icon"><CheckCircle2 size={22}/></span><div><small>EcoGuide result</small><h3>Review detected items</h3><p>Keep only what you are bringing. The center confirms the final reward.</p></div><strong>{Math.round(result.summary.confidence * 100)}%</strong></div>
+                  <div><span className="result-icon"><CheckCircle2 size={22}/></span><div><small>EcoGuide result</small><h3>Review detected items</h3><p>Plastic bottles count as 1 point each. Other materials stay estimated until partner verification.</p></div><strong>{Math.round(result.summary.confidence * 100)}%</strong></div>
                   <div className="recycle-estimate">
                     <span>Selected</span>
-                    <strong>~{estimatedSelectedPoints} pts</strong>
+                    <strong>~{formatPoints(estimatedSelectedPoints)} pts</strong>
                     <small>{estimatedSelectedWeightKg.toFixed(2)} kg · {selectedDetections.length} item{selectedDetections.length === 1 ? "" : "s"}</small>
                   </div>
                   <div className="recyclable-list" aria-label="Detected recyclable items">
@@ -337,9 +356,9 @@ export default function RecyclePage() {
                         />
                         <span>
                           <strong>{detection.itemType}</strong>
-                          <small>{detection.materialLabel}</small>
+                          <small>{detection.materialLabel} · {detection.pointRuleLabel}</small>
                         </span>
-                        <b><span>{detection.estimatedCount}× · {detection.estimatedWeightKg.toFixed(2)} kg</span>{detection.estimatedPoints > 0 ? `~${detection.estimatedPoints} pts` : "Verify"}</b>
+                        <b><span>{detection.estimatedCount}× · {detection.estimatedWeightKg.toFixed(2)} kg</span>{detection.estimatedPoints > 0 ? `~${formatPoints(detection.estimatedPoints)} pts` : "Verify"}</b>
                       </label>
                     )) : <p className="photo-tip">No recyclable items were detected. Try another photo with the item closer to the camera.</p>}
                   </div>
