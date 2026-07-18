@@ -2,6 +2,7 @@ import "server-only";
 
 import type { CollectorVehicleLocation, RecyclingCenterMapItem } from "@/features/live-map/types";
 import { PARTNER_CENTERS } from "@/lib/ecolink-data";
+import type { Database } from "@/lib/database.types";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export interface LiveMapBootstrap {
@@ -9,6 +10,19 @@ export interface LiveMapBootstrap {
   vehicles: CollectorVehicleLocation[];
   demoMode: boolean;
 }
+
+type RecyclingCenterRow = Pick<
+  Database["public"]["Tables"]["recycling_centers"]["Row"],
+  "id" | "name" | "township" | "address" | "opening_hours" | "latitude" | "longitude" | "accepted_materials"
+>;
+type CollectorVehicleRow = Pick<
+  Database["public"]["Tables"]["collector_vehicles"]["Row"],
+  "id" | "center_id" | "public_label"
+>;
+type CollectorVehicleLocationRow = Pick<
+  Database["public"]["Tables"]["collector_vehicle_locations"]["Row"],
+  "vehicle_id" | "latitude" | "longitude" | "heading" | "speed_kph" | "status" | "observed_at"
+>;
 
 function demoCenters(): RecyclingCenterMapItem[] {
   return PARTNER_CENTERS.map((center) => ({
@@ -46,8 +60,12 @@ export async function loadLiveMapBootstrap(): Promise<LiveMapBootstrap> {
     if (vehiclesResult.error) throw vehiclesResult.error;
     if (locationsResult.error) throw locationsResult.error;
 
-    const vehiclesById = new Map((vehiclesResult.data ?? []).map((vehicle) => [vehicle.id, vehicle]));
-    const vehicles: CollectorVehicleLocation[] = (locationsResult.data ?? []).flatMap((location) => {
+    const centerRows = (centersResult.data ?? []) as RecyclingCenterRow[];
+    const vehicleRows = (vehiclesResult.data ?? []) as CollectorVehicleRow[];
+    const locationRows = (locationsResult.data ?? []) as CollectorVehicleLocationRow[];
+
+    const vehiclesById = new Map(vehicleRows.map((vehicle) => [vehicle.id, vehicle]));
+    const vehicles: CollectorVehicleLocation[] = locationRows.flatMap((location) => {
       const vehicle = vehiclesById.get(location.vehicle_id);
       if (!vehicle) return [];
       return [{
@@ -65,7 +83,7 @@ export async function loadLiveMapBootstrap(): Promise<LiveMapBootstrap> {
 
     return {
       demoMode: false,
-      centers: (centersResult.data ?? []).map((center) => ({
+      centers: centerRows.map((center) => ({
         id: center.id,
         name: center.name,
         township: center.township,

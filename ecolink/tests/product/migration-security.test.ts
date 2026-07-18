@@ -19,6 +19,7 @@ const reportWorkflowMigration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260718153000_report_approval_workflow.sql"),
   "utf8",
 );
+const normalizedReportWorkflowMigration = reportWorkflowMigration.replace(/\r\n/g, "\n");
 const reportPhotoLocationMigration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260718161000_report_photo_location_submission.sql"),
   "utf8",
@@ -67,7 +68,7 @@ describe("EcoLink Supabase migration", () => {
     expect(reportWorkflowMigration).toContain("alter table public.environment_reports enable row level security");
     expect(reportWorkflowMigration).toContain("profile.app_role = 'admin'");
     expect(reportWorkflowMigration).toContain("if not public.current_profile_is_admin() then");
-    expect(reportWorkflowMigration).toContain("where id = target_report_id\n    and status = 'PENDING'::public.report_status");
+    expect(normalizedReportWorkflowMigration).toContain("where id = target_report_id\n    and status = 'PENDING'::public.report_status");
     expect(reportWorkflowMigration).toContain("if report_row.status <> 'APPROVED'::public.report_status then");
     expect(reportWorkflowMigration).toContain("for update");
     expect(reportWorkflowMigration).toContain("on conflict (report_id) where report_id is not null do nothing");

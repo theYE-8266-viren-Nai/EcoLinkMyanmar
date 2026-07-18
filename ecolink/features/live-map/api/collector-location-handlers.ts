@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { collectorLocationSchema, type CollectorLocationInput } from "@/features/live-map/schemas/map";
+import type { Database } from "@/lib/database.types";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 interface PublishResult {
@@ -17,7 +18,15 @@ async function publishCollectorLocation(input: CollectorLocationInput): Promise<
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) return { ok: false, reason: "unauthenticated" };
 
-  const { error } = await supabase.from("collector_vehicle_locations").upsert({
+  type CollectorVehicleLocationInsert = Database["public"]["Tables"]["collector_vehicle_locations"]["Insert"];
+  type CollectorLocationTable = {
+    upsert: (
+      values: CollectorVehicleLocationInsert,
+      options?: { onConflict?: string },
+    ) => Promise<{ error: { message: string } | null }>;
+  };
+  const collectorLocations = supabase.from("collector_vehicle_locations") as unknown as CollectorLocationTable;
+  const { error } = await collectorLocations.upsert({
     vehicle_id: input.vehicleId,
     latitude: input.latitude,
     longitude: input.longitude,

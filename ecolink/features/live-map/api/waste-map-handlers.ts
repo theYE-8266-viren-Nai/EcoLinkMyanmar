@@ -4,6 +4,7 @@ import { createDemoWasteResponse } from "@/features/live-map/data/demo-map-data"
 import { wasteMapQuerySchema, wasteMapRpcRowsSchema, type WasteMapQuery } from "@/features/live-map/schemas/map";
 import type { WasteMapRpcRow } from "@/features/live-map/types";
 import { getObservedSince, rowsToWasteMapResponse } from "@/features/live-map/utils/map-data";
+import type { Database } from "@/lib/database.types";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export interface WasteMapHandlerDependencies {
@@ -14,7 +15,13 @@ export interface WasteMapHandlerDependencies {
 
 async function loadWasteMapRows(query: WasteMapQuery, now: Date) {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("get_public_waste_map", {
+  type WasteMapRpc = Database["public"]["Functions"]["get_public_waste_map"];
+  type WasteMapRpcCaller = (
+    name: "get_public_waste_map",
+    args: WasteMapRpc["Args"],
+  ) => Promise<{ data: WasteMapRpc["Returns"] | null; error: { message: string } | null }>;
+  const callWasteMapRpc = supabase.rpc as unknown as WasteMapRpcCaller;
+  const { data, error } = await callWasteMapRpc("get_public_waste_map", {
     min_lng: query.west,
     min_lat: query.south,
     max_lng: query.east,
