@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { MATERIALS } from "@/lib/ecolink-data";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { sanitizeErrorMessage } from "@/lib/errors";
 
 type RpcResult<T> = Promise<{ data: T | null; error: { message: string } | null }>;
 
@@ -31,7 +32,7 @@ export async function recordCenterDropOff(input: unknown) {
     material_slug: parsed.data.materialSlug,
     weight_kg: parsed.data.weightKg,
   });
-  if (error || !data?.[0]) return { ok: false as const, error: error?.message ?? "The drop-off could not be recorded." };
+  if (error || !data?.[0]) return { ok: false as const, error: sanitizeErrorMessage(error?.message, "The drop-off could not be recorded.") };
   return { ok: true as const, points: data[0].points_awarded };
 }
 
@@ -46,7 +47,7 @@ export async function fulfillPartnerReward(claimCode: string) {
   if (!parsed.success) return { ok: false as const, error: "Enter a valid reward claim code." };
   const rpc = supabase.rpc.bind(supabase) as unknown as (name: "fulfill_partner_reward", args: { reward_claim_code: string }) => RpcResult<string>;
   const { error } = await rpc("fulfill_partner_reward", { reward_claim_code: parsed.data });
-  if (error) return { ok: false as const, error: error.message };
+  if (error) return { ok: false as const, error: sanitizeErrorMessage(error.message, "The reward could not be fulfilled.") };
   return { ok: true as const };
 }
 

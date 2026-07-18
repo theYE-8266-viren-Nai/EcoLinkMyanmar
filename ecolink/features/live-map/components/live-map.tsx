@@ -1,7 +1,22 @@
 "use client";
 
-import BottomNavigation from "@mui/material/BottomNavigation";
-import BottomNavigationAction from "@mui/material/BottomNavigationAction";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Chip from "@mui/material/Chip";
+import Divider from "@mui/material/Divider";
+import IconButton from "@mui/material/IconButton";
+import List from "@mui/material/List";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemText from "@mui/material/ListItemText";
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
+import Tab from "@mui/material/Tab";
+import Tabs from "@mui/material/Tabs";
+import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
 import {
   AlertTriangle,
   Building2,
@@ -38,14 +53,6 @@ import {
   YANGON_CENTER,
   YANGON_ZOOM,
 } from "@/features/live-map/utils/map-data";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
 
 const EMPTY_FEATURES: MapFeatureCollection = { type: "FeatureCollection", features: [] };
@@ -64,22 +71,6 @@ type SelectedMapItem =
   | null;
 
 type MobilePanelTab = "centers" | "collectors";
-
-const MOBILE_PANEL_TABS = [
-  { value: "centers", label: "Centers", Icon: Building2 },
-  { value: "collectors", label: "Collectors", Icon: Truck },
-] as const satisfies ReadonlyArray<{
-  value: MobilePanelTab;
-  label: string;
-  Icon: typeof Layers3;
-}>;
-
-const HOME_BOTTOM_NAV_ITEMS = [
-  { href: "/", label: "Home", Icon: House },
-  { href: "/impact", label: "Impact", Icon: CircleGauge },
-  { href: "/recycle", label: "Recycle", Icon: MapPinned },
-  { href: "/report", label: "Report", Icon: Recycle },
-] as const;
 
 function centersToFeatureCollection(centers: RecyclingCenterMapItem[]): MapFeatureCollection {
   return {
@@ -238,20 +229,16 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
   const [showWaste, setShowWaste] = useState(true);
   const [showCenters, setShowCenters] = useState(true);
   const [showCollectors, setShowCollectors] = useState(true);
-  const [isMobileMap, setIsMobileMap] = useState(false);
-  const [mobileSheetOpen, setMobileSheetOpen] = useState(true);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [mobilePanelTab, setMobilePanelTab] = useState<MobilePanelTab>("centers");
   const [selected, setSelected] = useState<SelectedMapItem>(null);
   const [vehicles, setVehicles] = useState(initialVehicles);
   const [locationMessage, setLocationMessage] = useState("");
 
-  useEffect(() => {
-    const query = window.matchMedia("(max-width: 900px)");
-    const syncMobileState = () => setIsMobileMap(query.matches);
-    syncMobileState();
-    query.addEventListener("change", syncMobileState);
-    return () => query.removeEventListener("change", syncMobileState);
-  }, []);
+  const visibleVehicles = vehicles.filter((vehicle) => {
+    const freshness = getVehicleFreshness(vehicle.observedAt);
+    return freshness !== "hidden";
+  });
 
   useEffect(() => {
     if (!MAPBOX_TOKEN || !mapContainerRef.current || mapRef.current) return;
@@ -497,195 +484,448 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
 
   function focusCenter(center: RecyclingCenterMapItem) {
     setSelected({ kind: "center", center });
+    setMobileSheetOpen(false);
     mapRef.current?.flyTo({ center: [center.longitude, center.latitude], zoom: 15, essential: false });
   }
 
   function focusVehicle(vehicle: CollectorVehicleLocation) {
     setSelected({ kind: "vehicle", vehicle });
+    setMobileSheetOpen(false);
     mapRef.current?.flyTo({ center: [vehicle.longitude, vehicle.latitude], zoom: 15, essential: false });
   }
 
+  function resetMap() {
+    setSelected(null);
+    mapRef.current?.flyTo({ center: YANGON_CENTER, zoom: YANGON_ZOOM, bearing: 0, pitch: 0 });
+  }
+
   function useMyLocation() {
-    const geolocation = typeof window === "undefined" ? undefined : window.navigator.geolocation;
-    if (!geolocation) {
-      setLocationMessage("Location is not supported by this browser.");
+    if (!navigator.geolocation) {
+      setLocationMessage("Browser coordinates are not supported.");
       return;
     }
-    setLocationMessage("Finding your location…");
-    geolocation.getCurrentPosition(
-      ({ coords }) => {
-        setLocationMessage("Map centered on your location.");
-        mapRef.current?.flyTo({ center: [coords.longitude, coords.latitude], zoom: 15, essential: false });
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coordinates: [number, number] = [position.coords.longitude, position.coords.latitude];
+        mapRef.current?.flyTo({ center: coordinates, zoom: 15 });
+        setLocationMessage("");
       },
-      () => setLocationMessage("Location permission was denied. Recycling centers are still listed below."),
-      { enableHighAccuracy: false, timeout: 8000 },
+      () => setLocationMessage("We could not read your current location.")
     );
   }
 
-  function resetMap() {
-    mapRef.current?.flyTo({ center: YANGON_CENTER, zoom: YANGON_ZOOM, bearing: 0, pitch: 0, essential: false });
-    setSelected(null);
-  }
-
-  const visibleVehicles = vehicles.filter((vehicle) => getVehicleFreshness(vehicle.observedAt) !== "hidden");
   const densityLabel = wasteMode === "heatmap" ? "Heatmap" : "Report markers";
 
-  const layerToggles = (
-    <div className="map-layer-toggles" aria-label="Visible map layers">
-      <button type="button" className={showWaste ? "is-active" : ""} onClick={() => setShowWaste((value) => !value)} aria-pressed={showWaste}><span className="map-layer-dot map-layer-dot--waste" />Report markers</button>
-      <button type="button" className={showCenters ? "is-active" : ""} onClick={() => setShowCenters((value) => !value)} aria-pressed={showCenters}><Building2 size={16} />Centers</button>
-      <button type="button" className={showCollectors ? "is-active" : ""} onClick={() => setShowCollectors((value) => !value)} aria-pressed={showCollectors}><Truck size={16} />Collectors</button>
-    </div>
-  );
-
-  const mapSummary = (
-    <div className="map-panel-summary" aria-live="polite">
-      <span><Layers3 size={15} aria-hidden="true" />{wasteLoading ? "Updating density…" : `${densityLabel} · ${wasteCount} visible`}</span>
-      <span><Truck size={15} aria-hidden="true" />{visibleVehicles.length} collectors</span>
-    </div>
-  );
-
-  const centerList = (
-    <div className="map-center-list">
-      <div><strong>Recycling centers</strong><span>{centers.length} nearby</span></div>
-      {centers.length ? centers.map((center) => (
-        <button type="button" key={center.id} onClick={() => focusCenter(center)}>
-          <span><Recycle size={17} /></span><div><strong>{center.name}</strong><small>{center.township} · {center.hours}</small></div><ChevronRight size={16} />
-        </button>
-      )) : <p>No active recycling centers are available for this map view yet.</p>}
-    </div>
-  );
-
-  const collectorList = (
-    <div className="map-center-list">
-      <div><strong>Active collectors</strong><span>{visibleVehicles.length} nearby</span></div>
-      {visibleVehicles.length ? visibleVehicles.map((vehicle) => (
-        <button type="button" key={vehicle.vehicleId} onClick={() => focusVehicle(vehicle)}>
-          <span><Truck size={18} aria-hidden="true" /></span>
-          <div>
-            <strong>{vehicle.label}</strong>
-            <small>{vehicle.status.replaceAll("_", " ")} · {formatUpdatedAt(vehicle.observedAt)}</small>
-          </div>
-          <ChevronRight size={16} aria-hidden="true" />
-        </button>
-      )) : <p>No active collectors are visible right now. Check again shortly.</p>}
-    </div>
-  );
-
   return (
-    <main className={mobileSheetOpen ? "live-map-page is-mobile-sheet-open" : "live-map-page"} aria-label="Yangon live waste and recycling map">
-      <div className="live-map-canvas" role="region" aria-label="Interactive Mapbox map of Yangon">
-        <div className="live-map-canvas__map" ref={mapContainerRef} />
-        {mapUnavailable ? (
-          <div className="live-map-fallback">
-            <MapPin size={34} aria-hidden="true" />
-            <h1>Map view unavailable</h1>
-            <p>Add a Mapbox public token to enable the interactive map. Partner center details remain available.</p>
-          </div>
-        ) : null}
-      </div>
+    <Box sx={{ position: "relative", width: "100%", height: "100%", display: "flex", flexGrow: 1 }}>
+      {/* Map Canvas */}
+      <Box sx={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}>
+        <Box ref={mapContainerRef} sx={{ width: "100%", height: "100%" }} />
+        {mapUnavailable && (
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              bgcolor: "rgba(228, 236, 238, 0.95)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              p: 3,
+              textAlign: "center",
+              zIndex: 2,
+            }}
+          >
+            <MapPin size={48} color="#087c78" style={{ marginBottom: 16 }} />
+            <Typography variant="h6" sx={{ fontWeight: 800, color: "secondary.main" }}>
+              Map view unavailable
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, maxWidth: 300 }}>
+              Add a Mapbox public token to enable the interactive map. Partner center details remain available.
+            </Typography>
+          </Box>
+        )}
+      </Box>
 
-      <aside className="live-map-panel" aria-label="Map layers and recycling centers">
-        {layerToggles}
-        {mapSummary}
-        {centerList}
-      </aside>
-
-      <div className="live-map-actions" aria-label="Map actions">
-        <Link href="/impact" aria-label="Open impact dashboard"><CircleGauge size={18} /><span>Impact dashboard</span></Link>
-        <button type="button" onClick={useMyLocation} aria-label="Use my location"><LocateFixed size={19} /><span>My location</span></button>
-        <button type="button" onClick={resetMap} aria-label="Reset Yangon view"><RotateCcw size={18} /><span>Reset Yangon view</span></button>
-      </div>
-
-      {isMobileMap ? (
-        <Drawer
-          modal={false}
-          open={mobileSheetOpen}
-          onOpenChange={(open) => setMobileSheetOpen(open)}
-          showSwipeHandle
+      {/* Floating Layer Controls (Top Left) */}
+      <Stack
+        spacing={1}
+        sx={{
+          position: "absolute",
+          top: 12,
+          left: 12,
+          zIndex: 10,
+          maxWidth: "calc(100% - 24px)",
+        }}
+      >
+        <Paper
+          elevation={2}
+          sx={{
+            p: 0.5,
+            borderRadius: "20px",
+            bgcolor: "rgba(255, 255, 255, 0.92)",
+            backdropFilter: "blur(4px)",
+          }}
         >
-          {!mobileSheetOpen ? (
-            <DrawerTrigger className="live-map-sheet-trigger">
-              <PanelBottomOpen size={19} aria-hidden="true" />
-              Map controls
-            </DrawerTrigger>
-          ) : null}
-          <DrawerContent className="live-map-mobile-sheet">
-            <div className="live-map-mobile-sheet__heading">
-              <div>
-                <DrawerTitle className="live-map-mobile-sheet__title">Yangon Network</DrawerTitle>
-                <DrawerDescription className="sr-only">Browse recycling centers and active collector cars on the live Yangon map.</DrawerDescription>
-              </div>
-              <div className="live-map-mobile-sheet__heading-actions">
-                <DrawerClose className="live-map-mobile-sheet__close" aria-label="Close map controls">
-                  <X size={19} aria-hidden="true" />
-                </DrawerClose>
-              </div>
-            </div>
-            <nav className="live-map-panel-tabs" aria-label="Map panel sections">
-              {MOBILE_PANEL_TABS.map(({ value, label, Icon }) => (
-                <button
-                  className={mobilePanelTab === value ? "is-active" : ""}
-                  type="button"
-                  key={value}
-                  aria-pressed={mobilePanelTab === value}
-                  aria-controls="mobile-map-panel-content"
-                  onClick={() => setMobilePanelTab(value)}
-                >
-                  <span className="live-map-panel-tabs__icon"><Icon size={21} aria-hidden="true" /></span>
-                  <span>{label}</span>
-                </button>
-              ))}
-            </nav>
-            <section
-              className="live-map-mobile-sheet__content"
-              id="mobile-map-panel-content"
-              aria-label={`${MOBILE_PANEL_TABS.find((tab) => tab.value === mobilePanelTab)?.label ?? "Map"} panel`}
-            >
-              {mobilePanelTab === "centers" ? centerList : null}
-              {mobilePanelTab === "collectors" ? collectorList : null}
-            </section>
-          </DrawerContent>
-        </Drawer>
-      ) : null}
-
-      {isMobileMap ? (
-        <BottomNavigation
-          aria-label="Home bottom navigation"
-          className="live-map-bottom-nav"
-          showLabels
-          value="/"
-        >
-          {HOME_BOTTOM_NAV_ITEMS.map(({ href, label, Icon }) => (
-            <BottomNavigationAction
-              aria-current={href === "/" ? "page" : undefined}
-              component={Link}
-              href={href}
-              icon={<Icon size={22} aria-hidden="true" />}
-              key={href}
-              label={label}
-              onClick={() => setMobileSheetOpen(false)}
-              value={href}
+          <Stack direction="row" spacing={0.5}>
+            <Chip
+              onClick={() => setShowWaste((val) => !val)}
+              variant={showWaste ? "filled" : "outlined"}
+              color={showWaste ? "error" : "default"}
+              size="small"
+              label="Reports"
+              sx={{ fontWeight: 700, fontSize: "0.68rem" }}
             />
-          ))}
-        </BottomNavigation>
-      ) : null}
+            <Chip
+              onClick={() => setShowCenters((val) => !val)}
+              variant={showCenters ? "filled" : "outlined"}
+              color={showCenters ? "primary" : "default"}
+              size="small"
+              icon={<Building2 size={12} />}
+              label="Centers"
+              sx={{ fontWeight: 700, fontSize: "0.68rem" }}
+            />
+            <Chip
+              onClick={() => setShowCollectors((val) => !val)}
+              variant={showCollectors ? "filled" : "outlined"}
+              color={showCollectors ? "secondary" : "default"}
+              size="small"
+              icon={<Truck size={12} />}
+              label="Collectors"
+              sx={{ fontWeight: 700, fontSize: "0.68rem" }}
+            />
+          </Stack>
+        </Paper>
 
-      {selected ? (
-        <article className="map-selection" aria-live="polite">
-          <button type="button" onClick={() => setSelected(null)} aria-label="Close map details"><X size={17} /></button>
-          {selected.kind === "center" ? <><span className="map-selection__type"><Building2 size={15} />Partner center</span><h2>{selected.center.name}</h2><p>{selected.center.address}, {selected.center.township}</p><small>{selected.center.hours}</small><div className="map-selection__tags">{selected.center.materials.slice(0, 5).map((material) => <span key={material}>{material.replaceAll("-", " ")}</span>)}</div><a href={`https://www.google.com/maps/dir/?api=1&destination=${selected.center.latitude},${selected.center.longitude}`} target="_blank" rel="noreferrer"><Navigation size={16} />Get directions</a></> : null}
-          {selected.kind === "vehicle" ? <><span className="map-selection__type"><Truck size={15} />{selected.vehicle.isDemo ? "Demo collector" : "Live collector"}</span><h2>{selected.vehicle.label}</h2><p>{selected.vehicle.status.replaceAll("_", " ")} · {Math.round(selected.vehicle.speedKph)} km/h</p><small>{formatUpdatedAt(selected.vehicle.observedAt)}</small></> : null}
-          {selected.kind === "report" ? <><span className="map-selection__type"><AlertTriangle size={15} />Community report</span><h2>{selected.wasteType.replaceAll("_", " ")}</h2><p>Waste density score {selected.score} out of 10</p><small>Approximate location · {new Date(selected.observedAt).toLocaleDateString("en-US", { timeZone: "Asia/Yangon" })}</small></> : null}
-        </article>
-      ) : null}
+        <Paper
+          elevation={1}
+          sx={{
+            py: 0.5,
+            px: 1.5,
+            borderRadius: "12px",
+            bgcolor: "rgba(255, 255, 255, 0.85)",
+            backdropFilter: "blur(4px)",
+            width: "fit-content",
+          }}
+        >
+          <Typography variant="caption" sx={{ fontSize: "0.65rem", display: "flex", gap: 1, alignItems: "center", color: "text.secondary" }}>
+            <Layers3 size={11} />
+            {wasteLoading ? "Loading..." : `${densityLabel} · ${wasteCount} reports`}
+          </Typography>
+        </Paper>
+      </Stack>
 
-      <section className="map-legend" aria-label="Waste density legend">
-        <strong>Waste density</strong><span className="map-legend__ramp" aria-hidden="true" /><div><span>Lower</span><span>Higher</span></div><small>Always visible</small>
-      </section>
+      {/* Floating Utilities (Right Side, mid-screen) */}
+      <Stack
+        spacing={1}
+        sx={{
+          position: "absolute",
+          top: "30%",
+          right: 12,
+          zIndex: 10,
+        }}
+      >
+        <Paper elevation={3} sx={{ borderRadius: "50%", overflow: "hidden" }}>
+          <IconButton
+            onClick={useMyLocation}
+            aria-label="Use my location"
+            sx={{ bgcolor: "background.paper", color: "secondary.main", p: 1.25 }}
+          >
+            <LocateFixed size={20} />
+          </IconButton>
+        </Paper>
+        <Paper elevation={3} sx={{ borderRadius: "50%", overflow: "hidden" }}>
+          <IconButton
+            onClick={resetMap}
+            aria-label="Reset Yangon view"
+            sx={{ bgcolor: "background.paper", color: "secondary.main", p: 1.25 }}
+          >
+            <RotateCcw size={20} />
+          </IconButton>
+        </Paper>
+        <Paper elevation={3} sx={{ borderRadius: "50%", overflow: "hidden" }}>
+          <IconButton
+            onClick={() => setMobileSheetOpen(true)}
+            aria-label="Open list panel"
+            sx={{ bgcolor: "primary.main", color: "white", p: 1.25, "&:hover": { bgcolor: "primary.dark" } }}
+          >
+            <PanelBottomOpen size={20} />
+          </IconButton>
+        </Paper>
+      </Stack>
 
-      {mapError ? <div className="map-notice map-notice--error" role="alert"><AlertTriangle size={17} />{mapError}</div> : null}
-      {locationMessage ? <div className="map-notice" role="status"><LocateFixed size={17} />{locationMessage}<button type="button" onClick={() => setLocationMessage("")} aria-label="Dismiss location message"><X size={15} /></button></div> : null}
-    </main>
+      {/* Map Legend (Bottom Right, sits above Bottom Sheet) */}
+      <Paper
+        elevation={1}
+        sx={{
+          position: "absolute",
+          bottom: selected ? 220 : 76,
+          right: 12,
+          zIndex: 9,
+          p: 1,
+          borderRadius: "8px",
+          bgcolor: "rgba(255, 255, 255, 0.9)",
+          backdropFilter: "blur(4px)",
+          fontSize: "0.65rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: 0.5,
+          width: 100,
+        }}
+      >
+        <Typography variant="caption" sx={{ fontWeight: 800, fontSize: "0.62rem" }}>
+          Waste density
+        </Typography>
+        <Box
+          sx={{
+            height: 6,
+            borderRadius: 1,
+            background: "linear-gradient(90deg, rgba(8,124,120,0) 0%, rgba(44,150,137,0.45) 20%, rgba(244,194,74,0.68) 50%, rgba(238,126,62,0.82) 80%, rgba(184,55,72,0.94) 100%)",
+          }}
+        />
+        <Stack direction="row" sx={{ justifyContent: "space-between", color: "text.secondary" }}>
+          <span>Low</span>
+          <span>High</span>
+        </Stack>
+      </Paper>
+
+      {/* Selected Item Detail Card */}
+      {selected && (
+        <Card
+          elevation={4}
+          sx={{
+            position: "absolute",
+            bottom: 76,
+            left: 12,
+            right: 12,
+            zIndex: 15,
+            borderRadius: 3,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+            <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+              <Box>
+                {selected.kind === "center" && (
+                  <>
+                    <Chip size="small" icon={<Building2 size={12} />} label="Partner Center" color="primary" sx={{ mb: 1, height: 20, fontSize: "0.65rem", fontWeight: 700 }} />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>{selected.center.name}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{selected.center.address}, {selected.center.township}</Typography>
+                    <Typography variant="caption" color="primary.main" sx={{ display: "block", mt: 0.5, fontWeight: 700 }}>{selected.center.hours}</Typography>
+                    <Stack direction="row" spacing={0.5} useFlexGap sx={{ mt: 1.5, flexWrap: "wrap" }}>
+                      {selected.center.materials.slice(0, 4).map((m) => (
+                        <Chip key={m} size="small" label={m.replaceAll("-", " ")} sx={{ fontSize: "0.62rem", height: 18 }} />
+                      ))}
+                    </Stack>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      startIcon={<Navigation size={14} />}
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${selected.center.latitude},${selected.center.longitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      sx={{ mt: 2, minHeight: 38 }}
+                    >
+                      Get Directions
+                    </Button>
+                  </>
+                )}
+                {selected.kind === "vehicle" && (
+                  <>
+                    <Chip size="small" icon={<Truck size={12} />} label={selected.vehicle.isDemo ? "Demo Collector" : "Live Collector"} color="secondary" sx={{ mb: 1, height: 20, fontSize: "0.65rem", fontWeight: 700 }} />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>{selected.vehicle.label}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Status: {selected.vehicle.status.replaceAll("_", " ")}</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                      Heading · {Math.round(selected.vehicle.speedKph)} km/h · {formatUpdatedAt(selected.vehicle.observedAt)}
+                    </Typography>
+                  </>
+                )}
+                {selected.kind === "report" && (
+                  <>
+                    <Chip size="small" icon={<AlertTriangle size={12} />} label="Community Waste Report" color="error" sx={{ mb: 1, height: 20, fontSize: "0.65rem", fontWeight: 700 }} />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>{selected.wasteType.replaceAll("_", " ")}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Density Score: {selected.score} / 10</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                      Observed: {new Date(selected.observedAt).toLocaleDateString("en-US", { timeZone: "Asia/Yangon" })}
+                    </Typography>
+                  </>
+                )}
+              </Box>
+              <IconButton size="small" onClick={() => setSelected(null)}>
+                <X size={16} />
+              </IconButton>
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Absolute Bottom Sheet Panel (List of centers/collectors) */}
+      <Paper
+        elevation={4}
+        sx={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 20,
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+          display: "flex",
+          flexDirection: "column",
+          maxHeight: "75%",
+          transform: mobileSheetOpen ? "translateY(0)" : "translateY(100%)",
+          transition: "transform 0.25s ease-out",
+          borderTop: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        {/* Drag handle block */}
+        <Box
+          onClick={() => setMobileSheetOpen(false)}
+          sx={{
+            cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            py: 1.5,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            bgcolor: "background.paper",
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+          }}
+        >
+          <Box sx={{ width: 40, height: 4, bgcolor: "divider", borderRadius: 2, mb: 1 }} />
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main" }}>Yangon Network</Typography>
+        </Box>
+
+        {/* Tab Controls */}
+        <Tabs
+          value={mobilePanelTab}
+          onChange={(_, val: MobilePanelTab) => setMobilePanelTab(val)}
+          variant="fullWidth"
+          indicatorColor="primary"
+          textColor="primary"
+          sx={{ borderBottom: "1px solid", borderColor: "divider" }}
+        >
+          <Tab
+            value="centers"
+            icon={<Building2 size={16} style={{ marginBottom: 2 }} />}
+            label={`Centers (${centers.length})`}
+            sx={{ fontWeight: 750, minHeight: 48, fontSize: "0.78rem" }}
+          />
+          <Tab
+            value="collectors"
+            icon={<Truck size={16} style={{ marginBottom: 2 }} />}
+            label={`Collectors (${visibleVehicles.length})`}
+            sx={{ fontWeight: 750, minHeight: 48, fontSize: "0.78rem" }}
+          />
+        </Tabs>
+
+        {/* Scrollable list content */}
+        <Box sx={{ flexGrow: 1, overflowY: "auto", bgcolor: "background.default", p: 1, minHeight: 120 }}>
+          {mobilePanelTab === "centers" ? (
+            <List disablePadding>
+              {centers.length ? (
+                centers.map((center) => (
+                  <ListItemButton
+                    key={center.id}
+                    onClick={() => focusCenter(center)}
+                    sx={{
+                      mb: 0.75,
+                      borderRadius: 2,
+                      bgcolor: "background.paper",
+                      border: "1px solid",
+                      borderColor: "divider",
+                    }}
+                  >
+                    <ListItemText
+                      primary={center.name}
+                      secondary={`${center.township} · ${center.hours}`}
+                      slotProps={{
+                        primary: { variant: "body2", sx: { fontWeight: 800 } },
+                        secondary: { variant: "caption", color: "text.secondary" }
+                      }}
+                    />
+                    <ChevronRight size={18} color="grey" />
+                  </ListItemButton>
+                ))
+              ) : (
+                <Typography variant="body2" align="center" color="text.secondary" sx={{ p: 3 }}>
+                  No active recycling centers are available.
+                </Typography>
+              )}
+            </List>
+          ) : (
+            <List disablePadding>
+              {visibleVehicles.length ? (
+                visibleVehicles.map((vehicle) => (
+                  <ListItemButton
+                    key={vehicle.vehicleId}
+                    onClick={() => focusVehicle(vehicle)}
+                    sx={{
+                      mb: 0.75,
+                      borderRadius: 2,
+                      bgcolor: "background.paper",
+                      border: "1px solid",
+                      borderColor: "divider",
+                    }}
+                  >
+                    <ListItemText
+                      primary={vehicle.label}
+                      secondary={`${vehicle.status.replaceAll("_", " ")} · ${formatUpdatedAt(vehicle.observedAt)}`}
+                      slotProps={{
+                        primary: { variant: "body2", sx: { fontWeight: 800 } },
+                        secondary: { variant: "caption", color: "text.secondary" }
+                      }}
+                    />
+                    <ChevronRight size={18} color="grey" />
+                  </ListItemButton>
+                ))
+              ) : (
+                <Typography variant="body2" align="center" color="text.secondary" sx={{ p: 3 }}>
+                  No active collectors are visible right now.
+                </Typography>
+              )}
+            </List>
+          )}
+        </Box>
+      </Paper>
+
+      {/* Floating notifications */}
+      {locationMessage && (
+        <Alert
+          severity="info"
+          onClose={() => setLocationMessage("")}
+          sx={{
+            position: "absolute",
+            top: 76,
+            left: 12,
+            right: 12,
+            zIndex: 100,
+            borderRadius: 2,
+          }}
+        >
+          {locationMessage}
+        </Alert>
+      )}
+
+      {mapError && (
+        <Alert
+          severity="warning"
+          sx={{
+            position: "absolute",
+            top: 76,
+            left: 12,
+            right: 12,
+            zIndex: 100,
+            borderRadius: 2,
+          }}
+        >
+          {mapError}
+        </Alert>
+      )}
+    </Box>
   );
 }

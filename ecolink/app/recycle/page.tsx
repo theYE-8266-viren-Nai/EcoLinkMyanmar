@@ -1,11 +1,36 @@
 "use client";
 
-import Image from "next/image";
+import Alert from "@mui/material/Alert";
+import Avatar from "@mui/material/Avatar";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardActionArea from "@mui/material/CardActionArea";
+import CardContent from "@mui/material/CardContent";
+import Checkbox from "@mui/material/Checkbox";
+import CircularProgress from "@mui/material/CircularProgress";
+import Divider from "@mui/material/Divider";
+import Drawer from "@mui/material/Drawer";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemAvatar from "@mui/material/ListItemAvatar";
+import ListItemButton from "@mui/material/ListItemButton";
+import IconButton from "@mui/material/IconButton";
+import ListItemText from "@mui/material/ListItemText";
+import MenuItem from "@mui/material/MenuItem";
+import Paper from "@mui/material/Paper";
+import Select from "@mui/material/Select";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import {
   Building2,
   CalendarClock,
   Camera,
   CheckCircle2,
+  ChevronRight,
   ImagePlus,
   LoaderCircle,
   MapPin,
@@ -17,16 +42,10 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/ecolink/app-shell";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
 import { calculatePoints, MATERIALS, PARTNER_CENTERS, type MaterialSlug } from "@/lib/ecolink-data";
 import type { AiScanResponse } from "@/schemas/ai-scan";
 
@@ -240,231 +259,549 @@ export default function RecyclePage() {
 
   return (
     <AppShell>
-      <main className="content-container recycle-page">
-        <header className="page-intro">
-          <div>
-            <p>Recycle in Yangon</p>
-            <h1>Scan recyclables. Choose what happens next.</h1>
-            <span>Use EcoGuide to identify recyclable items, submit what you plan to recycle, then schedule Eco pickup or head to a matching center.</span>
-          </div>
-          <span className="network-badge"><Scale size={17}/> 1 plastic bottle = 1 point</span>
-        </header>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {/* Intro */}
+        <Box sx={{ mt: 1 }}>
+          <Typography variant="caption" sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase" }}>
+            Recycle in Yangon
+          </Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.5 }}>
+            Scan recyclables. Choose what happens next.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Use EcoGuide to identify recyclable items, submit what you plan to recycle, then schedule Eco pickup or head to a matching center.
+          </Typography>
 
-        <section className="analyzer-section recycle-flow-section" id="analyzer" aria-label="Recycle submission flow">
-          {submitted ? (
-            <div className="submission-panel" role="status">
-              <div className="submission-hero">
-                <span className="result-icon"><CheckCircle2 size={24}/></span>
-                <div>
-                  <small>Selected recyclables submitted</small>
-                  <h2>Nice. Now choose how to recycle them.</h2>
-                  <p>This is a demo request. A partner will verify the final weight and reward points.</p>
-                </div>
-              </div>
+          <Stack direction="row" spacing={1} sx={{ mt: 1.5, alignItems: "center" }}>
+            <Box
+              sx={{
+                bgcolor: "rgba(8, 124, 120, 0.08)",
+                color: "primary.main",
+                px: 1.5,
+                py: 0.5,
+                borderRadius: "12px",
+                fontSize: "0.7rem",
+                fontWeight: 800,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 0.75,
+              }}
+            >
+              <Scale size={13} />
+              1 plastic bottle = 1 point
+            </Box>
+          </Stack>
+        </Box>
 
-              <div className="submitted-summary" aria-label="Submitted recyclable summary">
-                <div>
-                  <span>Items</span>
-                  <strong>{selectedDetections.length}</strong>
-                </div>
-                <div>
-                  <span>Estimated weight</span>
-                  <strong>{estimatedSelectedWeightKg.toFixed(2)} kg</strong>
-                </div>
-                <div>
-                  <span>Estimated points</span>
-                  <strong>~{formatPoints(estimatedSelectedPoints)}</strong>
-                </div>
-              </div>
+        {submitted ? (
+          /* Submission Results / Next Steps Panel */
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+            <Card variant="outlined" sx={{ borderRadius: 3, bgcolor: "rgba(8, 124, 120, 0.04)" }}>
+              <CardContent sx={{ p: 2 }}>
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
+                  <Avatar sx={{ bgcolor: "primary.main", color: "white", width: 34, height: 34 }}>
+                    <CheckCircle2 size={18} />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+                      Selected recyclables submitted
+                    </Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.25 }}>
+                      Nice. Now choose how to recycle them.
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                      This is a demo request. A partner will verify the final weight and reward points.
+                    </Typography>
+                  </Box>
+                </Stack>
 
-              <div className="submitted-items">
-                {selectedDetections.map((detection) => (
-                  <span key={detection.key}>{detection.itemType} · {detection.estimatedWeightKg.toFixed(2)} kg</span>
+                <Divider sx={{ my: 2 }} />
+
+                <Stack direction="row" spacing={1} sx={{ justifyContent: "space-around", textAlign: "center" }}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Items</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{selectedDetections.length}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Weight</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{estimatedSelectedWeightKg.toFixed(2)} kg</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Points</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "primary.main" }}>
+                      ~{formatPoints(estimatedSelectedPoints)}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+
+            {/* List of submitted items */}
+            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: "background.default" }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1, fontWeight: 700 }}>
+                SUBMITTED ITEMS
+              </Typography>
+              <Stack spacing={0.5}>
+                {selectedDetections.map((d) => (
+                  <Typography key={d.key} variant="caption" color="text.secondary" sx={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>• {d.itemType}</span>
+                    <span>{d.estimatedWeightKg.toFixed(2)} kg</span>
+                  </Typography>
                 ))}
-              </div>
+              </Stack>
+            </Paper>
 
-              <div className="fulfillment-grid" aria-label="Choose recycling method">
-                <button
-                  className={fulfillmentOption === "truck" ? "fulfillment-card is-selected" : "fulfillment-card"}
-                  type="button"
-                  onClick={() => {
-                    setFulfillmentOption("truck");
-                    setPickupDrawerOpen(true);
-                  }}
-                >
-                  <span><Truck size={24}/></span>
-                  <strong>Schedule Eco truck pickup</strong>
-                  <small>Confirm the next EcoLink route and add your pickup address.</small>
-                </button>
-                <button
-                  className={fulfillmentOption === "center" ? "fulfillment-card is-selected" : "fulfillment-card"}
-                  type="button"
-                  onClick={() => setFulfillmentOption("center")}
-                >
-                  <span><Building2 size={24}/></span>
-                  <strong>Take to nearby recycle center</strong>
-                  <small>See verified centers that accept your selected materials.</small>
-                </button>
-              </div>
+            {/* Fulfillment Options */}
+            <Stack spacing={1.5}>
+              <Card
+                variant="outlined"
+                sx={{
+                  borderRadius: 3,
+                  borderColor: fulfillmentOption === "truck" ? "primary.main" : "divider",
+                  borderWidth: fulfillmentOption === "truck" ? 2 : 1,
+                  bgcolor: "background.paper",
+                }}
+              >
+                <CardActionArea onClick={() => { setFulfillmentOption("truck"); setPickupDrawerOpen(true); }} sx={{ p: 2 }}>
+                  <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
+                    <Avatar sx={{ bgcolor: "rgba(8, 124, 120, 0.1)", color: "primary.main", width: 38, height: 38 }}>
+                      <Truck size={20} />
+                    </Avatar>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main" }}>
+                        Schedule Eco truck pickup
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
+                        Confirm the next EcoLink route and add your pickup address.
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </CardActionArea>
+              </Card>
 
-              {pickupPrepared ? (
-                <div className="inline-message inline-message--success" role="status">
-                  <CheckCircle2 size={18}/>
-                  <span>
-                    <strong>Eco pickup request prepared.</strong>
-                    {`${nextEcoLinkSchedule.window} · ${nextEcoLinkSchedule.area}`}
-                  </span>
-                </div>
-              ) : null}
+              <Card
+                variant="outlined"
+                sx={{
+                  borderRadius: 3,
+                  borderColor: fulfillmentOption === "center" ? "primary.main" : "divider",
+                  borderWidth: fulfillmentOption === "center" ? 2 : 1,
+                  bgcolor: "background.paper",
+                }}
+              >
+                <CardActionArea onClick={() => setFulfillmentOption("center")} sx={{ p: 2 }}>
+                  <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
+                    <Avatar sx={{ bgcolor: "rgba(11, 53, 88, 0.1)", color: "secondary.main", width: 38, height: 38 }}>
+                      <Building2 size={20} />
+                    </Avatar>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main" }}>
+                        Take to nearby recycle center
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
+                        See verified centers that accept your selected materials.
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </CardActionArea>
+              </Card>
+            </Stack>
 
-              {fulfillmentOption === "center" ? (
-                <div className="matching-centers" aria-live="polite">
-                  <div className="matching-centers__header">
-                    <span>{matchingCenters.length > 0 ? `${matchingCenters.length} matching centers` : "No verified match yet"}</span>
-                    <p>{matchingCenters.length > 0 ? "These centers accept at least one selected material." : "Select recyclable items with known materials to find a nearby center."}</p>
-                  </div>
-                  {matchingCenters.length > 0 ? matchingCenters.map((center) => {
+            {pickupPrepared && (
+              <Alert severity="success" sx={{ borderRadius: 2 }}>
+                <strong>Eco pickup request prepared.</strong>
+                <Typography variant="caption" sx={{ display: "block" }}>
+                  {`${nextEcoLinkSchedule.window} · ${nextEcoLinkSchedule.area}`}
+                </Typography>
+              </Alert>
+            )}
+
+            {fulfillmentOption === "center" && (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main" }}>
+                    {matchingCenters.length > 0 ? `${matchingCenters.length} matching centers` : "No verified matches"}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {matchingCenters.length > 0 ? "These centers accept at least one selected material." : "Select items with known materials to find matches."}
+                  </Typography>
+                </Box>
+
+                <Stack spacing={1.5}>
+                  {matchingCenters.map((center) => {
                     const acceptedSelectedMaterials = selectedMaterialSlugs.filter((slug) => center.materials.includes(slug));
                     return (
-                      <article className="center-option-card" key={center.id}>
-                        <div>
-                          <span className="center-detail__pin"><MapPin size={18}/></span>
-                          <div>
-                            <small>{center.township} · {center.hours}</small>
-                            <h3>{center.name}</h3>
-                            <p>{center.address}</p>
-                          </div>
-                        </div>
-                        <div className="center-detail__materials">
-                          {acceptedSelectedMaterials.map((slug) => <span key={slug}>{materialName(slug)}</span>)}
-                        </div>
-                        <a className="button button--primary" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/directions?to=${center.latitude},${center.longitude}`}>
-                          <Navigation size={17}/> Start navigation
-                        </a>
-                      </article>
+                      <Card key={center.id} variant="outlined" sx={{ borderRadius: 3, borderLeft: "4px solid", borderLeftColor: "primary.main" }}>
+                        <CardContent sx={{ p: 2 }}>
+                          <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
+                            <MapPin size={18} color="#087c78" style={{ marginTop: 2 }} />
+                            <Box sx={{ flexGrow: 1 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                {center.township} · {center.hours}
+                              </Typography>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.25 }}>
+                                {center.name}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
+                                {center.address}
+                              </Typography>
+
+                              <Stack direction="row" spacing={0.5} sx={{ mt: 1.5, flexWrap: "wrap", gap: 0.5 }}>
+                                {acceptedSelectedMaterials.map((slug) => (
+                                  <Chip key={slug} label={materialName(slug)} />
+                                ))}
+                              </Stack>
+
+                              <Button
+                                fullWidth
+                                variant="outlined"
+                                startIcon={<Navigation size={14} />}
+                                href={`https://www.openstreetmap.org/directions?to=${center.latitude},${center.longitude}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                sx={{ mt: 2, minHeight: 38 }}
+                              >
+                                Start Navigation
+                              </Button>
+                            </Box>
+                          </Stack>
+                        </CardContent>
+                      </Card>
                     );
-                  }) : null}
-                </div>
-              ) : null}
+                  })}
+                </Stack>
+              </Box>
+            )}
 
-              <button className="button button--secondary restart-button" type="button" onClick={resetSubmission}>
-                <RotateCcw size={17}/> Edit selected items
-              </button>
-            </div>
-          ) : (
-            <div className="analyzer-workspace">
-              <div className={result ? "scan-card has-result" : "scan-card"}>
-                <button
-                  aria-label={file ? "Change selected recyclable item photo" : "Upload recyclable item photo"}
-                  className={previewUrl ? "scan-photo has-photo" : "scan-photo"}
-                  type="button"
-                  onClick={() => setUploadOptionsOpen(true)}
+            <Button
+              color="inherit"
+              onClick={resetSubmission}
+              startIcon={<RotateCcw size={16} />}
+              variant="text"
+              sx={{ alignSelf: "center", fontWeight: 700 }}
+            >
+              Edit selected items
+            </Button>
+          </Box>
+        ) : (
+          /* Analyzer Workspace / Upload Photo Page */
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+            <Card variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+              <CardActionArea
+                onClick={() => setUploadOptionsOpen(true)}
+                sx={{
+                  minHeight: 200,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  bgcolor: previewUrl ? "black" : "rgba(0, 0, 0, 0.02)",
+                  color: previewUrl ? "white" : "text.secondary",
+                  border: "2px dashed",
+                  borderColor: previewUrl ? "transparent" : "divider",
+                  m: 1,
+                  borderRadius: 2,
+                  position: "relative",
+                }}
+              >
+                {previewUrl ? (
+                  <Box sx={{ width: "100%", height: 200, position: "relative" }}>
+                    <Image
+                      alt="Uploaded preview"
+                      src={previewUrl}
+                      fill
+                      style={{ objectFit: "contain" }}
+                      unoptimized
+                    />
+                  </Box>
+                ) : (
+                  <Stack spacing={1} sx={{ alignItems: "center", p: 3, textAlign: "center" }}>
+                    <Avatar sx={{ bgcolor: "rgba(8, 124, 120, 0.08)", color: "primary.main", width: 52, height: 52 }}>
+                      <Camera size={24} />
+                    </Avatar>
+                    <Typography variant="body2" sx={{ fontWeight: 800 }}>Tap to add a photo</Typography>
+                    <Typography variant="caption" color="text.secondary">Camera or gallery</Typography>
+                  </Stack>
+                )}
+              </CardActionArea>
+
+              <CardContent sx={{ p: 2, pt: 1 }}>
+                <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                      {file ? "Photo ready" : "Start with one clear item"}
+                    </Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", maxWidth: 200 }}>
+                      {file ? file.name : "Scan recyclable item"}
+                    </Typography>
+                    {file && (
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                        {(file.size / 1024 / 1024).toFixed(2)} MB selected
+                      </Typography>
+                    )}
+                  </Box>
+                  <Button
+                    disabled={!file || analyzing}
+                    onClick={analyze}
+                    variant="contained"
+                    startIcon={analyzing ? <CircularProgress size={16} color="inherit" /> : <Sparkles size={16} />}
+                  >
+                    {analyzing ? "Analyzing" : "Analyze photo"}
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
+
+            <input
+              ref={cameraInputRef}
+              style={{ display: "none" }}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              capture="environment"
+              onChange={(event) => chooseFile(event.target.files?.[0])}
+            />
+            <input
+              ref={galleryInputRef}
+              style={{ display: "none" }}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(event) => chooseFile(event.target.files?.[0])}
+            />
+
+            {error && (
+              <Alert severity="error" sx={{ borderRadius: 2 }} icon={<TriangleAlert size={18} />}>
+                {error}
+              </Alert>
+            )}
+
+            {result && (
+              /* Detections List */
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <Card variant="outlined" sx={{ borderRadius: 3 }}>
+                  <CardContent sx={{ p: 2 }}>
+                    <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Avatar sx={{ bgcolor: "rgba(45, 115, 80, 0.1)", color: "success.main", width: 28, height: 28 }}>
+                          <CheckCircle2 size={16} />
+                        </Avatar>
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Review detected items</Typography>
+                          <Typography variant="caption" color="text.secondary">Confidence: {Math.round(result.summary.confidence * 100)}%</Typography>
+                        </Box>
+                      </Box>
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 1,
+                          bgcolor: "rgba(185, 120, 24, 0.08)",
+                          color: "#b97818",
+                          textAlign: "right",
+                          borderRadius: 2,
+                        }}
+                      >
+                        <Typography variant="caption" sx={{ display: "block", fontWeight: 700, lineHeight: 1 }}>Selected</Typography>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 900 }}>~{formatPoints(estimatedSelectedPoints)} pts</Typography>
+                        <Typography variant="caption" sx={{ fontSize: "0.62rem", display: "block" }}>
+                          {estimatedSelectedWeightKg.toFixed(2)} kg · {selectedDetections.length} items
+                        </Typography>
+                      </Paper>
+                    </Stack>
+
+                    {result.warnings.length > 0 && (
+                      <Box sx={{ mt: 2, bgcolor: "rgba(180, 35, 24, 0.05)", p: 1, borderRadius: 2 }}>
+                        {result.warnings.map((w) => (
+                          <Typography key={w} variant="caption" color="error.main" sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+                            <TriangleAlert size={12} /> {w}
+                          </Typography>
+                        ))}
+                      </Box>
+                    )}
+
+                    <List sx={{ mt: 2, py: 0 }}>
+                      {selectableDetections.length ? (
+                        selectableDetections.map((detection) => {
+                          const isChecked = selectedDetectionKeys.includes(detection.key);
+                          return (
+                            <ListItem
+                              key={detection.key}
+                              disablePadding
+                              secondaryAction={
+                                <Checkbox
+                                  edge="end"
+                                  checked={isChecked}
+                                  onChange={(event) => {
+                                    setSelectedDetectionKeys((current) => event.target.checked
+                                      ? [...current, detection.key]
+                                      : current.filter((key) => key !== detection.key));
+                                  }}
+                                />
+                              }
+                              sx={{
+                                borderBottom: "1px solid",
+                                borderColor: "divider",
+                                py: 1,
+                              }}
+                            >
+                              <ListItemAvatar sx={{ minWidth: 46 }}>
+                                <Avatar sx={{ width: 34, height: 34, fontSize: "0.75rem", bgcolor: "secondary.main" }}>
+                                  {materialInitials(detection.materialLabel)}
+                                </Avatar>
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={detection.displayName}
+                                slotProps={{
+                                  primary: { variant: "body2", sx: { fontWeight: 800 } }
+                                }}
+                                secondary={
+                                  <>
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                                      {detection.materialLabel} · {detection.pointRuleLabel}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main" }}>
+                                      {detection.estimatedCount}× · {detection.estimatedWeightKg.toFixed(2)} kg · {detection.estimatedPoints > 0 ? `~${formatPoints(detection.estimatedPoints)} pts` : "Verification required"}
+                                    </Typography>
+                                  </>
+                                }
+                              />
+                            </ListItem>
+                          );
+                        })
+                      ) : (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center", py: 2 }}>
+                          No recyclable items detected. Try another photo.
+                        </Typography>
+                      )}
+                    </List>
+                  </CardContent>
+                </Card>
+
+                <Button
+                  disabled={selectedDetections.length === 0}
+                  fullWidth
+                  onClick={submitSelectedRecyclables}
+                  size="large"
+                  variant="contained"
+                  sx={{ mt: 1 }}
                 >
-                  {previewUrl ? <Image alt="Selected recyclable item preview" src={previewUrl} fill sizes="(max-width: 760px) calc(100vw - 64px), 52vw" unoptimized /> : <><span><Camera size={28}/></span><strong>Tap to add a photo</strong><small>Camera or gallery</small></>}
-                </button>
-                <div className="scan-card__body">
-                  <div>
-                    <span>{file ? "Photo ready" : "Start with one clear item"}</span>
-                    <strong>{file ? file.name : "Scan recyclable item"}</strong>
-                    <small>{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB selected` : "Use daylight, fill the frame, avoid mixed piles."}</small>
-                  </div>
-                  <button className="button button--primary" type="button" disabled={!file || analyzing} onClick={analyze}>
-                    {analyzing ? <LoaderCircle className="spin" size={17}/> : <Sparkles size={17}/>}
-                    {analyzing ? "Analyzing" : file ? "Analyze photo" : "Choose photo first"}
-                  </button>
-                </div>
-              </div>
-              <input ref={cameraInputRef} className="file-input-hidden" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(event) => chooseFile(event.target.files?.[0])}/>
-              <input ref={galleryInputRef} className="file-input-hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => chooseFile(event.target.files?.[0])}/>
-              {error ? <div className="inline-message inline-message--error" role="alert"><TriangleAlert size={18}/><span><strong>Analysis unavailable</strong>{error}</span></div> : null}
-              {result ? (
-                <div className="analysis-result" role="status">
-                  <div><span className="result-icon"><CheckCircle2 size={22}/></span><div><small>EcoGuide result</small><h3>Review detected items</h3><p>Use the checkboxes to include items. Partner centers verify final material and weight.</p></div><strong>{Math.round(result.summary.confidence * 100)}%</strong></div>
-                  <div className="recycle-estimate recycle-estimate--sticky">
-                    <span>Selected</span>
-                    <strong>~{formatPoints(estimatedSelectedPoints)} pts</strong>
-                    <small>{estimatedSelectedWeightKg.toFixed(2)} kg · {selectedDetections.length} item{selectedDetections.length === 1 ? "" : "s"}</small>
-                  </div>
-                  {result.warnings.length > 0 ? (
-                    <div className="scan-warning-panel" aria-label="Scan confidence notes">
-                      {result.warnings.map((warning) => <p key={warning}><TriangleAlert size={15}/>{warning}</p>)}
-                    </div>
-                  ) : null}
-                  <div className="recyclable-list" aria-label="Detected recyclable items">
-                    {selectableDetections.length ? selectableDetections.map((detection) => (
-                      <label className="recyclable-item" key={detection.key}>
-                        <input
-                          checked={selectedDetectionKeys.includes(detection.key)}
-                          onChange={(event) => {
-                            setSelectedDetectionKeys((current) => event.target.checked
-                              ? [...current, detection.key]
-                              : current.filter((key) => key !== detection.key));
-                          }}
-                          type="checkbox"
-                        />
-                        <span className="recyclable-thumb" aria-hidden="true">{materialInitials(detection.materialLabel)}</span>
-                        <span className="recyclable-copy">
-                          <strong>{detection.displayName}</strong>
-                          <small>{detection.materialLabel} · {detection.pointRuleLabel}</small>
-                        </span>
-                        <b>
-                          <span>{detection.estimatedCount}× · {detection.estimatedWeightKg.toFixed(2)} kg</span>
-                          {detection.estimatedPoints > 0 ? `~${formatPoints(detection.estimatedPoints)} pts` : "Center check"}
-                        </b>
-                        <em>{selectedDetectionKeys.includes(detection.key) ? "Included" : "Not included"}</em>
-                      </label>
-                    )) : <p className="photo-tip">No recyclable items were detected. Try another photo with the item closer to the camera.</p>}
-                  </div>
-                  <button className="button button--primary submit-recyclables-button" type="button" disabled={selectedDetections.length === 0} onClick={submitSelectedRecyclables}>
-                    Submit selected recyclables
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          )}
-        </section>
+                  Submit selected recyclables
+                </Button>
+              </Box>
+            )}
+          </Box>
+        )}
 
-        <Drawer open={uploadOptionsOpen} onOpenChange={setUploadOptionsOpen} showSwipeHandle>
-          <DrawerContent className="upload-options-drawer">
-            <DrawerHeader>
-              <DrawerTitle>Upload item photo</DrawerTitle>
-              <DrawerDescription>Use a new camera shot or pick a photo from your gallery.</DrawerDescription>
-            </DrawerHeader>
-            <div className="upload-options">
-              <button type="button" onClick={() => cameraInputRef.current?.click()}><Camera size={22}/><span><strong>Camera shot</strong><small>Take a new photo</small></span></button>
-              <button type="button" onClick={() => galleryInputRef.current?.click()}><ImagePlus size={22}/><span><strong>Pick from gallery</strong><small>Use an existing photo</small></span></button>
-              <button className="upload-options__cancel" type="button" onClick={() => setUploadOptionsOpen(false)}><X size={18}/>Cancel</button>
-            </div>
-          </DrawerContent>
+        {/* Upload Options drawer */}
+        <Drawer
+          anchor="bottom"
+          open={uploadOptionsOpen}
+          onClose={() => setUploadOptionsOpen(false)}
+          slotProps={{ paper: { sx: { borderTopLeftRadius: 16, borderTopRightRadius: 16, maxWidth: 480, mx: "auto" } } }}
+        >
+          <Box sx={{ p: 2 }}>
+            <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Upload item photo</Typography>
+                <Typography variant="caption" color="text.secondary">Use a camera shot or select from gallery</Typography>
+              </Box>
+              <IconButton onClick={() => setUploadOptionsOpen(false)}>
+                <X size={20} />
+              </IconButton>
+            </Stack>
+            <Divider />
+            <List>
+              <ListItemButton onClick={() => { setUploadOptionsOpen(false); cameraInputRef.current?.click(); }} sx={{ py: 1.5, borderRadius: 2 }}>
+                <ListItemAvatar>
+                  <Avatar sx={{ bgcolor: "rgba(8, 124, 120, 0.08)", color: "primary.main" }}><Camera size={20} /></Avatar>
+                </ListItemAvatar>
+                <ListItemText primary="Camera shot" secondary="Take a new photo with camera" slotProps={{ primary: { variant: "body2", sx: { fontWeight: 700 } } }} />
+              </ListItemButton>
+              <ListItemButton onClick={() => { setUploadOptionsOpen(false); galleryInputRef.current?.click(); }} sx={{ py: 1.5, borderRadius: 2, mt: 1 }}>
+                <ListItemAvatar>
+                  <Avatar sx={{ bgcolor: "rgba(11, 53, 88, 0.08)", color: "secondary.main" }}><ImagePlus size={20} /></Avatar>
+                </ListItemAvatar>
+                <ListItemText primary="Pick from gallery" secondary="Choose an existing image" slotProps={{ primary: { variant: "body2", sx: { fontWeight: 700 } } }} />
+              </ListItemButton>
+            </List>
+          </Box>
         </Drawer>
 
-        <Drawer open={pickupDrawerOpen} onOpenChange={setPickupDrawerOpen} showSwipeHandle>
-          <DrawerContent className="pickup-scheduler-drawer">
-            <DrawerHeader>
-              <DrawerTitle>Confirm Eco truck pickup</DrawerTitle>
-              <DrawerDescription>EcoLink will place this demo request on the next available route.</DrawerDescription>
-            </DrawerHeader>
-            <form className="pickup-form" onSubmit={(event) => { event.preventDefault(); preparePickup(); }}>
-              <div className="next-schedule-card" aria-label="Next EcoLink pickup schedule">
-                <span>{nextEcoLinkSchedule.label}</span>
-                <strong>{nextEcoLinkSchedule.window}</strong>
-                <small>{nextEcoLinkSchedule.area}</small>
-              </div>
-              <label>
-                <span>Pickup address</span>
-                <textarea required value={pickupForm.address} placeholder="Street, township, landmark" onChange={(event) => setPickupForm((current) => ({ ...current, address: event.target.value }))}/>
-              </label>
-              <label>
-                <span>Notes <small>optional</small></span>
-                <textarea value={pickupForm.notes} placeholder="Gate instructions, bag count, contact notes" onChange={(event) => setPickupForm((current) => ({ ...current, notes: event.target.value }))}/>
-              </label>
-              <button className="button button--primary" type="submit">
-                <CalendarClock size={17}/> Confirm next EcoLink schedule
-              </button>
-            </form>
-          </DrawerContent>
+        {/* Pickup Scheduler drawer */}
+        <Drawer
+          anchor="bottom"
+          open={pickupDrawerOpen}
+          onClose={() => setPickupDrawerOpen(false)}
+          slotProps={{ paper: { sx: { borderTopLeftRadius: 16, borderTopRightRadius: 16, maxWidth: 480, mx: "auto" } } }}
+        >
+          <Box sx={{ p: 2 }} component="form" onSubmit={(e) => { e.preventDefault(); preparePickup(); }}>
+            <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Confirm Eco truck pickup</Typography>
+                <Typography variant="caption" color="text.secondary">EcoLink will place this demo request on the next route</Typography>
+              </Box>
+              <IconButton onClick={() => setPickupDrawerOpen(false)}>
+                <X size={20} />
+              </IconButton>
+            </Stack>
+            <Divider sx={{ mb: 2 }} />
+
+            <Stack spacing={2.5}>
+              <Paper elevation={0} sx={{ p: 2, bgcolor: "rgba(8, 124, 120, 0.05)", border: "1px solid", borderColor: "divider", borderRadius: 2 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{nextEcoLinkSchedule.label}</Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, mt: 0.5 }}>{nextEcoLinkSchedule.window}</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{nextEcoLinkSchedule.area}</Typography>
+              </Paper>
+
+              <TextField
+                required
+                multiline
+                rows={3}
+                label="Pickup address"
+                placeholder="Street, township, landmark"
+                value={pickupForm.address}
+                onChange={(e) => setPickupForm((current) => ({ ...current, address: e.target.value }))}
+                variant="filled"
+              />
+
+              <TextField
+                multiline
+                rows={2}
+                label="Notes (optional)"
+                placeholder="Gate instructions, bag count, contact notes"
+                value={pickupForm.notes}
+                onChange={(e) => setPickupForm((current) => ({ ...current, notes: e.target.value }))}
+                variant="filled"
+              />
+
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<CalendarClock size={16} />}
+                fullWidth
+                size="large"
+              >
+                Confirm next EcoLink schedule
+              </Button>
+            </Stack>
+          </Box>
         </Drawer>
-      </main>
+      </Box>
     </AppShell>
+  );
+}
+
+function Chip({ label }: { label: string }) {
+  return (
+    <Box
+      sx={{
+        px: 1,
+        py: 0.25,
+        borderRadius: "8px",
+        bgcolor: "rgba(0,0,0,0.05)",
+        color: "text.secondary",
+        fontSize: "0.62rem",
+        fontWeight: 700,
+      }}
+    >
+      {label}
+    </Box>
   );
 }

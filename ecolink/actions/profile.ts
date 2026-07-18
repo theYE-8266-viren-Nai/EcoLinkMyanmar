@@ -1,6 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { sanitizeErrorMessage } from "@/lib/errors";
 
 type ProfileRow = { profile_id: string; member_code: string; display_name: string };
 
@@ -19,6 +20,6 @@ export async function syncCurrentProfile() {
 
   const rpc = supabase.rpc.bind(supabase) as unknown as (name: "ensure_current_profile", args: { profile_display_name: string; profile_email: string }) => Promise<{ data: ProfileRow[] | null; error: { message: string } | null }>;
   const { data, error } = await rpc("ensure_current_profile", { profile_display_name: displayName, profile_email: email });
-  if (error || !data?.[0]) return { ok: false as const, error: error?.message ?? "Your EcoLink profile could not be prepared." };
+  if (error || !data?.[0]) return { ok: false as const, error: sanitizeErrorMessage(error?.message, "Your EcoLink profile could not be prepared.") };
   return { ok: true as const, profile: data[0] };
 }

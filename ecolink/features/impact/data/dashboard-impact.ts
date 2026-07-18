@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { sanitizeErrorMessage } from "@/lib/errors";
 import type { ImpactDashboardData, ImpactLedgerItem, ImpactReportHistoryItem } from "@/features/impact/types";
 
 type SupabaseUser = {

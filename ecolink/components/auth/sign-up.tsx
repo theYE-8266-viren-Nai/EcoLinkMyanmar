@@ -2,17 +2,17 @@
 
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
 import CircularProgress from "@mui/material/CircularProgress";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import { UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
+import { sanitizeErrorMessage } from "@/lib/errors";
 
 export function EcoLinkSignUp() {
   const router = useRouter();
@@ -41,7 +41,7 @@ export function EcoLinkSignUp() {
 
     setIsSubmitting(false);
     if (signUpError) {
-      setError(signUpError.message);
+      setError(sanitizeErrorMessage(signUpError.message, "Failed to create account. Please try again."));
       return;
     }
 
@@ -55,52 +55,54 @@ export function EcoLinkSignUp() {
   }
 
   return (
-    <Card className="w-full max-w-sm" variant="outlined">
-      <CardContent>
-        <Stack component="form" spacing={2} onSubmit={signUp}>
-          <h2 className="text-xl font-bold text-secondary">Create your EcoLink account</h2>
-          <TextField
-            autoComplete="name"
-            label="Name"
-            onChange={(event) => setDisplayName(event.target.value)}
-            required
-            value={displayName}
-            variant="filled"
-          />
-          <TextField
-            autoComplete="email"
-            label="Email"
-            onChange={(event) => setEmail(event.target.value)}
-            required
-            type="email"
-            value={email}
-            variant="filled"
-          />
-          <TextField
-            autoComplete="new-password"
-            label="Password"
-            onChange={(event) => setPassword(event.target.value)}
-            required
-            slotProps={{ htmlInput: { minLength: 8 } }}
-            type="password"
-            value={password}
-            variant="filled"
-          />
-          {error ? <Alert severity="error">{error}</Alert> : null}
-          {message ? <Alert severity="success">{message}</Alert> : null}
-          <Button
-            disabled={isSubmitting}
-            startIcon={isSubmitting ? <CircularProgress color="inherit" size={16} /> : <UserPlus aria-hidden="true" size={18} />}
-            type="submit"
-            variant="contained"
-          >
-            {isSubmitting ? "Creating account" : "Create account"}
-          </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            Already have an account? <Link className="inline-flex min-h-11 items-center font-medium text-primary underline-offset-4 hover:underline" href="/sign-in">Sign in</Link>
-          </p>
-        </Stack>
-      </CardContent>
-    </Card>
+    <Stack component="form" spacing={2.5} onSubmit={signUp} sx={{ width: "100%" }}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>
+        Create your EcoLink account
+      </Typography>
+      <TextField
+        autoComplete="name"
+        label="Name"
+        onChange={(event) => setDisplayName(event.target.value)}
+        required
+        value={displayName}
+        variant="filled"
+      />
+      <TextField
+        autoComplete="email"
+        label="Email"
+        onChange={(event) => setEmail(event.target.value)}
+        required
+        type="email"
+        value={email}
+        variant="filled"
+      />
+      <TextField
+        autoComplete="new-password"
+        label="Password"
+        onChange={(event) => setPassword(event.target.value)}
+        required
+        slotProps={{ htmlInput: { minLength: 8 } }}
+        type="password"
+        value={password}
+        variant="filled"
+      />
+      {error && <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>}
+      {message && <Alert severity="success" sx={{ borderRadius: 2 }}>{message}</Alert>}
+      <Button
+        disabled={isSubmitting}
+        startIcon={isSubmitting ? <CircularProgress color="inherit" size={16} /> : <UserPlus aria-hidden="true" size={18} />}
+        type="submit"
+        variant="contained"
+        size="large"
+      >
+        {isSubmitting ? "Creating account" : "Create account"}
+      </Button>
+      <Typography variant="body2" align="center" color="text.secondary">
+        Already have an account?{" "}
+        <Link style={{ color: "#087c78", fontWeight: 700, textDecoration: "none" }} href="/sign-in">
+          Sign in
+        </Link>
+      </Typography>
+    </Stack>
   );
 }

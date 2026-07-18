@@ -1,6 +1,20 @@
 "use client";
 
-import { Camera, ChevronRight, LoaderCircle, LocateFixed, MapPin } from "lucide-react";
+import Alert from "@mui/material/Alert";
+import Avatar from "@mui/material/Avatar";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import CircularProgress from "@mui/material/CircularProgress";
+import Divider from "@mui/material/Divider";
+import IconButton from "@mui/material/IconButton";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemText from "@mui/material/ListItemText";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { Camera, ChevronRight, LocateFixed, MapPin, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -132,49 +146,221 @@ export function MemberReportPage({
 
   return (
     <AppShell>
-      <main className="content-container report-page report-page--wide">
-        <header className="report-intro"><p>Community action</p><h1>Report an environmental issue</h1><span>Reports are reviewed by admins before any points are awarded.</span></header>
-        {message ? <p className={message.kind === "success" ? "admin-message is-success" : "admin-message is-error"} role="status">{message.text}</p> : null}
-        <section className="report-workspace">
-          <div className="report-step-heading"><span>Submit report</span><h2>Add photo evidence and current location</h2><p>No points are awarded until an admin approves the report.</p></div>
-          <form className="report-submit-form" onSubmit={submitReport}>
-            <label className="photo-upload">
-              <span><Camera size={18}/> Report image</span>
-              <input accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(event) => updateForm({ image: event.target.files?.[0] })} required type="file" />
-              <small>{form.image ? `${form.image.name} (${Math.max(1, Math.round(form.image.size / 1024))} KB)` : "JPEG, PNG, or WebP."}</small>
-            </label>
-            <button className={hasLocation ? "location-capture is-ready" : "location-capture"} type="button" onClick={useLocation}>
-              <LocateFixed size={19}/>
-              <span><strong>{hasLocation ? "Current location captured" : "Use my current location"}</strong><small>{hasLocation ? `${form.latitude?.toFixed(6)}, ${form.longitude?.toFixed(6)}` : "EcoLink will attach your browser GPS coordinates."}</small></span>
-            </button>
-            <button className="button button--primary" type="submit" disabled={submitting || !form.image || !hasLocation}>{submitting ? <LoaderCircle className="spin" size={17}/> : <ChevronRight size={17}/>} {submitting ? "Submitting" : "Send report"}</button>
-          </form>
-        </section>
-        <section className="history-section report-history" aria-labelledby="report-history-title">
-          <div className="card-heading-row"><div><p>Your reports</p><h2 id="report-history-title">Report history</h2></div><button className="button button--secondary" type="button" onClick={loadReports} disabled={refreshing}>{refreshing ? "Refreshing" : "Refresh"}</button></div>
-          {reports.length === 0 ? <p className="empty-copy">No reports yet.</p> : (
-            <div className="report-history-list">
-              {reports.map((report) => {
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {/* Intro */}
+        <Box sx={{ mt: 1 }}>
+          <Typography variant="caption" sx={{ fontWeight: 800, color: "primary.main", textTransform: "uppercase" }}>
+            Community Action
+          </Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.5 }}>
+            Report an environmental issue
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Reports are reviewed by admins before any points are awarded.
+          </Typography>
+        </Box>
+
+        {message && (
+          <Alert severity={message.kind} sx={{ borderRadius: 2 }}>
+            {message.text}
+          </Alert>
+        )}
+
+        {/* Report Form Workspace */}
+        <Card variant="outlined" sx={{ borderRadius: 3 }}>
+          <CardContent sx={{ p: 2 }} component="form" onSubmit={submitReport}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main", mb: 0.5 }}>
+              Submit Report
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 2 }}>
+              Add photo evidence and your current location.
+            </Typography>
+
+            <Stack spacing={2.5}>
+              <Box>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<Camera size={18} />}
+                  fullWidth
+                  sx={{ minHeight: 48, borderRadius: 2 }}
+                >
+                  {form.image ? "Change Photo" : "Upload Photo Evidence"}
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/jpeg,image/png,image/webp"
+                    capture="environment"
+                    onChange={(event) => updateForm({ image: event.target.files?.[0] })}
+                  />
+                </Button>
+                {form.image && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                    {form.image.name} ({Math.max(1, Math.round(form.image.size / 1024))} KB)
+                  </Typography>
+                )}
+              </Box>
+
+              <Button
+                variant="outlined"
+                color={hasLocation ? "success" : "primary"}
+                onClick={useLocation}
+                startIcon={<LocateFixed size={18} />}
+                fullWidth
+                sx={{
+                  minHeight: 48,
+                  borderRadius: 2,
+                  borderColor: hasLocation ? "success.main" : "divider",
+                  bgcolor: hasLocation ? "rgba(45, 115, 80, 0.04)" : "transparent",
+                }}
+              >
+                {hasLocation ? "Location Captured" : "Use My Current Location"}
+              </Button>
+              {hasLocation && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center" }}>
+                  Coordinates: {form.latitude?.toFixed(6)}, {form.longitude?.toFixed(6)}
+                </Typography>
+              )}
+
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={submitting || !form.image || !hasLocation}
+                startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : <ChevronRight size={18} />}
+                fullWidth
+                size="large"
+              >
+                {submitting ? "Submitting..." : "Send Report"}
+              </Button>
+            </Stack>
+          </CardContent>
+        </Card>
+
+        {/* History List */}
+        <Box>
+          <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+            <Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>
+                Your Reports
+              </Typography>
+              <Typography variant="caption" color="text.secondary">Report history</Typography>
+            </Box>
+            <IconButton onClick={loadReports} disabled={refreshing} color="primary">
+              <RefreshCw size={18} className={refreshing ? "spin" : ""} />
+            </IconButton>
+          </Stack>
+
+          <Stack spacing={1.5}>
+            {reports.length === 0 ? (
+              <Typography variant="body2" sx={{ p: 3, textAlign: "center", color: "text.secondary" }}>
+                No reports submitted yet.
+              </Typography>
+            ) : (
+              reports.map((report) => {
+                const statusColor =
+                  report.status === "APPROVED"
+                    ? "success.main"
+                    : report.status === "PENDING"
+                    ? "warning.main"
+                    : "error.main";
                 return (
-                  <article key={report.id}>
-                    <div>
-                      <span className={`report-status report-status--${report.status.toLowerCase()}`}>{STATUS_LABELS[report.status]}</span>
-                      <h3>{report.title}</h3>
-                      {report.photoUrl ? <Image alt="Submitted report evidence" className="report-photo-thumb" height={203} src={report.photoUrl} unoptimized width={360} /> : null}
-                      <p><MapPin size={14}/> {report.locationText} &middot; {DATE_FORMATTER.format(new Date(report.createdAt))}</p>
-                      {report.photoStoragePath ? <small>Image attached: {report.photoStoragePath.split("/").at(-1)}</small> : null}
-                      {report.status === "PENDING" ? <small>Your report is awaiting admin approval.</small> : null}
-                      {report.status === "REJECTED" ? <small>{report.rejectionReason ?? "This report was not approved for points."}</small> : null}
-                      {report.status === "APPROVED" ? <small>{report.pointsAwarded ?? 0} points awarded by admin approval.</small> : null}
-                    </div>
-                  </article>
+                  <Card key={report.id} variant="outlined" sx={{ borderRadius: 3 }}>
+                    <CardContent sx={{ p: 2 }}>
+                      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                          {report.title}
+                        </Typography>
+                        <ChipLabel
+                          label={STATUS_LABELS[report.status]}
+                          color={statusColor}
+                          bgcolor={
+                            report.status === "APPROVED"
+                              ? "rgba(45, 115, 80, 0.08)"
+                              : report.status === "PENDING"
+                              ? "rgba(185, 120, 24, 0.08)"
+                              : "rgba(180, 35, 24, 0.08)"
+                          }
+                        />
+                      </Stack>
+
+                      {report.photoUrl && (
+                        <Box sx={{ width: "100%", height: 180, position: "relative", borderRadius: 2, overflow: "hidden", my: 1.5 }}>
+                          <Image
+                            alt="Submitted report photo"
+                            src={report.photoUrl}
+                            fill
+                            style={{ objectFit: "cover" }}
+                            unoptimized
+                          />
+                        </Box>
+                      )}
+
+                      <Stack spacing={0.5} sx={{ color: "text.secondary" }}>
+                        <Typography variant="caption" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          <MapPin size={12} /> {report.locationText}
+                        </Typography>
+                        <Typography variant="caption" sx={{ display: "block" }}>
+                          Submitted · {DATE_FORMATTER.format(new Date(report.createdAt))}
+                        </Typography>
+                        {report.photoStoragePath && (
+                          <Typography variant="caption" sx={{ fontSize: "0.62rem", display: "block" }}>
+                            Image attached · {report.photoStoragePath.split("/").at(-1)}
+                          </Typography>
+                        )}
+                      </Stack>
+
+                      {report.status === "PENDING" && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1.5, fontStyle: "italic" }}>
+                          Your report is awaiting admin approval.
+                        </Typography>
+                      )}
+                      {report.status === "REJECTED" && (
+                        <Typography variant="caption" color="error.main" sx={{ display: "block", mt: 1.5, fontWeight: 700 }}>
+                          Rejection Reason: {report.rejectionReason ?? "This report was not approved."}
+                        </Typography>
+                      )}
+                      {report.status === "APPROVED" && (
+                        <Typography variant="caption" color="primary.main" sx={{ display: "block", mt: 1.5, fontWeight: 800 }}>
+                          {report.pointsAwarded ?? 0} points rewarded!
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
                 );
-              })}
-            </div>
-          )}
-          <Link className="back-link" href="/dashboard">View dashboard</Link>
-        </section>
-      </main>
+              })
+            )}
+          </Stack>
+        </Box>
+        
+        <Button
+          component={Link}
+          href="/dashboard"
+          fullWidth
+          variant="text"
+          sx={{ alignSelf: "center", fontWeight: 700, mt: 1 }}
+        >
+          View dashboard
+        </Button>
+      </Box>
     </AppShell>
+  );
+}
+
+function ChipLabel({ label, color, bgcolor }: { label: string; color: string; bgcolor: string }) {
+  return (
+    <Box
+      sx={{
+        px: 1,
+        py: 0.25,
+        borderRadius: "10px",
+        bgcolor,
+        color,
+        fontSize: "0.65rem",
+        fontWeight: 800,
+        letterSpacing: 0.2,
+      }}
+    >
+      {label}
+    </Box>
   );
 }

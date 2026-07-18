@@ -3,6 +3,7 @@
 import { z } from "zod";
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { sanitizeErrorMessage } from "@/lib/errors";
 
 type RpcResult<T> = Promise<{ data: T | null; error: { message: string } | null }>;
 
@@ -17,6 +18,6 @@ export async function redeemPartnerReward(rewardId: string) {
   if (!parsed.success) return { ok: false as const, error: "This reward identifier is invalid." };
   const rpc = supabase.rpc.bind(supabase) as unknown as (name: "redeem_partner_reward", args: { reward_id: string }) => RpcResult<Array<{ claim_code: string }>>;
   const { data, error } = await rpc("redeem_partner_reward", { reward_id: parsed.data });
-  if (error || !data?.[0]) return { ok: false as const, error: error?.message ?? "The reward could not be reserved." };
+  if (error || !data?.[0]) return { ok: false as const, error: sanitizeErrorMessage(error?.message, "The reward could not be reserved.") };
   return { ok: true as const, claimCode: data[0].claim_code };
 }

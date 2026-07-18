@@ -1,10 +1,11 @@
 "use client";
 
+import IconButton from "@mui/material/IconButton";
+import CircularProgress from "@mui/material/CircularProgress";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
 
 export function EcoLinkUserButton() {
@@ -21,8 +22,18 @@ export function EcoLinkUserButton() {
   }
 
   return (
-    <Button aria-label="Sign out" disabled={isSigningOut} onClick={signOut} size="icon" type="button" variant="secondary">
-      <LogOut aria-hidden="true" />
-    </Button>
+    <IconButton
+      aria-label="Sign out"
+      disabled={isSigningOut}
+      onClick={signOut}
+      color="error"
+      size="medium"
+    >
+      {isSigningOut ? (
+        <CircularProgress size={20} color="inherit" />
+      ) : (
+        <LogOut aria-hidden="true" size={20} />
+      )}
+    </IconButton>
   );
 }
