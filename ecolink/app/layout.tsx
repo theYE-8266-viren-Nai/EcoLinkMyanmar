@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { RootProviders } from "@/providers/root-providers";
+import "mapbox-gl/dist/mapbox-gl.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+    <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
         <RootProviders>{children}</RootProviders>
       </body>

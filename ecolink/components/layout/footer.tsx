@@ -26,7 +26,7 @@ export function Footer({ className, links = [] }: FooterProps) {
         </div>
         <nav className="flex flex-wrap gap-4" aria-label="Footer">
           {links.map((link) => (
-            <Link className="hover:text-foreground" href={link.href} key={link.href}>
+            <Link className="inline-flex min-h-11 items-center hover:text-foreground sm:min-h-0" href={link.href} key={link.href}>
               {link.label}
             </Link>
           ))}

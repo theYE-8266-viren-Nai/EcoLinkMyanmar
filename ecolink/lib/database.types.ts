@@ -11,6 +11,7 @@ export type Database = {
           email: string;
           avatar_url: string | null;
           member_code: string | null;
+          app_role: "member" | "admin";
           preferred_language: string;
           created_at: string;
           updated_at: string;
@@ -23,6 +24,7 @@ export type Database = {
           email: string;
           avatar_url?: string | null;
           member_code?: string | null;
+          app_role?: "member" | "admin";
           preferred_language?: string;
           created_at?: string;
           updated_at?: string;
@@ -34,6 +36,7 @@ export type Database = {
           email?: string;
           avatar_url?: string | null;
           member_code?: string | null;
+          app_role?: "member" | "admin";
           preferred_language?: string;
           created_at?: string;
           updated_at?: string;
@@ -52,6 +55,7 @@ export type Database = {
           opening_hours: string;
           accepted_materials: string[];
           is_active: boolean;
+          location: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -79,7 +83,6 @@ export type Database = {
           opening_hours?: string;
           accepted_materials?: string[];
           is_active?: boolean;
-          created_at?: string;
           updated_at?: string;
         };
       };
@@ -145,6 +148,7 @@ export type Database = {
           profile_id: string;
           center_id: string | null;
           drop_off_id: string | null;
+          report_id: string | null;
           points: number;
           entry_type: "earned" | "redeemed" | "adjusted" | "refunded";
           description: string;
@@ -155,6 +159,7 @@ export type Database = {
           profile_id: string;
           center_id?: string | null;
           drop_off_id?: string | null;
+          report_id?: string | null;
           points: number;
           entry_type: "earned" | "redeemed" | "adjusted" | "refunded";
           description: string;
@@ -164,6 +169,7 @@ export type Database = {
           profile_id?: string;
           center_id?: string | null;
           drop_off_id?: string | null;
+          report_id?: string | null;
           points?: number;
           entry_type?: "earned" | "redeemed" | "adjusted" | "refunded";
           description?: string;
@@ -275,9 +281,9 @@ export type Database = {
       environment_reports: {
         Row: {
           id: string;
-          latitude: number;
-          longitude: number;
-          dirtiness_score: number;
+          latitude: number | null;
+          longitude: number | null;
+          dirtiness_score: number | null;
           waste_type:
             | "MIXED"
             | "PLASTIC"
@@ -290,14 +296,31 @@ export type Database = {
             | "OTHER"
             | null;
           notes: string | null;
+          reporter_profile_id: string | null;
+          issue_type: string | null;
+          severity: string | null;
+          status: "PENDING" | "APPROVED" | "REJECTED";
+          photo_storage_path: string | null;
+          location: Json | null;
+          title: string;
+          location_text: string | null;
+          details: string | null;
+          approved_at: string | null;
+          approved_by_profile_id: string | null;
+          reviewed_at: string | null;
+          reviewed_by_profile_id: string | null;
+          rejection_reason: string | null;
+          claimed_at: string | null;
+          points_awarded: number | null;
+          is_claimed: boolean;
           observed_at: string;
           created_at: string;
         };
         Insert: {
           id?: string;
-          latitude: number;
-          longitude: number;
-          dirtiness_score: number;
+          latitude?: number | null;
+          longitude?: number | null;
+          dirtiness_score?: number | null;
           waste_type?:
             | "MIXED"
             | "PLASTIC"
@@ -310,13 +333,29 @@ export type Database = {
             | "OTHER"
             | null;
           notes?: string | null;
+          reporter_profile_id?: string | null;
+          issue_type?: string | null;
+          severity?: string | null;
+          status?: "PENDING" | "APPROVED" | "REJECTED";
+          photo_storage_path?: string | null;
+          title?: string;
+          location_text?: string | null;
+          details?: string | null;
+          approved_at?: string | null;
+          approved_by_profile_id?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by_profile_id?: string | null;
+          rejection_reason?: string | null;
+          claimed_at?: string | null;
+          points_awarded?: number | null;
+          is_claimed?: boolean;
           observed_at?: string;
           created_at?: string;
         };
         Update: {
-          latitude?: number;
-          longitude?: number;
-          dirtiness_score?: number;
+          latitude?: number | null;
+          longitude?: number | null;
+          dirtiness_score?: number | null;
           waste_type?:
             | "MIXED"
             | "PLASTIC"
@@ -329,9 +368,85 @@ export type Database = {
             | "OTHER"
             | null;
           notes?: string | null;
+          reporter_profile_id?: string | null;
+          issue_type?: string | null;
+          severity?: string | null;
+          status?: "PENDING" | "APPROVED" | "REJECTED";
+          photo_storage_path?: string | null;
+          title?: string;
+          location_text?: string | null;
+          details?: string | null;
+          approved_at?: string | null;
+          approved_by_profile_id?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by_profile_id?: string | null;
+          rejection_reason?: string | null;
+          claimed_at?: string | null;
+          points_awarded?: number | null;
+          is_claimed?: boolean;
           observed_at?: string;
           created_at?: string;
         };
+      };
+      collector_vehicles: {
+        Row: {
+          id: string;
+          center_id: string;
+          public_label: string;
+          is_active: boolean;
+          is_public: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          center_id: string;
+          public_label: string;
+          is_active?: boolean;
+          is_public?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          center_id?: string;
+          public_label?: string;
+          is_active?: boolean;
+          is_public?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      collector_vehicle_locations: {
+        Row: {
+          vehicle_id: string;
+          latitude: number;
+          longitude: number;
+          heading: number;
+          speed_kph: number;
+          status: "collecting" | "en_route" | "returning" | "offline";
+          observed_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          vehicle_id: string;
+          latitude: number;
+          longitude: number;
+          heading?: number;
+          speed_kph?: number;
+          status?: "collecting" | "en_route" | "returning" | "offline";
+          observed_at: string;
+          updated_at?: string;
+        };
+        Update: {
+          latitude?: number;
+          longitude?: number;
+          heading?: number;
+          speed_kph?: number;
+          status?: "collecting" | "en_route" | "returning" | "offline";
+          observed_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
@@ -352,8 +467,59 @@ export type Database = {
         Args: { reward_claim_code: string };
         Returns: string;
       };
+      get_public_waste_map: {
+        Args: {
+          min_lng: number;
+          min_lat: number;
+          max_lng: number;
+          max_lat: number;
+          requested_zoom: number;
+          observed_since: string;
+          requested_waste_type?: string | null;
+        };
+        Returns: Array<{
+          mode: string;
+          feature_id: string;
+          geometry: Json;
+          properties: Json;
+        }>;
+      };
+      current_profile_id: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
+      current_profile_is_admin: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      submit_environment_report: {
+        Args: {
+          report_title: string;
+          report_issue_type: string;
+          report_severity: string;
+          report_location_text: string;
+          report_latitude: number;
+          report_longitude: number;
+          report_photo_storage_path: string;
+          report_details?: string | null;
+        };
+        Returns: Array<{ report_id: string; status: "PENDING" | "APPROVED" | "REJECTED"; created_at: string }>;
+      };
+      approve_environment_report: {
+        Args: { target_report_id: string };
+        Returns: string;
+      };
+      reject_environment_report: {
+        Args: { target_report_id: string; reason?: string | null };
+        Returns: string;
+      };
+      claim_environment_report_points: {
+        Args: { target_report_id: string };
+        Returns: Array<{ report_id: string; points_awarded: number; claimed_at: string }>;
+      };
     };
     Enums: {
+      report_status: "PENDING" | "APPROVED" | "REJECTED";
       environment_waste_type:
         | "MIXED"
         | "PLASTIC"

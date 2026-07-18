@@ -17,7 +17,7 @@ export async function syncCurrentProfile() {
     : email?.split("@")[0];
   if (!email || !displayName) return { ok: false as const, error: "Your Supabase account needs a name and primary email." };
 
-  const rpc = supabase.rpc as unknown as (name: "ensure_current_profile", args: { profile_display_name: string; profile_email: string }) => Promise<{ data: ProfileRow[] | null; error: { message: string } | null }>;
+  const rpc = supabase.rpc.bind(supabase) as unknown as (name: "ensure_current_profile", args: { profile_display_name: string; profile_email: string }) => Promise<{ data: ProfileRow[] | null; error: { message: string } | null }>;
   const { data, error } = await rpc("ensure_current_profile", { profile_display_name: displayName, profile_email: email });
   if (error || !data?.[0]) return { ok: false as const, error: error?.message ?? "Your EcoLink profile could not be prepared." };
   return { ok: true as const, profile: data[0] };

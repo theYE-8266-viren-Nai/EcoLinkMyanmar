@@ -21,8 +21,8 @@ export function AuthLayout({
   title,
 }: AuthLayoutProps) {
   return (
-    <main className={cn("flex min-h-screen bg-background", className)}>
-      <section className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-10 md:grid-cols-[360px_1fr] md:items-center md:py-16">
+    <main className={cn("flex min-h-dvh bg-background", className)}>
+      <section className="mx-auto grid w-full max-w-6xl gap-8 px-4 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-6 md:grid-cols-[360px_1fr] md:items-center md:gap-10 md:py-16">
         <aside className="space-y-6">
           <Link
             className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground"

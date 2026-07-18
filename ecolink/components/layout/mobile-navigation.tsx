@@ -42,7 +42,7 @@ export function MobileNavigation({
         <nav className="grid gap-1 px-4" aria-label="Mobile primary">
           {items.map((item) => (
             <Link
-              className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="flex min-h-12 items-center rounded-lg px-3 py-2 text-base font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 sm:min-h-0 sm:text-sm"
               href={item.href}
               key={item.href}
             >

@@ -157,3 +157,206 @@ on conflict (id) do update set
   points = excluded.points,
   description = excluded.description,
   created_at = excluded.created_at;
+
+insert into auth.users (
+  id, aud, role, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+) values (
+  '30000000-0000-0000-0000-000000000003',
+  'authenticated',
+  'authenticated',
+  'admin@example.com',
+  crypt('ecolink-demo-123', gen_salt('bf')),
+  now(),
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{"full_name":"EcoLink Admin"}'::jsonb,
+  now(),
+  now()
+)
+on conflict (id) do update set
+  email = excluded.email,
+  encrypted_password = excluded.encrypted_password,
+  raw_user_meta_data = excluded.raw_user_meta_data,
+  updated_at = now();
+
+insert into auth.identities (
+  id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+) values (
+  '30000000-0000-0000-0000-000000000003',
+  '30000000-0000-0000-0000-000000000003',
+  'admin@example.com',
+  '{"sub":"30000000-0000-0000-0000-000000000003","email":"admin@example.com"}'::jsonb,
+  'email',
+  now(),
+  now(),
+  now()
+)
+on conflict (provider, provider_id) do update set
+  identity_data = excluded.identity_data,
+  updated_at = now();
+
+insert into public.profiles (
+  id, auth_user_id, display_name, email, member_code, preferred_language, app_role, created_at, updated_at
+) values (
+  '40000000-0000-0000-0000-000000000003',
+  '30000000-0000-0000-0000-000000000003',
+  'EcoLink Admin',
+  'admin@example.com',
+  'ECO-MM-ADMIN',
+  'en',
+  'admin',
+  now(),
+  now()
+)
+on conflict (id) do update set
+  auth_user_id = excluded.auth_user_id,
+  display_name = excluded.display_name,
+  email = excluded.email,
+  member_code = excluded.member_code,
+  app_role = excluded.app_role,
+  updated_at = now();
+
+update public.profiles
+set app_role = 'member'
+where id in (
+  '40000000-0000-0000-0000-000000000001',
+  '40000000-0000-0000-0000-000000000002'
+);
+
+insert into public.environment_reports (
+  id,
+  reporter_profile_id,
+  title,
+  issue_type,
+  severity,
+  location_text,
+  details,
+  notes,
+  status,
+  approved_at,
+  approved_by_profile_id,
+  reviewed_at,
+  reviewed_by_profile_id,
+  rejection_reason,
+  claimed_at,
+  points_awarded,
+  is_claimed,
+  observed_at,
+  created_at
+) values
+  (
+    '80000000-0000-0000-0000-000000000001',
+    '40000000-0000-0000-0000-000000000001',
+    'Plastic dump near Hledan Market',
+    'plastic-dump',
+    'concerning',
+    'Hledan Market, Insein Road',
+    'Bags and bottles are collecting beside the footpath.',
+    'Bags and bottles are collecting beside the footpath.',
+    'PENDING',
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    false,
+    '2026-07-15T09:30:00+06:30',
+    '2026-07-15T09:30:00+06:30'
+  ),
+  (
+    '80000000-0000-0000-0000-000000000002',
+    '40000000-0000-0000-0000-000000000001',
+    'Blocked drain in Lanmadaw',
+    'blocked-drain',
+    'urgent',
+    'Lanmadaw Material Bank corner',
+    'Drain flow is blocked by mixed trash after rain.',
+    'Drain flow is blocked by mixed trash after rain.',
+    'APPROVED',
+    '2026-07-16T10:00:00+06:30',
+    '40000000-0000-0000-0000-000000000003',
+    '2026-07-16T10:00:00+06:30',
+    '40000000-0000-0000-0000-000000000003',
+    null,
+    null,
+    null,
+    false,
+    '2026-07-15T16:00:00+06:30',
+    '2026-07-15T16:00:00+06:30'
+  ),
+  (
+    '80000000-0000-0000-0000-000000000003',
+    '40000000-0000-0000-0000-000000000001',
+    'Duplicate burning report',
+    'illegal-burning',
+    'limited',
+    'Near Tamwe Community Drop-off',
+    'Smoke was already reported by another member.',
+    'Smoke was already reported by another member.',
+    'REJECTED',
+    null,
+    null,
+    '2026-07-14T12:00:00+06:30',
+    '40000000-0000-0000-0000-000000000003',
+    'Duplicate report for the same location.',
+    null,
+    null,
+    false,
+    '2026-07-13T15:00:00+06:30',
+    '2026-07-13T15:00:00+06:30'
+  ),
+  (
+    '80000000-0000-0000-0000-000000000004',
+    '40000000-0000-0000-0000-000000000001',
+    'Water pollution near Kandawgyi',
+    'water-pollution',
+    'concerning',
+    'Kandawgyi lake walkway',
+    'Floating packaging was visible along the edge.',
+    'Floating packaging was visible along the edge.',
+    'APPROVED',
+    '2026-07-12T11:00:00+06:30',
+    '40000000-0000-0000-0000-000000000003',
+    '2026-07-12T11:00:00+06:30',
+    '40000000-0000-0000-0000-000000000003',
+    null,
+    '2026-07-12T11:15:00+06:30',
+    50,
+    true,
+    '2026-07-11T08:00:00+06:30',
+    '2026-07-11T08:00:00+06:30'
+  )
+on conflict (id) do update set
+  title = excluded.title,
+  issue_type = excluded.issue_type,
+  severity = excluded.severity,
+  location_text = excluded.location_text,
+  details = excluded.details,
+  notes = excluded.notes,
+  status = excluded.status,
+  approved_at = excluded.approved_at,
+  approved_by_profile_id = excluded.approved_by_profile_id,
+  reviewed_at = excluded.reviewed_at,
+  reviewed_by_profile_id = excluded.reviewed_by_profile_id,
+  rejection_reason = excluded.rejection_reason,
+  claimed_at = excluded.claimed_at,
+  points_awarded = excluded.points_awarded,
+  is_claimed = excluded.is_claimed;
+
+insert into public.point_ledger_entries (
+  id, profile_id, report_id, points, entry_type, description, created_at
+) values (
+  '70000000-0000-0000-0000-000000000005',
+  '40000000-0000-0000-0000-000000000001',
+  '80000000-0000-0000-0000-000000000004',
+  50,
+  'earned',
+  'Approved community report',
+  '2026-07-12T11:15:00+06:30'
+)
+on conflict (id) do update set
+  points = excluded.points,
+  description = excluded.description,
+  created_at = excluded.created_at;

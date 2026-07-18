@@ -124,7 +124,7 @@ export async function getImpactDashboardData(user: SupabaseUser): Promise<Impact
   const displayName = metadataName || email?.split("@")[0];
   if (!email || !displayName) return getDemoImpactDashboardData();
 
-  const rpc = supabase.rpc as unknown as (
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
     name: "ensure_current_profile",
     args: { profile_display_name: string; profile_email: string },
   ) => Promise<{ data: ProfileRow[] | null; error: { message: string } | null }>;
@@ -151,16 +151,25 @@ export async function getImpactDashboardData(user: SupabaseUser): Promise<Impact
     .lt("points", 0);
 
   const spentPoints = Math.abs(((redeemedRows ?? []) as Array<{ points: number }>).reduce((total, item) => total + item.points, 0));
-  const dropOffs = ((dropOffRows ?? []) as DashboardDropOffRow[])
-    .filter((item) => isKnownMaterialSlug(item.material_slug))
-    .map((item) => ({
+  const dropOffs: Array<{
+    id: string;
+    centerName: string;
+    materialSlug: MaterialSlug;
+    weightKg: number;
+    points: number;
+    recordedAt: string;
+  }> = [];
+  for (const item of (dropOffRows ?? []) as DashboardDropOffRow[]) {
+    if (!isKnownMaterialSlug(item.material_slug)) continue;
+    dropOffs.push({
       id: item.id,
       centerName: getCenterName(item.recycling_centers, item.center_id),
-      materialSlug: item.material_slug as MaterialSlug,
+      materialSlug: item.material_slug,
       weightKg: Number(item.weight_kg),
       points: item.points_awarded,
       recordedAt: item.recorded_at,
-    }));
+    });
+  }
 
   return buildImpactDashboardData({
     displayName: profile.display_name,

@@ -15,6 +15,27 @@ const supabaseAuthMigration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260718120000_supabase_native_auth.sql"),
   "utf8",
 );
+const profileRpcRepairMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718063419_repair_ensure_current_profile.sql"),
+  "utf8",
+);
+const reportWorkflowMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718153000_report_approval_workflow.sql"),
+  "utf8",
+);
+const normalizedReportWorkflowMigration = reportWorkflowMigration.replace(/\r\n/g, "\n");
+const reportPhotoLocationMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718161000_report_photo_location_submission.sql"),
+  "utf8",
+);
+const authenticatedReportSelectRepairMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718064724_repair_environment_reports_authenticated_select.sql"),
+  "utf8",
+);
+const reportRpcAmbiguityRepairMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718065705_repair_report_rpc_ambiguous_columns.sql"),
+  "utf8",
+);
 
 describe("EcoLink Supabase migration", () => {
   it("enables RLS on every new user-data table", () => {
@@ -52,5 +73,58 @@ describe("EcoLink Supabase migration", () => {
     expect(profileRpcMigration).toContain("create or replace function public.get_current_staff_center()");
     expect(profileRpcMigration).toContain("assignment.is_active");
     expect(profileRpcMigration).toContain("revoke all on function public.get_current_staff_center() from public, anon");
+  });
+
+  it("restores every profile column required by ensure_current_profile", () => {
+    expect(profileRpcRepairMigration).toContain("add column if not exists preferred_language");
+    expect(profileRpcRepairMigration).toContain("add column if not exists updated_at");
+    expect(profileRpcRepairMigration).toContain("add column if not exists deleted_at");
+  });
+
+  it("protects report review and point claiming transitions", () => {
+    expect(reportWorkflowMigration).toContain("create type public.report_status as enum ('PENDING', 'APPROVED', 'REJECTED')");
+    expect(reportWorkflowMigration).toContain("alter table public.environment_reports enable row level security");
+    expect(reportWorkflowMigration).toContain("profile.app_role = 'admin'");
+    expect(reportWorkflowMigration).toContain("if not public.current_profile_is_admin() then");
+    expect(normalizedReportWorkflowMigration).toContain("where id = target_report_id\n    and status = 'PENDING'::public.report_status");
+    expect(reportWorkflowMigration).toContain("if report_row.status <> 'APPROVED'::public.report_status then");
+    expect(reportWorkflowMigration).toContain("for update");
+    expect(reportWorkflowMigration).toContain("on conflict (report_id) where report_id is not null do nothing");
+  });
+
+  it("keeps report table reads private while allowing authenticated RLS checks", () => {
+    expect(reportWorkflowMigration).toContain("grant select, insert, update on public.environment_reports to authenticated");
+    expect(reportWorkflowMigration).toContain("create policy \"Members can read their reports\"");
+    expect(reportWorkflowMigration).toContain("create policy \"Admins can read reports\"");
+    expect(authenticatedReportSelectRepairMigration).toContain("grant select on table public.environment_reports to authenticated");
+    expect(authenticatedReportSelectRepairMigration).toContain("revoke select on table public.environment_reports from anon");
+  });
+
+  it("qualifies report RPC columns that collide with returned column names", () => {
+    expect(reportRpcAmbiguityRepairMigration).toContain("returning public.environment_reports.id, public.environment_reports.created_at");
+    expect(reportRpcAmbiguityRepairMigration).toContain("from public.point_ledger_entries ledger");
+    expect(reportRpcAmbiguityRepairMigration).toContain("ledger.report_id = report_row.id");
+    expect(reportRpcAmbiguityRepairMigration).toContain("coalesce(public.environment_reports.claimed_at, now())");
+    expect(reportRpcAmbiguityRepairMigration).toContain("coalesce(public.environment_reports.points_awarded, award_points)");
+  });
+
+  it("does not expose report workflow RPCs to anonymous callers", () => {
+    expect(reportWorkflowMigration).toContain("revoke all on function public.submit_environment_report(text, text, text, text, text) from public, anon");
+    expect(reportPhotoLocationMigration).toContain("revoke all on function public.submit_environment_report(text, text, text, text, double precision, double precision, text, text) from public, anon");
+    expect(reportWorkflowMigration).toContain("revoke all on function public.approve_environment_report(uuid) from public, anon");
+    expect(reportWorkflowMigration).toContain("revoke all on function public.reject_environment_report(uuid, text) from public, anon");
+    expect(reportWorkflowMigration).toContain("revoke all on function public.claim_environment_report_points(uuid) from public, anon");
+  });
+
+  it("requires report photo and current coordinates when submitting reports", () => {
+    expect(reportPhotoLocationMigration).toContain("insert into storage.buckets");
+    expect(reportPhotoLocationMigration).toContain("'report-photos'");
+    expect(reportPhotoLocationMigration).toContain("create policy \"Members can upload own report photos\"");
+    expect(reportPhotoLocationMigration).toContain("create policy \"Members and admins can read report photos\"");
+    expect(reportPhotoLocationMigration).toContain("report_latitude double precision");
+    expect(reportPhotoLocationMigration).toContain("report_longitude double precision");
+    expect(reportPhotoLocationMigration).toContain("report_photo_storage_path text");
+    expect(reportPhotoLocationMigration).toContain("raise exception 'Report image is required'");
+    expect(reportPhotoLocationMigration).toContain("photo_storage_path");
   });
 });
