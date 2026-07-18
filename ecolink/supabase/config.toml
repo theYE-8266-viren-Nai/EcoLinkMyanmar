@@ -1,1 +1,5 @@
 project_id = "ecolink"
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql", "./seeds/yangon_heatmap_reports.sql"]

@@ -6,7 +6,6 @@ import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Chip from "@mui/material/Chip";
-import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
@@ -16,38 +15,39 @@ import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
-import CircularProgress from "@mui/material/CircularProgress";
 import {
   AlertTriangle,
   Building2,
   ChevronRight,
-  CircleGauge,
-  House,
   Layers3,
   LocateFixed,
   MapPin,
   MapPinned,
   Navigation,
   PanelBottomOpen,
-  Recycle,
   RotateCcw,
   Truck,
   X,
 } from "lucide-react";
 import mapboxgl, { type GeoJSONSource, type Map as MapboxMap } from "mapbox-gl";
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { createDemoVehicles } from "@/features/live-map/data/demo-map-data";
+import {
+  createDemoCollectorRoutes,
+  createDemoVehicles,
+  DEMO_COLLECTOR_ROUTES,
+} from "@/features/live-map/data/demo-map-data";
 import type { LiveMapBootstrap } from "@/features/live-map/data/load-map-bootstrap";
 import type {
   CollectorVehicleLocation,
+  CollectorRoute,
   MapFeatureCollection,
   RecyclingCenterMapItem,
   WasteMapResponse,
 } from "@/features/live-map/types";
 import {
   getVehicleFreshness,
+  routesToFeatureCollection,
   vehiclesToFeatureCollection,
   YANGON_BOUNDS,
   YANGON_CENTER,
@@ -64,6 +64,13 @@ const HAS_SUPABASE_CONFIG = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL
     && (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
 );
+const mapFilterChipSx = {
+  height: 32,
+  fontWeight: 700,
+  fontSize: "0.72rem",
+  "& .MuiChip-label": { px: 1, display: "flex", alignItems: "center" },
+  "& .MuiChip-icon": { width: 15, height: 15, ml: 0.9, mr: -0.2, flexShrink: 0 },
+} as const;
 
 type SelectedMapItem =
   | { kind: "center"; center: RecyclingCenterMapItem }
@@ -72,6 +79,31 @@ type SelectedMapItem =
   | null;
 
 type MobilePanelTab = "centers" | "collectors";
+
+type MapboxDirectionsResponse = {
+  routes?: Array<{ geometry?: { coordinates?: unknown } }>;
+};
+
+function isRouteCoordinates(value: unknown): value is [number, number][] {
+  return Array.isArray(value) && value.length >= 2 && value.every((coordinate) =>
+    Array.isArray(coordinate)
+    && coordinate.length === 2
+    && coordinate.every((part) => typeof part === "number" && Number.isFinite(part)));
+}
+
+async function loadRoadRoute(route: typeof DEMO_COLLECTOR_ROUTES[number], signal: AbortSignal) {
+  if (!MAPBOX_TOKEN) return route.route;
+  const coordinates = [...route.route, route.route[0]].map(([longitude, latitude]) => `${longitude},${latitude}`).join(";");
+  const response = await fetch(
+    `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates}?geometries=geojson&overview=full&continue_straight=true&access_token=${MAPBOX_TOKEN}`,
+    { signal },
+  );
+  if (!response.ok) throw new Error("Road directions could not be loaded.");
+  const body = await response.json() as MapboxDirectionsResponse;
+  const routeCoordinates = body.routes?.[0]?.geometry?.coordinates;
+  if (!isRouteCoordinates(routeCoordinates)) throw new Error("Road directions returned an invalid geometry.");
+  return routeCoordinates;
+}
 
 function centersToFeatureCollection(centers: RecyclingCenterMapItem[]): MapFeatureCollection {
   return {
@@ -101,11 +133,19 @@ function formatUpdatedAt(value: string, t: ReturnType<typeof useI18n>["t"]) {
 }
 
 async function addCollectorVehicleIcons(map: MapboxMap) {
-  if (map.hasImage("recycle-car")) return;
-  const image = new Image();
-  image.src = "/recycle-car.svg";
-  await image.decode();
-  map.addImage("recycle-car", image, { pixelRatio: 2 });
+  const images = [
+    { id: "recycle-car", path: "/recycle-car.svg", sdf: false },
+    { id: "recycling-center-glyph", path: "/map-recycling-center.svg", sdf: true },
+    { id: "waste-report-glyph", path: "/map-waste-report.svg", sdf: true },
+  ];
+
+  await Promise.all(images.map(async ({ id, path, sdf }) => {
+    if (map.hasImage(id)) return;
+    const image = new Image();
+    image.src = path;
+    await image.decode();
+    map.addImage(id, image, { pixelRatio: 2, sdf });
+  }));
 }
 
 async function addMapSourcesAndLayers(map: MapboxMap, centers: RecyclingCenterMapItem[]) {
@@ -119,6 +159,7 @@ async function addMapSourcesAndLayers(map: MapboxMap, centers: RecyclingCenterMa
     clusterRadius: 48,
   });
   map.addSource("recycling-centers", { type: "geojson", data: centersToFeatureCollection(centers) });
+  map.addSource("collector-routes", { type: "geojson", data: EMPTY_FEATURES });
   map.addSource("collector-vehicles", { type: "geojson", data: EMPTY_FEATURES });
 
   map.addLayer({
@@ -180,6 +221,20 @@ async function addMapSourcesAndLayers(map: MapboxMap, centers: RecyclingCenterMa
       "circle-stroke-width": 2,
     },
   });
+  map.addLayer({
+    id: "waste-report-icons",
+    type: "symbol",
+    source: "waste-reports",
+    minzoom: 12,
+    filter: ["!", ["has", "point_count"]],
+    layout: {
+      "icon-image": "waste-report-glyph",
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 15, 0.5, 18, 0.72],
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
+    },
+    paint: { "icon-color": "#ffffff" },
+  });
 
   map.addLayer({
     id: "center-halo",
@@ -194,12 +249,44 @@ async function addMapSourcesAndLayers(map: MapboxMap, centers: RecyclingCenterMa
     paint: { "circle-radius": 9, "circle-color": "#087c78", "circle-stroke-color": "#ffffff", "circle-stroke-width": 1.5 },
   });
   map.addLayer({
+    id: "center-icons",
+    type: "symbol",
+    source: "recycling-centers",
+    layout: {
+      "icon-image": "recycling-center-glyph",
+      "icon-size": 0.58,
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
+    },
+    paint: { "icon-color": "#ffffff" },
+  });
+  map.addLayer({
     id: "center-labels",
     type: "symbol",
     source: "recycling-centers",
     minzoom: 13,
     layout: { "text-field": ["get", "name"], "text-size": 11, "text-offset": [0, 1.8], "text-anchor": "top" },
     paint: { "text-color": "#0b3558", "text-halo-color": "#ffffff", "text-halo-width": 1.5 },
+  });
+
+  map.addLayer({
+    id: "collector-route-casing",
+    type: "line",
+    source: "collector-routes",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": "rgba(255,255,255,0.9)", "line-width": 6, "line-opacity": 0.9 },
+  });
+  map.addLayer({
+    id: "collector-route-dots",
+    type: "line",
+    source: "collector-routes",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": ["get", "routeColor"],
+      "line-width": 3,
+      "line-opacity": 0.9,
+      "line-dasharray": [0.5, 1.5],
+    },
   });
 
   map.addLayer({
@@ -235,6 +322,8 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
   const [mobilePanelTab, setMobilePanelTab] = useState<MobilePanelTab>("centers");
   const [selected, setSelected] = useState<SelectedMapItem>(null);
   const [vehicles, setVehicles] = useState(initialVehicles);
+  const [collectorRoutes, setCollectorRoutes] = useState<CollectorRoute[]>(() => createDemoCollectorRoutes());
+  const roadRoutesRef = useRef<Map<string, readonly [number, number][]>>(new Map());
   const [locationMessage, setLocationMessage] = useState("");
 
   const visibleVehicles = vehicles.filter((vehicle) => {
@@ -254,11 +343,11 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
       minZoom: 9,
       maxZoom: 19,
       maxBounds: YANGON_BOUNDS,
-      attributionControl: true,
+      attributionControl: false,
       cooperativeGestures: false,
     });
     mapRef.current = map;
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false, showZoom: false }), "bottom-right");
 
     const handleLoad = () => {
       void addMapSourcesAndLayers(map, centers)
@@ -418,15 +507,39 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
   useEffect(() => {
     const map = mapRef.current;
     if (!mapReady || !map) return;
-    setLayerVisibility(map, ["waste-clusters", "waste-cluster-count", "waste-report-points"], showWaste);
-    setLayerVisibility(map, ["center-halo", "center-points", "center-labels"], showCenters);
-    setLayerVisibility(map, ["collector-vehicle-icons"], showCollectors);
+    setLayerVisibility(map, ["waste-clusters", "waste-cluster-count", "waste-report-points", "waste-report-icons"], showWaste);
+    setLayerVisibility(map, ["center-halo", "center-points", "center-icons", "center-labels"], showCenters);
+    setLayerVisibility(map, ["collector-route-casing", "collector-route-dots", "collector-vehicle-icons"], showCollectors);
   }, [mapReady, showCenters, showCollectors, showWaste]);
 
   useEffect(() => {
     const source = mapRef.current?.getSource("collector-vehicles") as GeoJSONSource | undefined;
     if (source) source.setData(vehiclesToFeatureCollection(vehicles) as Parameters<GeoJSONSource["setData"]>[0]);
-  }, [vehicles]);
+  }, [mapReady, vehicles]);
+
+  useEffect(() => {
+    const source = mapRef.current?.getSource("collector-routes") as GeoJSONSource | undefined;
+    if (source) source.setData(routesToFeatureCollection(collectorRoutes) as Parameters<GeoJSONSource["setData"]>[0]);
+  }, [collectorRoutes, mapReady]);
+
+  useEffect(() => {
+    if (!demoMode || !MAPBOX_TOKEN) return;
+    const controller = new AbortController();
+
+    void Promise.all(DEMO_COLLECTOR_ROUTES.map(async (route) => {
+      try {
+        return [route.vehicleId, await loadRoadRoute(route, controller.signal)] as const;
+      } catch {
+        return [route.vehicleId, route.route] as const;
+      }
+    })).then((routes) => {
+      if (controller.signal.aborted) return;
+      roadRoutesRef.current = new Map(routes);
+      setCollectorRoutes(createDemoCollectorRoutes(roadRoutesRef.current));
+    });
+
+    return () => controller.abort();
+  }, [demoMode]);
 
   useEffect(() => {
     if (!demoMode) return;
@@ -435,7 +548,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
     let lastPanelUpdate = 0;
 
     const update = (timestamp: number) => {
-      const nextVehicles = createDemoVehicles(Date.now() - startedAt);
+      const nextVehicles = createDemoVehicles(Date.now() - startedAt, new Date(), roadRoutesRef.current);
       const source = mapRef.current?.getSource("collector-vehicles") as GeoJSONSource | undefined;
       if (source) source.setData(vehiclesToFeatureCollection(nextVehicles) as Parameters<GeoJSONSource["setData"]>[0]);
 
@@ -517,9 +630,11 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
   }
 
   const densityLabel = wasteMode === "heatmap" ? t("map.heatmap") : t("map.reportMarkers");
+  const bottomNavOffset = "calc(var(--ecolink-bottom-nav-clearance, 64px) + 12px)";
+  const selectedCardOffset = "calc(var(--ecolink-bottom-nav-clearance, 64px) + 156px)";
 
   return (
-    <Box sx={{ position: "relative", width: "100%", height: "100%", display: "flex", flexGrow: 1 }}>
+    <Box className="live-map-canvas" sx={{ position: "relative", width: "100%", height: "100%", display: "flex", flexGrow: 1 }}>
       {/* Map Canvas */}
       <Box sx={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}>
         <Box ref={mapContainerRef} sx={{ width: "100%", height: "100%" }} />
@@ -569,32 +684,33 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
             backdropFilter: "blur(4px)",
           }}
         >
-          <Stack direction="row" spacing={0.5}>
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
             <Chip
               onClick={() => setShowWaste((val) => !val)}
               variant={showWaste ? "filled" : "outlined"}
               color={showWaste ? "error" : "default"}
               size="small"
+              icon={<MapPinned size={15} strokeWidth={2.2} />}
               label={t("map.reports")}
-              sx={{ fontWeight: 700, fontSize: "0.68rem" }}
+              sx={mapFilterChipSx}
             />
             <Chip
               onClick={() => setShowCenters((val) => !val)}
               variant={showCenters ? "filled" : "outlined"}
               color={showCenters ? "primary" : "default"}
               size="small"
-              icon={<Building2 size={12} />}
+              icon={<Building2 size={15} strokeWidth={2.2} />}
               label={t("map.centers")}
-              sx={{ fontWeight: 700, fontSize: "0.68rem" }}
+              sx={mapFilterChipSx}
             />
             <Chip
               onClick={() => setShowCollectors((val) => !val)}
               variant={showCollectors ? "filled" : "outlined"}
               color={showCollectors ? "secondary" : "default"}
               size="small"
-              icon={<Truck size={12} />}
+              icon={<Truck size={15} strokeWidth={2.2} />}
               label={t("map.collectors")}
-              sx={{ fontWeight: 700, fontSize: "0.68rem" }}
+              sx={mapFilterChipSx}
             />
           </Stack>
         </Paper>
@@ -631,7 +747,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           <IconButton
             onClick={useMyLocation}
             aria-label={t("map.useLocation")}
-            sx={{ bgcolor: "background.paper", color: "secondary.main", p: 1.25 }}
+            sx={{ bgcolor: "background.paper", color: "secondary.main", width: 44, height: 44 }}
           >
             <LocateFixed size={20} />
           </IconButton>
@@ -640,7 +756,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           <IconButton
             onClick={resetMap}
             aria-label={t("map.reset")}
-            sx={{ bgcolor: "background.paper", color: "secondary.main", p: 1.25 }}
+            sx={{ bgcolor: "background.paper", color: "secondary.main", width: 44, height: 44 }}
           >
             <RotateCcw size={20} />
           </IconButton>
@@ -649,7 +765,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           <IconButton
             onClick={() => setMobileSheetOpen(true)}
             aria-label={t("map.openPanel")}
-            sx={{ bgcolor: "primary.main", color: "white", p: 1.25, "&:hover": { bgcolor: "primary.dark" } }}
+            sx={{ bgcolor: "primary.main", color: "white", width: 44, height: 44, "&:hover": { bgcolor: "primary.dark" } }}
           >
             <PanelBottomOpen size={20} />
           </IconButton>
@@ -661,8 +777,8 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         elevation={1}
         sx={{
           position: "absolute",
-          bottom: selected ? 220 : 76,
-          right: 12,
+          bottom: selected ? selectedCardOffset : bottomNavOffset,
+          left: 12,
           zIndex: 9,
           p: 1,
           borderRadius: "8px",
@@ -697,7 +813,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           elevation={4}
           sx={{
             position: "absolute",
-            bottom: 76,
+            bottom: bottomNavOffset,
             left: 12,
             right: 12,
             zIndex: 15,
@@ -767,7 +883,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
         elevation={4}
         sx={{
           position: "absolute",
-          bottom: 0,
+          bottom: "var(--ecolink-bottom-nav-clearance, 64px)",
           left: 0,
           right: 0,
           zIndex: 20,
@@ -776,7 +892,7 @@ export function LiveMap({ centers, vehicles: initialVehicles, demoMode }: LiveMa
           display: "flex",
           flexDirection: "column",
           maxHeight: "75%",
-          transform: mobileSheetOpen ? "translateY(0)" : "translateY(100%)",
+          transform: mobileSheetOpen ? "translateY(0)" : "translateY(calc(100% + var(--ecolink-bottom-nav-clearance, 64px)))",
           transition: "transform 0.25s ease-out",
           borderTop: "1px solid",
           borderColor: "divider",

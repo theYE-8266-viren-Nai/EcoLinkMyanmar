@@ -1,4 +1,5 @@
 import type {
+  CollectorRoute,
   CollectorVehicleLocation,
   MapFeatureCollection,
   WasteMapMode,
@@ -70,15 +71,29 @@ export function getVehicleFreshness(observedAt: string, now = Date.now()) {
 export function interpolateRoute(
   route: Array<[number, number]>,
   elapsedMilliseconds: number,
-  segmentDuration = 14000,
+  routeDuration = 14000,
 ) {
   if (route.length < 2) return { coordinates: route[0] ?? YANGON_CENTER, heading: 0 };
-  const progress = elapsedMilliseconds / segmentDuration;
-  const fromIndex = Math.floor(progress) % route.length;
-  const toIndex = (fromIndex + 1) % route.length;
-  const fraction = progress - Math.floor(progress);
-  const from = route[fromIndex];
-  const to = route[toIndex];
+
+  const isClosed = route[0][0] === route.at(-1)?.[0] && route[0][1] === route.at(-1)?.[1];
+  const segments = route.slice(1).map((to, index) => ({ from: route[index], to }));
+  if (!isClosed) segments.push({ from: route.at(-1)!, to: route[0] });
+
+  const distances = segments.map(({ from, to }) => Math.hypot(to[0] - from[0], to[1] - from[1]));
+  const totalDistance = distances.reduce((total, distance) => total + distance, 0);
+  if (totalDistance === 0) return { coordinates: route[0], heading: 0 };
+
+  const progress = ((elapsedMilliseconds % routeDuration) + routeDuration) % routeDuration;
+  let remainingDistance = totalDistance * (progress / routeDuration);
+  let segmentIndex = 0;
+  while (segmentIndex < segments.length - 1 && remainingDistance > distances[segmentIndex]) {
+    remainingDistance -= distances[segmentIndex];
+    segmentIndex += 1;
+  }
+
+  const { from, to } = segments[segmentIndex];
+  const segmentDistance = distances[segmentIndex];
+  const fraction = segmentDistance === 0 ? 0 : remainingDistance / segmentDistance;
   const longitude = from[0] + (to[0] - from[0]) * fraction;
   const latitude = from[1] + (to[1] - from[1]) * fraction;
   const heading = (Math.atan2(to[0] - from[0], to[1] - from[1]) * 180) / Math.PI;
@@ -105,4 +120,16 @@ export function vehiclesToFeatureCollection(vehicles: CollectorVehicleLocation[]
   });
 
   return { type: "FeatureCollection" as const, features };
+}
+
+export function routesToFeatureCollection(routes: CollectorRoute[]): MapFeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: routes.filter((route) => route.coordinates.length >= 2).map((route) => ({
+      type: "Feature",
+      id: route.vehicleId,
+      geometry: { type: "LineString", coordinates: route.coordinates },
+      properties: { vehicleId: route.vehicleId, routeColor: route.color },
+    })),
+  };
 }

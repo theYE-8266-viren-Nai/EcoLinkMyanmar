@@ -22,7 +22,12 @@ export interface MapPolygonGeometry {
   coordinates: number[][][];
 }
 
-export type MapGeometry = MapPointGeometry | MapPolygonGeometry;
+export interface MapLineStringGeometry {
+  type: "LineString";
+  coordinates: [number, number][];
+}
+
+export type MapGeometry = MapPointGeometry | MapPolygonGeometry | MapLineStringGeometry;
 
 export interface MapFeature<Properties extends Record<string, unknown> = Record<string, unknown>> {
   type: "Feature";
@@ -67,6 +72,12 @@ export interface CollectorVehicleLocation {
   observedAt: string;
   isDemo?: boolean;
   vehicleIcon?: string;
+}
+
+export interface CollectorRoute {
+  vehicleId: string;
+  coordinates: [number, number][];
+  color: string;
 }
 
 export interface WasteMapRpcRow {
