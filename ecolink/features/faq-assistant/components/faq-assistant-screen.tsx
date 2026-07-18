@@ -84,11 +84,24 @@ function AnswerCard({
   onFeedback,
 }: {
   message: FaqAssistantMessage;
-  onFeedback: (messageId: string, value: "useful" | "not_useful") => void;
+  onFeedback: (messageId: string, value: "useful" | "not_useful") => Promise<void>;
 }) {
   const { t } = useI18n();
+  const [feedbackValue, setFeedbackValue] = useState<"useful" | "not_useful" | null>(null);
+  const [feedbackSaving, setFeedbackSaving] = useState(false);
   const response = message.response;
   if (!response) return null;
+
+  async function submitFeedback(value: "useful" | "not_useful") {
+    if (feedbackSaving) return;
+    setFeedbackValue(value);
+    setFeedbackSaving(true);
+    try {
+      await onFeedback(message.id, value);
+    } finally {
+      setFeedbackSaving(false);
+    }
+  }
 
   return (
     <article className={styles.answerCard}>
@@ -140,8 +153,24 @@ function AnswerCard({
       ) : null}
 
       <div className={styles.feedback} aria-label={t("faq.feedback")}>
-        <button type="button" onClick={() => onFeedback(message.id, "useful")}><ThumbsUp size={15} />{t("faq.useful")}</button>
-        <button type="button" onClick={() => onFeedback(message.id, "not_useful")}><ThumbsDown size={15} />{t("faq.notUseful")}</button>
+        <button
+          aria-pressed={feedbackValue === "useful"}
+          className={feedbackValue === "useful" ? styles.feedbackActive : undefined}
+          disabled={feedbackSaving}
+          type="button"
+          onClick={() => void submitFeedback("useful")}
+        >
+          <ThumbsUp size={15} />{t("faq.useful")}
+        </button>
+        <button
+          aria-pressed={feedbackValue === "not_useful"}
+          className={feedbackValue === "not_useful" ? styles.feedbackActive : undefined}
+          disabled={feedbackSaving}
+          type="button"
+          onClick={() => void submitFeedback("not_useful")}
+        >
+          <ThumbsDown size={15} />{t("faq.notUseful")}
+        </button>
       </div>
     </article>
   );

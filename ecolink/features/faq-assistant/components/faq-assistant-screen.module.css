@@ -442,6 +442,22 @@
   font-size: .7rem;
 }
 
+.feedback button:hover:not(:disabled) {
+  border-color: #bcded6;
+  color: var(--teal);
+  background: #f2faf8;
+}
+
+.feedback button:disabled {
+  cursor: wait;
+}
+
+.feedbackActive {
+  border-color: var(--teal) !important;
+  color: var(--teal) !important;
+  background: #e8f5f3 !important;
+}
+
 .loading,
 .error {
   display: inline-flex;
@@ -455,8 +471,16 @@
   font-size: .78rem;
 }
 
+.loading {
+  position: relative;
+  border: 1px solid #d9ece8;
+  background: #f7fbfa;
+}
+
 .loading svg {
-  animation: spin 1s linear infinite;
+  display: block;
+  color: var(--teal);
+  animation: loadingIconSpin 900ms linear infinite;
 }
 
 .error {
@@ -512,6 +536,18 @@
   border-radius: 8px;
   color: white;
   background: var(--teal);
+}
+
+@keyframes loadingIconSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading svg {
+    animation: none;
+  }
 }
 
 @media (max-width: 720px) {
