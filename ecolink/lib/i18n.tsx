@@ -10,8 +10,7 @@ import {
   type ReactNode,
 } from "react";
 
-export const LANGUAGES = ["en", "my"] as const;
-export type Language = (typeof LANGUAGES)[number];
+export type Language = "en" | "my";
 
 const STORAGE_KEY = "ecolink-language";
 
