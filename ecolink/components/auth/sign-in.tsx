@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
+import { authTextFieldSx } from "@/components/auth/auth-field-styles";
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
 import { sanitizeErrorMessage } from "@/lib/errors";
 import { useI18n } from "@/lib/i18n";
@@ -46,7 +47,7 @@ export function EcoLinkSignIn() {
   }
 
   return (
-    <Stack component="form" spacing={2.5} onSubmit={signIn} sx={{ width: "100%" }}>
+    <Stack component="form" spacing={2} onSubmit={signIn} sx={{ width: "100%" }}>
       <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>
         {t("auth.signInTitle")}
       </Typography>
@@ -55,6 +56,7 @@ export function EcoLinkSignIn() {
         label={t("auth.email")}
         onChange={(event) => setEmail(event.target.value)}
         required
+        sx={authTextFieldSx}
         type="email"
         value={email}
         variant="filled"
@@ -65,6 +67,7 @@ export function EcoLinkSignIn() {
         onChange={(event) => setPassword(event.target.value)}
         required
         slotProps={{ htmlInput: { minLength: 8 } }}
+        sx={authTextFieldSx}
         type="password"
         value={password}
         variant="filled"

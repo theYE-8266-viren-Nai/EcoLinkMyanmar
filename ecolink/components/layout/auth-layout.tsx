@@ -33,12 +33,12 @@ export function AuthLayout({
     <Box
       component="main"
       sx={{
-        minHeight: "100dvh",
         bgcolor: "#e4ecee",
         display: "flex",
         justifyContent: "center",
-        alignItems: "center",
-        p: 2,
+        alignItems: "flex-start",
+        px: 2,
+        py: { xs: 3, sm: 6 },
       }}
     >
       <Container
@@ -51,7 +51,7 @@ export function AuthLayout({
           p: 3,
           display: "flex",
           flexDirection: "column",
-          gap: 2.5,
+          gap: 2,
         }}
       >
         {/* Brand link */}

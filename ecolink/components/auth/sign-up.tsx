@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
+import { authTextFieldSx } from "@/components/auth/auth-field-styles";
 import { createSupabaseBrowserClient } from "@/lib/supabase-client";
 import { sanitizeErrorMessage } from "@/lib/errors";
 import { useI18n } from "@/lib/i18n";
@@ -57,7 +58,7 @@ export function EcoLinkSignUp() {
   }
 
   return (
-    <Stack component="form" spacing={2.5} onSubmit={signUp} sx={{ width: "100%" }}>
+    <Stack component="form" spacing={2} onSubmit={signUp} sx={{ width: "100%" }}>
       <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "secondary.main" }}>
         {t("auth.createTitle")}
       </Typography>
@@ -66,6 +67,7 @@ export function EcoLinkSignUp() {
         label={t("auth.name")}
         onChange={(event) => setDisplayName(event.target.value)}
         required
+        sx={authTextFieldSx}
         value={displayName}
         variant="filled"
       />
@@ -74,6 +76,7 @@ export function EcoLinkSignUp() {
         label={t("auth.email")}
         onChange={(event) => setEmail(event.target.value)}
         required
+        sx={authTextFieldSx}
         type="email"
         value={email}
         variant="filled"
@@ -84,6 +87,7 @@ export function EcoLinkSignUp() {
         onChange={(event) => setPassword(event.target.value)}
         required
         slotProps={{ htmlInput: { minLength: 8 } }}
+        sx={authTextFieldSx}
         type="password"
         value={password}
         variant="filled"

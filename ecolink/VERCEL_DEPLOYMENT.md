@@ -43,7 +43,7 @@ Set these variables for Production, Preview, and Development as appropriate:
 ```text
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_SECRET_KEY
 DATABASE_URL
 GEMINI_API_KEY
 AI_SCANNER_MODEL=gemini-3.1-flash-lite
@@ -51,7 +51,7 @@ AI_SCANNER_MAX_UPLOAD_MB=10
 NEXT_PUBLIC_ECOLINK_DEMO_MODE=false
 ```
 
-`GEMINI_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are server-only. Never prefix them with `NEXT_PUBLIC_`.
+`GEMINI_API_KEY` and `SUPABASE_SECRET_KEY` are server-only. Never prefix them with `NEXT_PUBLIC_`. Existing projects can continue using `SUPABASE_SERVICE_ROLE_KEY` as a legacy fallback.
 
 ## 4. Verify Before Production
 

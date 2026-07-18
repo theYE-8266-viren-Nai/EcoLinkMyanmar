@@ -4,13 +4,13 @@ import type { Database } from "@/lib/database.types";
 
 export function createSupabaseAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const adminKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!url || !serviceRoleKey) {
+  if (!url || !adminKey) {
     throw new Error("Missing Supabase admin environment variables.");
   }
 
-  return createClient<Database>(url, serviceRoleKey, {
+  return createClient<Database>(url, adminKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
