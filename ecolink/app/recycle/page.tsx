@@ -43,7 +43,13 @@ const initialPickupForm: PickupFormState = {
   address: "",
   date: "",
   notes: "",
-  window: "Morning · 8:00 AM-11:00 AM",
+  window: "Tomorrow · 8:00 AM-11:00 AM",
+};
+
+const nextEcoLinkSchedule = {
+  area: "Yangon partner route",
+  label: "Next EcoLink pickup route",
+  window: "Tomorrow · 8:00 AM-11:00 AM",
 };
 
 function isMaterialSlug(value: string | null): value is MaterialSlug {
@@ -61,12 +67,19 @@ function estimatePoints(materialSlug: MaterialSlug | null, weightKg: number) {
 
 function isPlasticBottleDetection(detection: { itemType: string; materialLabel: string; materialSlug: MaterialSlug | null }) {
   const searchableLabel = `${detection.itemType} ${detection.materialLabel}`.toLowerCase();
-  return detection.materialSlug === "pet-plastic" && searchableLabel.includes("bottle");
+  return searchableLabel.includes("bottle") && (
+    detection.materialSlug === null ||
+    detection.materialSlug === "pet-plastic" ||
+    detection.materialSlug === "rigid-plastic" ||
+    searchableLabel.includes("plastic")
+  );
 }
 
 function estimateDetectionPoints(detection: { estimatedCount: number; estimatedWeightKg: number; itemType: string; materialLabel: string; materialSlug: MaterialSlug | null }) {
   if (isPlasticBottleDetection(detection)) {
-    return Number.isFinite(detection.estimatedCount) && detection.estimatedCount > 0 ? detection.estimatedCount : 0;
+    return Number.isFinite(detection.estimatedCount) && detection.estimatedCount > 0
+      ? detection.estimatedCount
+      : Math.max(1, Math.round(detection.estimatedWeightKg / 0.025));
   }
   return estimatePoints(detection.materialSlug, detection.estimatedWeightKg);
 }
@@ -78,6 +91,15 @@ function formatPoints(points: number) {
 
 function materialName(slug: MaterialSlug) {
   return MATERIALS.find((material) => material.slug === slug)?.name ?? slug;
+}
+
+function materialInitials(label: string) {
+  return label
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
 export default function RecyclePage() {
@@ -151,17 +173,33 @@ export default function RecyclePage() {
     }
   }
 
-  const selectableDetections = useMemo(() => (result?.detections ?? []).map((detection, index) => {
-    const materialSlug = isMaterialSlug(detection.materialSlug) ? detection.materialSlug : null;
-    const estimatedPoints = estimateDetectionPoints({ ...detection, materialSlug });
-    return {
-      ...detection,
-      key: detectionKey(index),
-      materialSlug,
-      estimatedPoints,
-      pointRuleLabel: isPlasticBottleDetection({ ...detection, materialSlug }) ? "1 point per bottle" : "Estimated by weight",
-    };
-  }), [result]);
+  const selectableDetections = useMemo(() => {
+    const duplicateTotals = new Map<string, number>();
+    for (const detection of result?.detections ?? []) {
+      const duplicateKey = `${detection.itemType.toLowerCase()}-${detection.materialLabel.toLowerCase()}`;
+      duplicateTotals.set(duplicateKey, (duplicateTotals.get(duplicateKey) ?? 0) + 1);
+    }
+
+    const duplicateCounts = new Map<string, number>();
+    return (result?.detections ?? []).map((detection, index) => {
+      const materialSlug = isMaterialSlug(detection.materialSlug) ? detection.materialSlug : null;
+      const duplicateKey = `${detection.itemType.toLowerCase()}-${detection.materialLabel.toLowerCase()}`;
+      const duplicateIndex = (duplicateCounts.get(duplicateKey) ?? 0) + 1;
+      duplicateCounts.set(duplicateKey, duplicateIndex);
+      const duplicateTotal = duplicateTotals.get(duplicateKey) ?? 1;
+      const estimatedPoints = estimateDetectionPoints({ ...detection, materialSlug });
+      return {
+        ...detection,
+        duplicateIndex,
+        duplicateTotal,
+        displayName: duplicateTotal > 1 ? `${detection.itemType} ${duplicateIndex}` : detection.itemType,
+        key: detectionKey(index),
+        materialSlug,
+        estimatedPoints,
+        pointRuleLabel: isPlasticBottleDetection({ ...detection, materialSlug }) ? "1 point per bottle" : "Estimated by weight",
+      };
+    });
+  }, [result]);
 
   const selectedDetections = selectableDetections.filter((detection) => selectedDetectionKeys.includes(detection.key));
   const selectedMaterialSlugs = [...new Set(selectedDetections.flatMap((detection) => detection.materialSlug ? [detection.materialSlug] : []))];
@@ -188,6 +226,11 @@ export default function RecyclePage() {
   }
 
   function preparePickup() {
+    setPickupForm((current) => ({
+      ...current,
+      date: nextEcoLinkSchedule.label,
+      window: nextEcoLinkSchedule.window,
+    }));
     setPickupPrepared(true);
     setFulfillmentOption("truck");
     setPickupDrawerOpen(false);
@@ -251,7 +294,7 @@ export default function RecyclePage() {
                 >
                   <span><Truck size={24}/></span>
                   <strong>Schedule Eco truck pickup</strong>
-                  <small>Choose a pickup date, window, and address for the Eco truck team.</small>
+                  <small>Confirm the next EcoLink route and add your pickup address.</small>
                 </button>
                 <button
                   className={fulfillmentOption === "center" ? "fulfillment-card is-selected" : "fulfillment-card"}
@@ -269,7 +312,7 @@ export default function RecyclePage() {
                   <CheckCircle2 size={18}/>
                   <span>
                     <strong>Eco pickup request prepared.</strong>
-                    {pickupForm.date ? `${pickupForm.date} · ${pickupForm.window}` : "Add a pickup date when you are ready."}
+                    {`${nextEcoLinkSchedule.window} · ${nextEcoLinkSchedule.area}`}
                   </span>
                 </div>
               ) : null}
@@ -336,12 +379,17 @@ export default function RecyclePage() {
               {error ? <div className="inline-message inline-message--error" role="alert"><TriangleAlert size={18}/><span><strong>Analysis unavailable</strong>{error}</span></div> : null}
               {result ? (
                 <div className="analysis-result" role="status">
-                  <div><span className="result-icon"><CheckCircle2 size={22}/></span><div><small>EcoGuide result</small><h3>Review detected items</h3><p>Plastic bottles count as 1 point each. Other materials stay estimated until partner verification.</p></div><strong>{Math.round(result.summary.confidence * 100)}%</strong></div>
-                  <div className="recycle-estimate">
+                  <div><span className="result-icon"><CheckCircle2 size={22}/></span><div><small>EcoGuide result</small><h3>Review detected items</h3><p>Use the checkboxes to include items. Partner centers verify final material and weight.</p></div><strong>{Math.round(result.summary.confidence * 100)}%</strong></div>
+                  <div className="recycle-estimate recycle-estimate--sticky">
                     <span>Selected</span>
                     <strong>~{formatPoints(estimatedSelectedPoints)} pts</strong>
                     <small>{estimatedSelectedWeightKg.toFixed(2)} kg · {selectedDetections.length} item{selectedDetections.length === 1 ? "" : "s"}</small>
                   </div>
+                  {result.warnings.length > 0 ? (
+                    <div className="scan-warning-panel" aria-label="Scan confidence notes">
+                      {result.warnings.map((warning) => <p key={warning}><TriangleAlert size={15}/>{warning}</p>)}
+                    </div>
+                  ) : null}
                   <div className="recyclable-list" aria-label="Detected recyclable items">
                     {selectableDetections.length ? selectableDetections.map((detection) => (
                       <label className="recyclable-item" key={detection.key}>
@@ -354,15 +402,19 @@ export default function RecyclePage() {
                           }}
                           type="checkbox"
                         />
-                        <span>
-                          <strong>{detection.itemType}</strong>
+                        <span className="recyclable-thumb" aria-hidden="true">{materialInitials(detection.materialLabel)}</span>
+                        <span className="recyclable-copy">
+                          <strong>{detection.displayName}</strong>
                           <small>{detection.materialLabel} · {detection.pointRuleLabel}</small>
                         </span>
-                        <b><span>{detection.estimatedCount}× · {detection.estimatedWeightKg.toFixed(2)} kg</span>{detection.estimatedPoints > 0 ? `~${formatPoints(detection.estimatedPoints)} pts` : "Verify"}</b>
+                        <b>
+                          <span>{detection.estimatedCount}× · {detection.estimatedWeightKg.toFixed(2)} kg</span>
+                          {detection.estimatedPoints > 0 ? `~${formatPoints(detection.estimatedPoints)} pts` : "Center check"}
+                        </b>
+                        <em>{selectedDetectionKeys.includes(detection.key) ? "Included" : "Not included"}</em>
                       </label>
                     )) : <p className="photo-tip">No recyclable items were detected. Try another photo with the item closer to the camera.</p>}
                   </div>
-                  {result.warnings.map((warning) => <p className="result-warning" key={warning}><TriangleAlert size={15}/>{warning}</p>)}
                   <button className="button button--primary submit-recyclables-button" type="button" disabled={selectedDetections.length === 0} onClick={submitSelectedRecyclables}>
                     Submit selected recyclables
                   </button>
@@ -389,22 +441,15 @@ export default function RecyclePage() {
         <Drawer open={pickupDrawerOpen} onOpenChange={setPickupDrawerOpen} showSwipeHandle>
           <DrawerContent className="pickup-scheduler-drawer">
             <DrawerHeader>
-              <DrawerTitle>Schedule Eco truck pickup</DrawerTitle>
-              <DrawerDescription>This prepares a demo pickup request. No real truck is assigned yet.</DrawerDescription>
+              <DrawerTitle>Confirm Eco truck pickup</DrawerTitle>
+              <DrawerDescription>EcoLink will place this demo request on the next available route.</DrawerDescription>
             </DrawerHeader>
             <form className="pickup-form" onSubmit={(event) => { event.preventDefault(); preparePickup(); }}>
-              <label>
-                <span>Preferred date</span>
-                <input required type="date" value={pickupForm.date} onChange={(event) => setPickupForm((current) => ({ ...current, date: event.target.value }))}/>
-              </label>
-              <label>
-                <span>Pickup window</span>
-                <select value={pickupForm.window} onChange={(event) => setPickupForm((current) => ({ ...current, window: event.target.value }))}>
-                  <option>Morning · 8:00 AM-11:00 AM</option>
-                  <option>Midday · 11:00 AM-2:00 PM</option>
-                  <option>Afternoon · 2:00 PM-5:00 PM</option>
-                </select>
-              </label>
+              <div className="next-schedule-card" aria-label="Next EcoLink pickup schedule">
+                <span>{nextEcoLinkSchedule.label}</span>
+                <strong>{nextEcoLinkSchedule.window}</strong>
+                <small>{nextEcoLinkSchedule.area}</small>
+              </div>
               <label>
                 <span>Pickup address</span>
                 <textarea required value={pickupForm.address} placeholder="Street, township, landmark" onChange={(event) => setPickupForm((current) => ({ ...current, address: event.target.value }))}/>
@@ -414,7 +459,7 @@ export default function RecyclePage() {
                 <textarea value={pickupForm.notes} placeholder="Gate instructions, bag count, contact notes" onChange={(event) => setPickupForm((current) => ({ ...current, notes: event.target.value }))}/>
               </label>
               <button className="button button--primary" type="submit">
-                <CalendarClock size={17}/> Prepare pickup request
+                <CalendarClock size={17}/> Confirm next EcoLink schedule
               </button>
             </form>
           </DrawerContent>

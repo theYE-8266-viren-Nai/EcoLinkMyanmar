@@ -5,10 +5,22 @@ import {
 } from "@/schemas/ai-scan";
 
 const MATERIAL_SLUGS = new Map([
-  ["plastic", "plastic"],
-  ["paper-and-cardboard", "paper-cardboard"],
-  ["paper-cardboard", "paper-cardboard"],
-  ["metal", "metal"],
+  ["aluminium", "aluminium"],
+  ["aluminum", "aluminium"],
+  ["battery", "batteries"],
+  ["batteries", "batteries"],
+  ["cardboard", "cardboard"],
+  ["e-waste", "e-waste"],
+  ["electronic-waste", "e-waste"],
+  ["glass", "glass"],
+  ["metal", "steel"],
+  ["paper", "paper"],
+  ["paper-and-cardboard", "cardboard"],
+  ["paper-cardboard", "cardboard"],
+  ["pet-plastic", "pet-plastic"],
+  ["plastic", "pet-plastic"],
+  ["rigid-plastic", "rigid-plastic"],
+  ["steel", "steel"],
 ]);
 
 function toSlug(value: string): string {
