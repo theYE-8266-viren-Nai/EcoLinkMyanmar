@@ -66,10 +66,54 @@ export const PARTNER_CENTERS = [
 ] as const;
 
 export const PARTNER_REWARDS = [
-  { id: "market-tote", databaseId: "20000000-0000-0000-0000-000000000001", centerId: "hlaing-ecopoint", partner: "Hlaing EcoPoint", township: "Hlaing Township", title: "Reusable market tote", description: "A sturdy washable bag for groceries and everyday errands.", points: 150, stock: 24 },
-  { id: "herb-seedling", databaseId: "20000000-0000-0000-0000-000000000002", centerId: null, partner: "Yangon Seedling Circle", township: "Kamayut Township", title: "Kitchen herb seedling", description: "Choose one seasonal herb prepared for a balcony or windowsill.", points: 250, stock: 18 },
-  { id: "refill-discount", databaseId: "20000000-0000-0000-0000-000000000003", centerId: null, partner: "Doh Refill Corner", township: "Sanchaung Township", title: "15% refill discount", description: "Use one voucher on household refill products brought in your own container.", points: 350, stock: 60 },
-  { id: "sorting-kit", databaseId: "20000000-0000-0000-0000-000000000004", centerId: "hlaing-ecopoint", partner: "Hlaing EcoPoint", township: "Hlaing Township", title: "Home sorting starter kit", description: "Three reusable labels and fold-flat bags for separating dry recyclables.", points: 500, stock: 8 },
+  {
+    id: "market-tote",
+    databaseId: "20000000-0000-0000-0000-000000000001",
+    centerId: "hlaing-ecopoint",
+    partner: "Hlaing EcoPoint",
+    township: "Hlaing Township",
+    title: "Reusable market tote",
+    description: "A sturdy washable bag for groceries and everyday errands.",
+    points: 150,
+    stock: 24,
+    imageUrl: "https://images.unsplash.com/photo-1597484662317-9bd7bdda2907?auto=format&fit=crop&w=960&q=80",
+  },
+  {
+    id: "herb-seedling",
+    databaseId: "20000000-0000-0000-0000-000000000002",
+    centerId: null,
+    partner: "Yangon Seedling Circle",
+    township: "Kamayut Township",
+    title: "Kitchen herb seedling",
+    description: "Choose one seasonal herb prepared for a balcony or windowsill.",
+    points: 250,
+    stock: 18,
+    imageUrl: "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=960&q=80",
+  },
+  {
+    id: "refill-discount",
+    databaseId: "20000000-0000-0000-0000-000000000003",
+    centerId: null,
+    partner: "Doh Refill Corner",
+    township: "Sanchaung Township",
+    title: "15% refill discount",
+    description: "Use one voucher on household refill products brought in your own container.",
+    points: 350,
+    stock: 60,
+    imageUrl: "https://images.unsplash.com/photo-1604342427523-189b17048853?auto=format&fit=crop&w=960&q=80",
+  },
+  {
+    id: "sorting-kit",
+    databaseId: "20000000-0000-0000-0000-000000000004",
+    centerId: "hlaing-ecopoint",
+    partner: "Hlaing EcoPoint",
+    township: "Hlaing Township",
+    title: "Home sorting starter kit",
+    description: "Three reusable labels and fold-flat bags for separating dry recyclables.",
+    points: 500,
+    stock: 8,
+    imageUrl: "https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?auto=format&fit=crop&w=960&q=80",
+  },
 ] as const;
 
 export const STAFF_ACCESS_CODE = "ECO-STAFF";

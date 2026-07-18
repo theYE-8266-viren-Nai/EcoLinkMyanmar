@@ -8,7 +8,6 @@ import Card from "@mui/material/Card";
 import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
 import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import Divider from "@mui/material/Divider";
@@ -23,13 +22,13 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { ArrowLeft, Check, Gift, HandHeart, MapPin, TicketCheck, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
+import { redeemPartnerReward } from "@/actions/rewards";
 import { AppShell } from "@/components/ecolink/app-shell";
 import { PARTNER_REWARDS } from "@/lib/ecolink-data";
 import { useI18n } from "@/lib/i18n";
 import { useEcoLink } from "@/providers/ecolink-context";
-import { redeemPartnerReward } from "@/actions/rewards";
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_ECOLINK_DEMO_MODE !== "false";
 
@@ -199,19 +198,50 @@ export default function RewardsPage() {
             {PARTNER_REWARDS.map((reward) => {
               const reserved = state.redemptions.find((item) => item.rewardId === reward.id);
               return (
-                <Card key={reward.id} variant="outlined" sx={{ borderRadius: 3 }}>
-                  <CardContent sx={{ p: 2, pb: 1 }}>
-                    <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-                      <Avatar sx={{ bgcolor: "rgba(8, 124, 120, 0.08)", color: "primary.main", width: 34, height: 34 }}>
-                        <Gift size={16} />
-                      </Avatar>
-                      <ChipLabel label={t("rewards.left", { count: reward.stock })} color="#b97818" bgcolor="rgba(185, 120, 24, 0.08)" />
-                    </Stack>
+                <Card key={reward.id} variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
+                  <Box sx={{ position: "relative", height: 142, bgcolor: "rgba(11, 53, 88, 0.04)" }}>
+                    <Box
+                      component="img"
+                      src={reward.imageUrl}
+                      alt={reward.title}
+                      loading="lazy"
+                      sx={{
+                        display: "block",
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "linear-gradient(180deg, rgba(7, 27, 44, 0.04) 38%, rgba(7, 27, 44, 0.52) 100%)",
+                      }}
+                    />
+                    <Avatar
+                      sx={{
+                        position: "absolute",
+                        left: 12,
+                        bottom: 12,
+                        bgcolor: "rgba(255, 255, 255, 0.92)",
+                        color: "primary.main",
+                        width: 34,
+                        height: 34,
+                      }}
+                    >
+                      <Gift size={16} />
+                    </Avatar>
+                    <Box sx={{ position: "absolute", right: 12, top: 12 }}>
+                      <ChipLabel label={t("rewards.left", { count: reward.stock })} color="#7a4b08" bgcolor="rgba(255, 255, 255, 0.92)" />
+                    </Box>
+                  </Box>
 
+                  <CardContent sx={{ p: 2, pb: 1 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
                       {reward.partner}
                     </Typography>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main" }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main", mt: 0.25 }}>
                       {reward.title}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>

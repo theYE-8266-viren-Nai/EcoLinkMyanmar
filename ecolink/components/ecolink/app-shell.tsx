@@ -139,6 +139,9 @@ export function AppShell({
     >
       <Box
         sx={{
+          "--ecolink-bottom-nav-height": "64px",
+          "--ecolink-bottom-nav-safe-area": "env(safe-area-inset-bottom, 0px)",
+          "--ecolink-bottom-nav-clearance": "calc(var(--ecolink-bottom-nav-height) + var(--ecolink-bottom-nav-safe-area))",
           width: "100%",
           maxWidth: 480,
           height: "100dvh",
@@ -221,7 +224,7 @@ export function AppShell({
             position: "relative",
             bgcolor: "background.default",
             p: disablePadding ? 0 : { xs: 1.5, sm: 2 },
-            pb: disableScroll ? 0 : "88px", // space for bottom navigation + safe area
+            pb: disableScroll ? 0 : "calc(var(--ecolink-bottom-nav-clearance) + 24px)",
             display: "flex",
             flexDirection: "column",
           }}
@@ -233,7 +236,7 @@ export function AppShell({
         <Box
           sx={{
             position: "absolute",
-            bottom: 84,
+            bottom: "calc(var(--ecolink-bottom-nav-clearance) + 12px)",
             right: 12,
             zIndex: 1050,
           }}
@@ -289,8 +292,8 @@ export function AppShell({
             zIndex: 1000,
             borderTop: "1px solid",
             borderColor: "divider",
-            height: 64,
-            pb: "env(safe-area-inset-bottom, 0px)",
+            height: "var(--ecolink-bottom-nav-clearance)",
+            pb: "var(--ecolink-bottom-nav-safe-area)",
           }}
         >
           <BottomNavigation

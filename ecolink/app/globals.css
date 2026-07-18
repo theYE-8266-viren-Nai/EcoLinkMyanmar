@@ -129,12 +129,12 @@ button:disabled {
 
 .live-map-canvas .mapboxgl-ctrl-bottom-left {
   left: 12px;
-  bottom: 12px;
+  bottom: calc(var(--ecolink-bottom-nav-clearance, 64px) + 12px);
 }
 
 .live-map-canvas .mapboxgl-ctrl-bottom-right {
   right: 12px;
-  bottom: 76px;
+  bottom: calc(var(--ecolink-bottom-nav-clearance, 64px) + 12px);
 }
 
 .live-map-canvas .mapboxgl-ctrl-group {

@@ -389,7 +389,7 @@ export default function RecyclePage() {
 
   return (
     <AppShell>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3, width: "100%" }}>
         {/* Intro */}
         <Box sx={{ mt: 0.5 }}>
           <Typography
@@ -405,7 +405,7 @@ export default function RecyclePage() {
             {t("recycle.subtitle")}
           </Typography>
 
-          <Stack direction="row" spacing={1} sx={{ mt: 1.5, alignItems: "center" }}>
+          <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1.5, alignItems: "center", flexWrap: "wrap" }}>
             <Box
               sx={{
                 bgcolor: "rgba(8, 124, 120, 0.08)",
@@ -428,7 +428,7 @@ export default function RecyclePage() {
 
         {submitted ? (
           /* Submission Results / Next Steps Panel */
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, width: "100%" }}>
             {error && (
               <Alert severity="error" sx={{ borderRadius: 2 }} icon={<TriangleAlert size={18} />}>
                 {error}
@@ -456,7 +456,7 @@ export default function RecyclePage() {
                   <Avatar sx={{ bgcolor: "primary.main", color: "white", width: 34, height: 34 }}>
                     <CheckCircle2 size={18} />
                   </Avatar>
-                  <Box>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
                       {t("recycle.submitted")}
                     </Typography>
@@ -471,16 +471,16 @@ export default function RecyclePage() {
 
                 <Divider sx={{ my: 2 }} />
 
-                <Stack direction="row" spacing={1} sx={{ justifyContent: "space-around", textAlign: "center" }}>
-                  <Box>
+                <Stack direction="row" spacing={1} sx={{ justifyContent: "space-between", textAlign: "center" }}>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="caption" color="text.secondary">{t("recycle.items")}</Typography>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{selectedDetections.length}</Typography>
                   </Box>
-                  <Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="caption" color="text.secondary">{t("recycle.weight")}</Typography>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{estimatedSelectedWeightKg.toFixed(2)} kg</Typography>
                   </Box>
-                  <Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="caption" color="text.secondary">{t("recycle.points")}</Typography>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, color: "primary.main" }}>
                       ~{formatPoints(estimatedSelectedPoints)}
@@ -497,9 +497,9 @@ export default function RecyclePage() {
               </Typography>
               <Stack spacing={0.5}>
                 {selectedDetections.map((d) => (
-                  <Typography key={d.key} variant="caption" color="text.secondary" sx={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>• {d.itemType}</span>
-                    <span>{d.estimatedWeightKg.toFixed(2)} kg</span>
+                  <Typography key={d.key} variant="caption" color="text.secondary" sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}>
+                    <Box component="span" sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>• {d.itemType}</Box>
+                    <Box component="span" sx={{ flexShrink: 0 }}>{d.estimatedWeightKg.toFixed(2)} kg</Box>
                   </Typography>
                 ))}
               </Stack>
@@ -525,7 +525,7 @@ export default function RecyclePage() {
                     <Avatar sx={{ bgcolor: "rgba(8, 124, 120, 0.1)", color: "primary.main", width: 38, height: 38 }}>
                       <Truck size={20} />
                     </Avatar>
-                    <Box>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main" }}>
                         {t("recycle.scheduleTruck")}
                       </Typography>
@@ -555,7 +555,7 @@ export default function RecyclePage() {
                     <Avatar sx={{ bgcolor: "rgba(11, 53, 88, 0.1)", color: "secondary.main", width: 38, height: 38 }}>
                       <Building2 size={20} />
                     </Avatar>
-                    <Box>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "secondary.main" }}>
                         {t("recycle.nearbyCenter")}
                       </Typography>
@@ -597,7 +597,7 @@ export default function RecyclePage() {
                         <CardContent sx={{ p: 2 }}>
                           <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start" }}>
                             <MapPin size={18} color="#087c78" style={{ marginTop: 2 }} />
-                            <Box sx={{ flexGrow: 1 }}>
+                            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                               <Typography variant="caption" color="text.secondary">
                                 {center.township} · {center.hours}
                               </Typography>
@@ -658,7 +658,7 @@ export default function RecyclePage() {
           </Box>
         ) : (
           /* Analyzer Workspace / Upload Photo Page */
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, width: "100%" }}>
             <Card variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
               <CardActionArea
                 onClick={() => setUploadOptionsOpen(true)}
@@ -672,7 +672,7 @@ export default function RecyclePage() {
                   color: previewUrl ? "white" : "text.secondary",
                   border: "2px dashed",
                   borderColor: previewUrl ? "transparent" : "divider",
-                  m: 1,
+                  m: 1.5,
                   borderRadius: 2,
                   position: "relative",
                 }}
@@ -767,12 +767,12 @@ export default function RecyclePage() {
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <Card variant="outlined" sx={{ borderRadius: 3 }}>
                   <CardContent sx={{ p: 2 }}>
-                    <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Stack direction="row" spacing={1.25} sx={{ justifyContent: "space-between", alignItems: "center" }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0, flex: 1 }}>
                         <Avatar sx={{ bgcolor: "rgba(45, 115, 80, 0.1)", color: "success.main", width: 28, height: 28 }}>
                           <CheckCircle2 size={16} />
                         </Avatar>
-                        <Box>
+                        <Box sx={{ minWidth: 0 }}>
                           <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{t("recycle.reviewDetected")}</Typography>
                           <Typography variant="caption" color="text.secondary">{t("recycle.confidence", { percent: Math.round(result.summary.confidence * 100) })}</Typography>
                         </Box>
@@ -785,6 +785,8 @@ export default function RecyclePage() {
                           color: "#b97818",
                           textAlign: "right",
                           borderRadius: 2,
+                          minWidth: 108,
+                          flexShrink: 0,
                         }}
                       >
                         <Typography variant="caption" sx={{ display: "block", fontWeight: 700, lineHeight: 1 }}>{t("recycle.selected")}</Typography>
@@ -830,6 +832,7 @@ export default function RecyclePage() {
                                 borderColor: "divider",
                                 py: 1.25,
                                 minHeight: 56,
+                                pr: 6,
                               }}
                             >
                               <ListItemAvatar sx={{ minWidth: 46 }}>
@@ -839,6 +842,7 @@ export default function RecyclePage() {
                               </ListItemAvatar>
                               <ListItemText
                                 primary={detection.displayName}
+                                sx={{ my: 0, minWidth: 0 }}
                                 slotProps={{
                                   primary: { variant: "body2", sx: { fontWeight: 800 } }
                                 }}
@@ -889,11 +893,11 @@ export default function RecyclePage() {
         >
           <Box sx={{ p: 2 }}>
             <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-              <Box>
+              <Box sx={{ minWidth: 0 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{t("recycle.uploadTitle")}</Typography>
                 <Typography variant="caption" color="text.secondary">{t("recycle.uploadHelp")}</Typography>
               </Box>
-              <IconButton onClick={() => setUploadOptionsOpen(false)}>
+              <IconButton onClick={() => setUploadOptionsOpen(false)} aria-label="Close upload options" sx={{ minWidth: 44, minHeight: 44 }}>
                 <X size={20} />
               </IconButton>
             </Stack>
@@ -924,11 +928,11 @@ export default function RecyclePage() {
         >
           <Box sx={{ p: 2 }} component="form" onSubmit={(e) => { e.preventDefault(); void submitPickupRoute(); }}>
             <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-              <Box>
+              <Box sx={{ minWidth: 0 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{t("recycle.confirmPickup")}</Typography>
                 <Typography variant="caption" color="text.secondary">{t("recycle.pickupHelp")}</Typography>
               </Box>
-              <IconButton onClick={() => setPickupDrawerOpen(false)}>
+              <IconButton onClick={() => setPickupDrawerOpen(false)} aria-label="Close pickup scheduler" sx={{ minWidth: 44, minHeight: 44 }}>
                 <X size={20} />
               </IconButton>
             </Stack>
@@ -969,6 +973,7 @@ export default function RecyclePage() {
                 startIcon={routeSubmitting === "pickup" ? <LoaderCircle className="spin" size={16} /> : <CalendarClock size={16} />}
                 fullWidth
                 size="large"
+                sx={{ minHeight: 52, borderRadius: 2 }}
               >
                 {routeSubmitting === "pickup" ? "Submitting pickup" : t("recycle.confirmSchedule")}
               </Button>
