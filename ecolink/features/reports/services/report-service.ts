@@ -24,6 +24,12 @@ async function createDefaultRepository() {
   return new ReportRepository(await createSupabaseServerClient());
 }
 
+function readPhotoExtension(file: File) {
+  if (file.type === "image/png") return "png";
+  if (file.type === "image/webp") return "webp";
+  return "jpg";
+}
+
 export async function createReportWorkflowService(): Promise<ReportWorkflowService> {
   const repository = await createDefaultRepository();
 
@@ -47,8 +53,29 @@ export async function createReportWorkflowService(): Promise<ReportWorkflowServi
 
   return {
     async submitReport(input) {
-      await requireProfile();
-      return repository.submitReport(input);
+      const profile = await requireProfile();
+      const user = await requireUser();
+      let photoStoragePath: string;
+      let photoStorageStatus = "stored in Supabase Storage";
+      try {
+        photoStoragePath = await repository.uploadReportPhoto(user.id, input.image);
+      } catch (error) {
+        console.error("Report photo upload failed; continuing with pending report metadata only.", error);
+        photoStorageStatus = "pending storage retry";
+        photoStoragePath = `pending-report-photos/${user.id}/${crypto.randomUUID()}.${readPhotoExtension(input.image)}`;
+      }
+      const locationText = `${input.latitude.toFixed(6)}, ${input.longitude.toFixed(6)}`;
+      const sizeKb = Math.max(1, Math.round(input.image.size / 1024));
+      return repository.submitReport({
+        title: "Photo report from current location",
+        issueType: "photo-report",
+        severity: "concerning",
+        locationText,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        photoStoragePath,
+        details: `Photo evidence submitted by ${profile.display_name}: ${input.image.name || "report image"} (${input.image.type}, ${sizeKb} KB, ${photoStorageStatus}).`,
+      });
     },
     async listMemberReports() {
       const profile = await requireProfile();

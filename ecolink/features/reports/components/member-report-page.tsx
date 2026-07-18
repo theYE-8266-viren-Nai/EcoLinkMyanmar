@@ -1,32 +1,17 @@
 "use client";
 
-import { Check, ChevronRight, Flame, LoaderCircle, LocateFixed, MapPin, ShieldAlert, Trash2, Waves } from "lucide-react";
+import { Camera, ChevronRight, LoaderCircle, LocateFixed, MapPin } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { AppShell } from "@/components/ecolink/app-shell";
 import type { MemberReport } from "@/features/reports/types";
 
-const ISSUES = [
-  { id: "plastic-dump", title: "Plastic dump", description: "Accumulated bags, bottles or packaging", Icon: Trash2 },
-  { id: "blocked-drain", title: "Blocked drain", description: "Waste obstructing water flow", Icon: Waves },
-  { id: "water-pollution", title: "Water pollution", description: "Visible dumping or unusual water colour", Icon: Waves },
-  { id: "illegal-burning", title: "Illegal burning", description: "Open burning of waste or plastic", Icon: Flame },
-  { id: "chemical-spill", title: "Chemical spill", description: "Unknown liquid, fumes or hazardous material", Icon: ShieldAlert },
-] as const;
-
-const SEVERITIES = [
-  { id: "limited", title: "Limited", description: "Small and contained; no immediate danger." },
-  { id: "concerning", title: "Concerning", description: "Growing or affecting a shared public area." },
-  { id: "urgent", title: "Urgent", description: "Spreading quickly or potentially dangerous." },
-] as const;
-
 const EMPTY_FORM = {
-  title: "",
-  issueType: "plastic-dump",
-  severity: "concerning",
-  locationText: "",
-  details: "",
+  image: undefined,
+  latitude: undefined,
+  longitude: undefined,
 } satisfies ReportFormState;
 
 const STATUS_LABELS = {
@@ -43,14 +28,20 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
 });
 
 type ReportFormState = {
-  title: string;
-  issueType: (typeof ISSUES)[number]["id"];
-  severity: (typeof SEVERITIES)[number]["id"];
-  locationText: string;
-  details: string;
+  image?: File;
+  latitude?: number;
+  longitude?: number;
 };
 
 type ReportsResponse = { reports: MemberReport[] } | { error: string };
+
+async function readJsonResponse<T>(response: Response): Promise<T | undefined> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    return undefined;
+  }
+}
 
 export function MemberReportPage({
   initialReports,
@@ -68,7 +59,7 @@ export function MemberReportPage({
     initialError ? { kind: "error", text: initialError } : undefined,
   );
 
-  const selectedIssue = useMemo(() => ISSUES.find((item) => item.id === form.issueType) ?? ISSUES[0], [form.issueType]);
+  const hasLocation = typeof form.latitude === "number" && typeof form.longitude === "number";
 
   function updateForm(update: Partial<ReportFormState>) {
     setForm((current) => ({ ...current, ...update }));
@@ -77,10 +68,10 @@ export function MemberReportPage({
   async function loadReports() {
     setRefreshing(true);
     const response = await fetch("/api/reports", { cache: "no-store" });
-    const body = (await response.json()) as ReportsResponse;
+    const body = await readJsonResponse<ReportsResponse>(response);
     setRefreshing(false);
-    if (!response.ok || "error" in body) {
-      setMessage({ kind: "error", text: "error" in body ? body.error : "Could not load reports." });
+    if (!response.ok || !body || "error" in body) {
+      setMessage({ kind: "error", text: body && "error" in body ? body.error : "Could not load reports." });
       return;
     }
     setReports(body.reports);
@@ -91,32 +82,51 @@ export function MemberReportPage({
       setMessage({ kind: "error", text: "Location services are not available in this browser." });
       return;
     }
+    setMessage(undefined);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        updateForm({ locationText: `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}` });
+        updateForm({
+          latitude: Number(position.coords.latitude.toFixed(6)),
+          longitude: Number(position.coords.longitude.toFixed(6)),
+        });
         setMessage(undefined);
       },
-      () => setMessage({ kind: "error", text: "We could not read your location. Enter a nearby landmark instead." }),
+      () => setMessage({ kind: "error", text: "We could not read your current location. Please allow location access and try again." }),
       { enableHighAccuracy: true, timeout: 8000 },
     );
   }
 
   async function submitReport(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
+    if (!form.image) {
+      setMessage({ kind: "error", text: "Add a report image before submitting." });
+      return;
+    }
+    if (!hasLocation) {
+      setMessage({ kind: "error", text: "Use your current location before submitting." });
+      return;
+    }
+
     setSubmitting(true);
     setMessage(undefined);
+    const formData = new FormData();
+    formData.set("image", form.image);
+    formData.set("latitude", String(form.latitude));
+    formData.set("longitude", String(form.longitude));
+
     const response = await fetch("/api/reports", {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(form),
+      body: formData,
     });
-    const body = (await response.json()) as { error?: string };
+    const body = await readJsonResponse<{ error?: string }>(response);
     setSubmitting(false);
     if (!response.ok) {
-      setMessage({ kind: "error", text: body.error ?? "The report could not be submitted." });
+      setMessage({ kind: "error", text: body?.error ?? "The report could not be submitted." });
       return;
     }
     setForm(EMPTY_FORM);
+    formElement.reset();
     setMessage({ kind: "success", text: "Your report is awaiting admin approval." });
     await loadReports();
   }
@@ -125,13 +135,13 @@ export function MemberReportPage({
     setClaimingId(reportId);
     setMessage(undefined);
     const response = await fetch(`/api/reports/${reportId}/claim`, { method: "POST" });
-    const body = (await response.json()) as { error?: string; claim?: { pointsAwarded: number } };
+    const body = await readJsonResponse<{ error?: string; claim?: { pointsAwarded: number } }>(response);
     setClaimingId(undefined);
     if (!response.ok) {
-      setMessage({ kind: "error", text: body.error ?? "Report points could not be claimed." });
+      setMessage({ kind: "error", text: body?.error ?? "Report points could not be claimed." });
       return;
     }
-    setMessage({ kind: "success", text: `${body.claim?.pointsAwarded ?? 50} points were added to your account.` });
+    setMessage({ kind: "success", text: `${body?.claim?.pointsAwarded ?? 50} points were added to your account.` });
     await loadReports();
   }
 
@@ -141,15 +151,18 @@ export function MemberReportPage({
         <header className="report-intro"><p>Community action</p><h1>Report an environmental issue</h1><span>Reports are reviewed before points can be claimed, so community impact stays trustworthy.</span></header>
         {message ? <p className={message.kind === "success" ? "admin-message is-success" : "admin-message is-error"} role="status">{message.text}</p> : null}
         <section className="report-workspace">
-          <div className="report-step-heading"><span>Submit report</span><h2>What should EcoLink review?</h2><p>No points are awarded until an admin approves the report.</p></div>
+          <div className="report-step-heading"><span>Submit report</span><h2>Add photo evidence and current location</h2><p>No points are awarded until an admin approves the report.</p></div>
           <form className="report-submit-form" onSubmit={submitReport}>
-            <label><span>Report title</span><input value={form.title} onChange={(event) => updateForm({ title: event.target.value })} placeholder={`${selectedIssue.title} near Hledan`} required /></label>
-            <div className="issue-grid">{ISSUES.map(({ id, title: itemTitle, description, Icon }) => <button className={form.issueType === id ? "issue-option is-selected" : "issue-option"} type="button" onClick={() => updateForm({ issueType: id })} key={id}><Icon size={21}/><span><strong>{itemTitle}</strong><small>{description}</small></span>{form.issueType === id ? <Check size={18}/> : null}</button>)}</div>
-            <fieldset className="severity-field"><legend>How serious is it?</legend>{SEVERITIES.map((item) => <label className={form.severity === item.id ? "severity-option is-selected" : "severity-option"} key={item.id}><input type="radio" name="severity" value={item.id} checked={form.severity === item.id} onChange={() => updateForm({ severity: item.id })}/><span><strong>{item.title}</strong><small>{item.description}</small></span></label>)}</fieldset>
-            <label><span>Nearby landmark or coordinates</span><div className="input-with-icon"><MapPin size={18}/><input value={form.locationText} onChange={(event) => updateForm({ locationText: event.target.value })} placeholder="Example: Hledan Market, Insein Road" required /></div></label>
-            <button className="button button--secondary" type="button" onClick={useLocation}><LocateFixed size={17}/> Use my current location</button>
-            <label><span>Relevant details <small>(optional)</small></span><textarea value={form.details} maxLength={500} onChange={(event) => updateForm({ details: event.target.value })} placeholder="Describe what you can see and any immediate risks."/><small>{form.details.length}/500</small></label>
-            <button className="button button--primary" type="submit" disabled={submitting}>{submitting ? <LoaderCircle className="spin" size={17}/> : <ChevronRight size={17}/>} {submitting ? "Submitting" : "Send report"}</button>
+            <label className="photo-upload">
+              <span><Camera size={18}/> Report image</span>
+              <input accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(event) => updateForm({ image: event.target.files?.[0] })} required type="file" />
+              <small>{form.image ? `${form.image.name} (${Math.max(1, Math.round(form.image.size / 1024))} KB)` : "JPEG, PNG, or WebP."}</small>
+            </label>
+            <button className={hasLocation ? "location-capture is-ready" : "location-capture"} type="button" onClick={useLocation}>
+              <LocateFixed size={19}/>
+              <span><strong>{hasLocation ? "Current location captured" : "Use my current location"}</strong><small>{hasLocation ? `${form.latitude?.toFixed(6)}, ${form.longitude?.toFixed(6)}` : "EcoLink will attach your browser GPS coordinates."}</small></span>
+            </button>
+            <button className="button button--primary" type="submit" disabled={submitting || !form.image || !hasLocation}>{submitting ? <LoaderCircle className="spin" size={17}/> : <ChevronRight size={17}/>} {submitting ? "Submitting" : "Send report"}</button>
           </form>
         </section>
         <section className="history-section report-history" aria-labelledby="report-history-title">
@@ -163,7 +176,9 @@ export function MemberReportPage({
                     <div>
                       <span className={`report-status report-status--${report.status.toLowerCase()}`}>{STATUS_LABELS[report.status]}</span>
                       <h3>{report.title}</h3>
-                      <p>{report.locationText} &middot; {DATE_FORMATTER.format(new Date(report.createdAt))}</p>
+                      {report.photoUrl ? <Image alt="Submitted report evidence" className="report-photo-thumb" height={203} src={report.photoUrl} unoptimized width={360} /> : null}
+                      <p><MapPin size={14}/> {report.locationText} &middot; {DATE_FORMATTER.format(new Date(report.createdAt))}</p>
+                      {report.photoStoragePath ? <small>Image attached: {report.photoStoragePath.split("/").at(-1)}</small> : null}
                       {report.status === "PENDING" ? <small>Your report is awaiting admin approval.</small> : null}
                       {report.status === "REJECTED" ? <small>{report.rejectionReason ?? "This report was not approved for points."}</small> : null}
                       {report.isClaimed ? <small>Claimed {report.pointsAwarded ?? 50} points.</small> : null}

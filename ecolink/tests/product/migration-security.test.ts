@@ -19,6 +19,10 @@ const reportWorkflowMigration = readFileSync(
   join(process.cwd(), "supabase", "migrations", "20260718153000_report_approval_workflow.sql"),
   "utf8",
 );
+const reportPhotoLocationMigration = readFileSync(
+  join(process.cwd(), "supabase", "migrations", "20260718161000_report_photo_location_submission.sql"),
+  "utf8",
+);
 
 describe("EcoLink Supabase migration", () => {
   it("enables RLS on every new user-data table", () => {
@@ -71,8 +75,21 @@ describe("EcoLink Supabase migration", () => {
 
   it("does not expose report workflow RPCs to anonymous callers", () => {
     expect(reportWorkflowMigration).toContain("revoke all on function public.submit_environment_report(text, text, text, text, text) from public, anon");
+    expect(reportPhotoLocationMigration).toContain("revoke all on function public.submit_environment_report(text, text, text, text, double precision, double precision, text, text) from public, anon");
     expect(reportWorkflowMigration).toContain("revoke all on function public.approve_environment_report(uuid) from public, anon");
     expect(reportWorkflowMigration).toContain("revoke all on function public.reject_environment_report(uuid, text) from public, anon");
     expect(reportWorkflowMigration).toContain("revoke all on function public.claim_environment_report_points(uuid) from public, anon");
+  });
+
+  it("requires report photo and current coordinates when submitting reports", () => {
+    expect(reportPhotoLocationMigration).toContain("insert into storage.buckets");
+    expect(reportPhotoLocationMigration).toContain("'report-photos'");
+    expect(reportPhotoLocationMigration).toContain("create policy \"Members can upload own report photos\"");
+    expect(reportPhotoLocationMigration).toContain("create policy \"Members and admins can read report photos\"");
+    expect(reportPhotoLocationMigration).toContain("report_latitude double precision");
+    expect(reportPhotoLocationMigration).toContain("report_longitude double precision");
+    expect(reportPhotoLocationMigration).toContain("report_photo_storage_path text");
+    expect(reportPhotoLocationMigration).toContain("raise exception 'Report image is required'");
+    expect(reportPhotoLocationMigration).toContain("photo_storage_path");
   });
 });

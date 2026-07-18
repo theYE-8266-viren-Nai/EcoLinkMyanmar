@@ -16,6 +16,26 @@ function jsonRequest(body: unknown) {
   });
 }
 
+function reportFormRequest(fields: { image?: File; latitude?: string; longitude?: string } = {}) {
+  const formData = new FormData();
+  if (fields.image) formData.set("image", fields.image);
+  if (fields.latitude) formData.set("latitude", fields.latitude);
+  if (fields.longitude) formData.set("longitude", fields.longitude);
+
+  return new Request("http://localhost/api/reports", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+function pngFile() {
+  return new File(
+    [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])],
+    "drain.png",
+    { type: "image/png" },
+  );
+}
+
 function service(overrides: Partial<ReportWorkflowService> = {}): ReportWorkflowService {
   return {
     submitReport: vi.fn(async () => ({ report_id: "report-1", status: "PENDING", created_at: "2026-07-18T00:00:00Z" })),
@@ -32,13 +52,7 @@ describe("report workflow handlers", () => {
   it("submits reports as pending without returning awarded points", async () => {
     const fakeService = service();
     const response = await handleSubmitReport(
-      jsonRequest({
-        title: "Plastic dump near Hledan",
-        issueType: "plastic-dump",
-        severity: "concerning",
-        locationText: "Hledan Market",
-        details: "Bags and bottles near the footpath.",
-      }),
+      reportFormRequest({ image: pngFile(), latitude: "16.8409", longitude: "96.1735" }),
       { service: fakeService },
     );
 
@@ -46,17 +60,17 @@ describe("report workflow handlers", () => {
     await expect(response.json()).resolves.toEqual({
       report: { report_id: "report-1", status: "PENDING", created_at: "2026-07-18T00:00:00Z" },
     });
-    expect(fakeService.submitReport).toHaveBeenCalledWith({
-      title: "Plastic dump near Hledan",
-      issueType: "plastic-dump",
-      severity: "concerning",
-      locationText: "Hledan Market",
-      details: "Bags and bottles near the footpath.",
-    });
+    expect(fakeService.submitReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        latitude: 16.8409,
+        longitude: 96.1735,
+        image: expect.any(File),
+      }),
+    );
   });
 
   it("rejects invalid submit payloads", async () => {
-    const response = await handleSubmitReport(jsonRequest({ title: "x" }), { service: service() });
+    const response = await handleSubmitReport(jsonRequest({ latitude: "16.8409", longitude: "96.1735" }), { service: service() });
 
     expect(response.status).toBe(400);
   });

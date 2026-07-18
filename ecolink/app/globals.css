@@ -369,6 +369,47 @@ h1, h2, h3 { text-wrap: balance; }
 .report-submit-form label { display: grid; gap: 7px; color: var(--ink); font-size: .75rem; font-weight: 700; }
 .report-submit-form label > input { min-height: 44px; padding: 0 11px; border: 1px solid var(--line); border-radius: 6px; outline: 0; }
 .report-submit-form label > input:focus { border-color: var(--teal); }
+.photo-upload {
+  min-height: 150px;
+  align-content: center;
+  padding: 22px;
+  border: 1px dashed color-mix(in srgb, var(--teal) 55%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--teal) 5%, white);
+}
+.photo-upload > span { display: flex; align-items: center; gap: 8px; font-size: .95rem; }
+.photo-upload input { min-height: auto; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.photo-upload small { color: var(--muted-ink); font-size: .82rem; font-weight: 600; }
+.location-capture {
+  min-height: 82px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.location-capture svg { color: var(--teal); flex: 0 0 auto; }
+.location-capture span { display: grid; gap: 4px; }
+.location-capture strong { font-size: .95rem; }
+.location-capture small { color: var(--muted-ink); font-size: .82rem; }
+.location-capture:hover, .location-capture:focus-visible { border-color: var(--teal); outline: 0; box-shadow: 0 0 0 3px rgba(0, 137, 123, .12); }
+.location-capture.is-ready { border-color: color-mix(in srgb, var(--teal) 65%, var(--line)); background: color-mix(in srgb, var(--teal) 7%, white); }
+.report-photo-thumb, .admin-report-photo {
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--soft);
+}
+.report-photo-thumb { margin: 10px 0 8px; }
+.admin-report-photo { max-width: 520px; margin: 12px 0; }
 .report-history { padding: 24px; }
 .report-history-list { display: grid; gap: 0; margin-top: 18px; border-top: 1px solid var(--line); }
 .report-history-list article { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 0; border-bottom: 1px solid var(--line); }

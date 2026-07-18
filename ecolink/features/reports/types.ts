@@ -7,6 +7,8 @@ export type MemberReport = {
   severity: string;
   locationText: string;
   details: string | null;
+  photoStoragePath: string | null;
+  photoUrl: string | null;
   status: ReportStatus;
   createdAt: string;
   approvedAt: string | null;

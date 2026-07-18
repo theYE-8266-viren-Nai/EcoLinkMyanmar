@@ -30,7 +30,24 @@ function readDisplayName(user: User) {
   return metadataName || user.email?.split("@")[0] || "EcoLink member";
 }
 
-function toMemberReport(row: ReportRow): MemberReport {
+type PersistReportInput = {
+  title: string;
+  issueType: string;
+  severity: string;
+  locationText: string;
+  latitude: number;
+  longitude: number;
+  details?: string;
+  photoStoragePath: string;
+};
+
+function readPhotoExtension(file: File) {
+  if (file.type === "image/png") return "png";
+  if (file.type === "image/webp") return "webp";
+  return "jpg";
+}
+
+function toMemberReport(row: ReportRow, photoUrl: string | null): MemberReport {
   return {
     id: row.id,
     title: row.title,
@@ -38,6 +55,8 @@ function toMemberReport(row: ReportRow): MemberReport {
     severity: row.severity ?? "concerning",
     locationText: row.location_text ?? "Location not provided",
     details: row.details,
+    photoStoragePath: row.photo_storage_path,
+    photoUrl,
     status: row.status,
     createdAt: row.created_at,
     approvedAt: row.approved_at,
@@ -80,13 +99,24 @@ export class ReportRepository {
     return data === true;
   }
 
-  async submitReport(input: {
-    title: string;
-    issueType: string;
-    severity: string;
-    locationText: string;
-    details?: string;
-  }) {
+  async uploadReportPhoto(authUserId: string, file: File) {
+    const path = `${authUserId}/${crypto.randomUUID()}.${readPhotoExtension(file)}`;
+    const { error } = await this.supabase.storage.from("report-photos").upload(path, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+    if (error) throw new Error(error.message);
+    return path;
+  }
+
+  async createReportPhotoUrl(path: string | null) {
+    if (!path) return null;
+    const { data, error } = await this.supabase.storage.from("report-photos").createSignedUrl(path, 60 * 10);
+    if (error) return null;
+    return data.signedUrl;
+  }
+
+  async submitReport(input: PersistReportInput) {
     const rpc = this.supabase.rpc as unknown as (
       name: "submit_environment_report",
       args: {
@@ -94,6 +124,9 @@ export class ReportRepository {
         report_issue_type: string;
         report_severity: string;
         report_location_text: string;
+        report_latitude: number;
+        report_longitude: number;
+        report_photo_storage_path: string;
         report_details?: string | null;
       },
     ) => RpcResult<SubmitReportRpcRow[]>;
@@ -102,6 +135,9 @@ export class ReportRepository {
       report_issue_type: input.issueType,
       report_severity: input.severity,
       report_location_text: input.locationText,
+      report_latitude: input.latitude,
+      report_longitude: input.longitude,
+      report_photo_storage_path: input.photoStoragePath,
       report_details: input.details ?? null,
     });
     if (error || !data?.[0]) throw new Error(error?.message ?? "The report could not be submitted.");
@@ -115,7 +151,7 @@ export class ReportRepository {
       .eq("reporter_profile_id", profileId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return ((data ?? []) as ReportRow[]).map(toMemberReport);
+    return Promise.all(((data ?? []) as ReportRow[]).map(async (row) => toMemberReport(row, await this.createReportPhotoUrl(row.photo_storage_path))));
   }
 
   async listPendingReports() {
@@ -140,16 +176,16 @@ export class ReportRepository {
       }
     }
 
-    return reports.map((report): AdminPendingReport => {
+    return Promise.all(reports.map(async (report): Promise<AdminPendingReport> => {
       const submittedBy = report.reporter_profile_id ? profileMap.get(report.reporter_profile_id) : undefined;
       return {
-        ...toMemberReport(report),
+        ...toMemberReport(report, await this.createReportPhotoUrl(report.photo_storage_path)),
         submittedBy: {
           displayName: submittedBy?.display_name ?? "Unknown member",
           email: submittedBy?.email ?? "unknown@example.com",
         },
       };
-    });
+    }));
   }
 
   async approveReport(reportId: string) {

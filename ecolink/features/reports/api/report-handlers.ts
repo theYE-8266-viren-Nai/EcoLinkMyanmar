@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { reportIdSchema, rejectReportSchema, submitReportSchema } from "@/features/reports/schemas/report";
+import { reportIdSchema, rejectReportSchema, submitReportLocationSchema, type SubmitReportInput } from "@/features/reports/schemas/report";
 import { createReportWorkflowService, ReportWorkflowError, type ReportWorkflowService } from "@/features/reports/services/report-service";
+import { AiScannerRequestError } from "@/lib/services/ai-scanner-errors";
+import { readSingleImageFromMultipartRequest } from "@/lib/services/uploaded-image";
 
 type HandlerDependencies = {
   service?: ReportWorkflowService;
@@ -23,8 +25,12 @@ function safeError(error: unknown) {
   if (error instanceof ReportWorkflowError) {
     return NextResponse.json({ error: error.message }, { status: error.status });
   }
-  if (error instanceof Error) {
+  if (error instanceof AiScannerRequestError) {
     return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+  if (error instanceof Error) {
+    console.error("Report workflow request failed", error);
+    return NextResponse.json({ error: "The report request could not be completed." }, { status: 500 });
   }
   return NextResponse.json({ error: "The report request could not be completed." }, { status: 500 });
 }
@@ -37,14 +43,46 @@ async function readJson(request: Request) {
   }
 }
 
+function getSingleTextField(formData: FormData, field: string) {
+  const values = formData.getAll(field);
+  if (values.length !== 1) throw new AiScannerRequestError(`The ${field} field is required.`);
+  const value = values[0];
+  if (value instanceof File) throw new AiScannerRequestError(`The ${field} field must be text.`);
+  return value;
+}
+
+async function readSubmitReportInput(request: Request): Promise<SubmitReportInput> {
+  const maxUploadMb = Number(process.env.REPORT_IMAGE_MAX_UPLOAD_MB ?? process.env.AI_SCANNER_MAX_UPLOAD_MB ?? 10);
+  const { file, formData } = await readSingleImageFromMultipartRequest(request, maxUploadMb * 1024 * 1024);
+
+  const allowedKeys = new Set(["image", "latitude", "longitude"]);
+  for (const key of formData.keys()) {
+    if (!allowedKeys.has(key)) throw new AiScannerRequestError(`Unexpected field: ${key}.`);
+  }
+
+  const parsed = submitReportLocationSchema.safeParse({
+    latitude: getSingleTextField(formData, "latitude"),
+    longitude: getSingleTextField(formData, "longitude"),
+  });
+  if (!parsed.success) throw parsed.error;
+
+  const latitude = Number(parsed.data.latitude.toFixed(6));
+  const longitude = Number(parsed.data.longitude.toFixed(6));
+  return {
+    latitude,
+    longitude,
+    image: file,
+  };
+}
+
 export async function handleSubmitReport(request: Request, dependencies: HandlerDependencies = {}) {
   try {
-    const parsed = submitReportSchema.safeParse(await readJson(request));
-    if (!parsed.success) return validationError(parsed.error);
+    const input = await readSubmitReportInput(request);
     const service = await getService(dependencies);
-    const report = await service.submitReport(parsed.data);
+    const report = await service.submitReport(input);
     return NextResponse.json({ report }, { status: 201 });
   } catch (error) {
+    if (error instanceof z.ZodError) return validationError(error);
     return safeError(error);
   }
 }
