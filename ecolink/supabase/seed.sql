@@ -29,3 +29,131 @@ on conflict (id) do update set
 -- insert into public.center_staff_assignments (center_id, profile_id, role)
 -- select '10000000-0000-0000-0000-000000000001', id, 'operator'
 -- from public.profiles where email = 'staff@example.com';
+
+insert into auth.users (
+  id, aud, role, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+) values
+  (
+    '30000000-0000-0000-0000-000000000001',
+    'authenticated',
+    'authenticated',
+    'member@example.com',
+    crypt('ecolink-demo-123', gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"full_name":"Mya Thiri"}'::jsonb,
+    now(),
+    now()
+  ),
+  (
+    '30000000-0000-0000-0000-000000000002',
+    'authenticated',
+    'authenticated',
+    'staff@example.com',
+    crypt('ecolink-demo-123', gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"full_name":"Hlaing Operator"}'::jsonb,
+    now(),
+    now()
+  )
+on conflict (id) do update set
+  email = excluded.email,
+  encrypted_password = excluded.encrypted_password,
+  raw_user_meta_data = excluded.raw_user_meta_data,
+  updated_at = now();
+
+insert into auth.identities (
+  id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+) values
+  (
+    '30000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    'member@example.com',
+    '{"sub":"30000000-0000-0000-0000-000000000001","email":"member@example.com"}'::jsonb,
+    'email',
+    now(),
+    now(),
+    now()
+  ),
+  (
+    '30000000-0000-0000-0000-000000000002',
+    '30000000-0000-0000-0000-000000000002',
+    'staff@example.com',
+    '{"sub":"30000000-0000-0000-0000-000000000002","email":"staff@example.com"}'::jsonb,
+    'email',
+    now(),
+    now(),
+    now()
+  )
+on conflict (provider, provider_id) do update set
+  identity_data = excluded.identity_data,
+  updated_at = now();
+
+insert into public.profiles (
+  id, auth_user_id, display_name, email, member_code, preferred_language, created_at, updated_at
+) values
+  (
+    '40000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    'Mya Thiri',
+    'member@example.com',
+    'ECO-MM-1048',
+    'en',
+    now(),
+    now()
+  ),
+  (
+    '40000000-0000-0000-0000-000000000002',
+    '30000000-0000-0000-0000-000000000002',
+    'Hlaing Operator',
+    'staff@example.com',
+    'ECO-MM-STAFF',
+    'en',
+    now(),
+    now()
+  )
+on conflict (id) do update set
+  auth_user_id = excluded.auth_user_id,
+  display_name = excluded.display_name,
+  email = excluded.email,
+  member_code = excluded.member_code,
+  updated_at = now();
+
+insert into public.center_staff_assignments (id, center_id, profile_id, role, is_active)
+values (
+  '50000000-0000-0000-0000-000000000001',
+  '10000000-0000-0000-0000-000000000001',
+  '40000000-0000-0000-0000-000000000002',
+  'operator',
+  true
+)
+on conflict (center_id, profile_id) do update set
+  role = excluded.role,
+  is_active = excluded.is_active;
+
+insert into public.verified_drop_offs (
+  id, center_id, member_profile_id, recorded_by_profile_id,
+  material_slug, weight_kg, points_awarded, recorded_at
+) values
+  ('60000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000002', 'pet-plastic', 3.0, 150, '2026-07-14T09:30:00+06:30'),
+  ('60000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000003', '40000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000002', 'paper', 6.0, 120, '2026-07-09T10:15:00+06:30'),
+  ('60000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000002', 'pet-plastic', 5.0, 250, '2026-06-28T08:45:00+06:30'),
+  ('60000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000005', '40000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000002', 'e-waste', 2.0, 160, '2026-06-18T12:00:00+06:30')
+on conflict (id) do update set
+  weight_kg = excluded.weight_kg,
+  points_awarded = excluded.points_awarded,
+  recorded_at = excluded.recorded_at;
+
+insert into public.point_ledger_entries (
+  id, profile_id, center_id, drop_off_id, points, entry_type, description, created_at
+) values
+  ('70000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001', 150, 'earned', 'Verified PET plastic recycling drop-off', '2026-07-14T09:30:00+06:30'),
+  ('70000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000003', '60000000-0000-0000-0000-000000000002', 120, 'earned', 'Verified paper recycling drop-off', '2026-07-09T10:15:00+06:30'),
+  ('70000000-0000-0000-0000-000000000003', '40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000003', 250, 'earned', 'Verified PET plastic recycling drop-off', '2026-06-28T08:45:00+06:30'),
+  ('70000000-0000-0000-0000-000000000004', '40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000005', '60000000-0000-0000-0000-000000000004', 160, 'earned', 'Verified e-waste recycling drop-off', '2026-06-18T12:00:00+06:30')
+on conflict (id) do update set
+  points = excluded.points,
+  description = excluded.description,
+  created_at = excluded.created_at;

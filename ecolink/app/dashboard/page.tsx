@@ -1,8 +1,15 @@
-import { requireUserId } from "@/lib/auth";
-import { DashboardSpa } from "@/components/dashboard/dashboard-spa";
+import { requireUser } from "@/lib/auth";
+import { AppShell } from "@/components/ecolink/app-shell";
+import { ImpactDashboard } from "@/features/impact/components/impact-dashboard";
+import { getImpactDashboardData } from "@/features/impact/data/dashboard-impact";
 
 export default async function DashboardPage() {
-  const userId = await requireUserId();
+  const user = await requireUser();
+  const data = await getImpactDashboardData(user);
 
-  return <DashboardSpa userId={userId} />;
+  return (
+    <AppShell>
+      <ImpactDashboard data={data} />
+    </AppShell>
+  );
 }

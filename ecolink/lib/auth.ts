@@ -17,3 +17,10 @@ export async function requireUserId() {
 
   return user.id;
 }
+
+export async function requireUser() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/sign-in");
+
+  return user;
+}
