@@ -55,7 +55,7 @@ export function ImpactDashboard({ data }: { data: ImpactDashboardData }) {
 
         <article className="material-impact material-impact--wide" aria-labelledby="report-summary-title">
           <div className="material-impact__header">
-            <div><p>YOUR REPORTS</p><h2 id="report-summary-title">Review status</h2></div>
+            <div><p>Reports</p><h2 id="report-summary-title">Review status</h2></div>
             <div><strong>{data.totalReportCount}</strong><span>Total reports</span></div>
           </div>
           <div className="material-legend">
@@ -69,7 +69,7 @@ export function ImpactDashboard({ data }: { data: ImpactDashboardData }) {
 
       <section className="history-section history-section--wide" aria-labelledby="ledger-title">
         <div className="card-heading-row">
-          <div><p>YOUR LEDGER</p><h2 id="ledger-title">Points activity</h2></div>
+          <div><p>Ledger</p><h2 id="ledger-title">Points activity</h2></div>
           <span className="status-chip"><CheckCircle2 size={15} /> Supabase ledger</span>
         </div>
         <div className="history-list history-list--roomy">
@@ -92,7 +92,7 @@ export function ImpactDashboard({ data }: { data: ImpactDashboardData }) {
 
       <section className="history-section history-section--wide" aria-labelledby="report-history-title">
         <div className="card-heading-row">
-          <div><p>YOUR REPORTS</p><h2 id="report-history-title">Report history</h2></div>
+          <div><p>Reports</p><h2 id="report-history-title">Report history</h2></div>
           <Link className="back-link" href="/report">Submit report</Link>
         </div>
         <div className="history-list history-list--roomy">
@@ -114,12 +114,6 @@ export function ImpactDashboard({ data }: { data: ImpactDashboardData }) {
             );
           })}
         </div>
-      </section>
-
-      <section className="dashboard-stat-row" aria-label="Impact summary">
-        <article className="stat-card"><span className="stat-card__icon stat-card__icon--green"><CheckCircle2 size={21} /></span><div><p>Approved reports</p><strong>{data.approvedReportCount}</strong><span>Admin-reviewed reports</span></div></article>
-        <article className="stat-card"><span className="stat-card__icon stat-card__icon--aqua"><Clock3 size={21} /></span><div><p>Pending reports</p><strong>{data.pendingReportCount}</strong><span>No points until approval</span></div></article>
-        <article className="stat-card"><span className="stat-card__icon stat-card__icon--amber"><Award size={21} /></span><div><p>Points earned</p><strong>{data.positivePoints}</strong><span>Positive ledger entries</span></div></article>
       </section>
     </main>
   );
