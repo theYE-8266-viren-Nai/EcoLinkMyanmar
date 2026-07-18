@@ -386,21 +386,26 @@ h1, h2, h3 { text-wrap: balance; }
 .analysis-result h3 { margin-top: 2px; color: var(--navy); font-size: 1rem; }
 .analysis-result p { margin-top: 4px; color: var(--muted-ink); font-size: .72rem; line-height: 1.45; }
 .analysis-result > div:first-child > strong { color: var(--green); font-size: .8rem; }
-.recyclable-list { display: grid; gap: 0; margin-top: 0; border-top: 1px solid #e4efec; }
-.recyclable-item { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; min-height: 76px; padding: 14px; border-bottom: 1px solid #edf4f2; background: white; cursor: pointer; transition: background-color 140ms ease; }
+.recyclable-list { display: grid; gap: 8px; margin: 10px 12px 0; }
+.recyclable-item { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 82px; padding: 12px; border: 1px solid #dfece9; border-radius: 8px; background: white; cursor: pointer; transition: background-color 140ms ease, border-color 140ms ease; }
 .recyclable-item:active { background: #edf8f5; }
-.recyclable-item:has(input:checked) { background: #f7fffc; }
+.recyclable-item:has(input:checked) { border-color: #a8d5cc; background: #f7fffc; }
 .recyclable-item input { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--teal); }
-.recyclable-item span { display: flex; flex-direction: column; min-width: 0; }
+.recyclable-thumb { width: 48px; height: 48px; display: grid !important; place-items: center; flex: 0 0 auto; border-radius: 8px; color: var(--teal); background: #e7f4f2; font-size: .78rem; font-weight: 850; letter-spacing: .02em; }
+.recyclable-copy { display: flex; flex-direction: column; min-width: 0; }
 .recyclable-item strong { color: var(--navy); font-size: .82rem; }
 .recyclable-item small { margin-top: 4px; font-size: .7rem; }
-.recyclable-item em { display: -webkit-box; overflow: hidden; margin-top: 5px; color: var(--muted-ink); font-size: .66rem; font-style: normal; line-height: 1.35; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.recyclable-item em { grid-column: 3 / 5; width: max-content; padding: 4px 7px; border-radius: 999px; color: var(--muted-ink); background: #f0f5f4; font-size: .64rem; font-style: normal; font-weight: 750; line-height: 1.2; }
+.recyclable-item:has(input:checked) em { color: var(--teal); background: #e6f3f1; }
 .recyclable-item b { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; color: var(--green); font-size: .76rem; white-space: nowrap; }
 .recyclable-item b span { color: var(--muted-ink); font-size: .65rem; font-weight: 650; }
 .recycle-estimate { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; margin: 0 14px 14px; padding: 12px; border-radius: 8px; background: #e9f7f3; }
+.recycle-estimate--sticky { position: sticky; top: 8px; z-index: 2; margin-bottom: 10px; border: 1px solid #cfe8df; }
 .recycle-estimate span { color: var(--teal); font-size: .68rem; font-weight: 800; text-transform: uppercase; }
 .recycle-estimate strong { grid-row: span 2; align-self: center; color: var(--green); font-size: 1rem; }
 .recycle-estimate small { color: var(--muted-ink); font-size: .68rem; }
+.scan-warning-panel { display: grid; gap: 6px; margin: 0 12px 12px; padding: 10px; border: 1px solid #eedbaf; border-radius: 8px; background: #fff9ed; }
+.scan-warning-panel p { display: flex; align-items: flex-start; gap: 7px; margin: 0; color: #6f4d10; font-size: .7rem; line-height: 1.4; }
 .result-warning { display: flex; gap: 6px; padding-top: 10px; color: #7b570d !important; }
 .result-centers { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #dcebe7; }
 .result-centers span { width: 100%; color: var(--ink); font-size: .7rem; font-weight: 700; }
@@ -435,9 +440,13 @@ h1, h2, h3 { text-wrap: balance; }
 .center-option-card .center-detail__materials { grid-column: 1 / -1; max-width: none; }
 .center-option-card .button { justify-self: end; }
 .restart-button { width: 100%; margin-top: 16px; }
-.pickup-scheduler-drawer { --drawer-height: auto; }
+.pickup-scheduler-drawer { --drawer-height: auto; padding-bottom: 70px; }
 .pickup-scheduler-drawer [data-slot="drawer-header"] { text-align: left; }
 .pickup-form { display: grid; gap: 12px; padding: 16px; }
+.next-schedule-card { display: grid; gap: 4px; padding: 14px; border: 1px solid #cfe8df; border-radius: 10px; background: #edf8f5; }
+.next-schedule-card span { color: var(--teal); font-size: .7rem; font-weight: 850; }
+.next-schedule-card strong { color: var(--navy); font-size: 1rem; }
+.next-schedule-card small { color: var(--muted-ink); font-size: .72rem; }
 .pickup-form label { display: grid; gap: 7px; color: var(--ink); font-size: .75rem; font-weight: 750; }
 .pickup-form label span small { color: var(--muted-ink); font-weight: 500; }
 .pickup-form input, .pickup-form select, .pickup-form textarea { width: 100%; min-height: 48px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--ink); font: inherit; outline: 0; }
@@ -1157,8 +1166,10 @@ h1, h2, h3 { text-wrap: balance; }
   .stat-card { min-height: 112px; }
   .card-heading-row { align-items: flex-start; gap: 10px; }
   .status-chip { white-space: normal; text-align: right; }
-  .recyclable-item { grid-template-columns: auto 1fr; align-items: start; }
-  .recyclable-item b { grid-column: 2; align-items: flex-start; white-space: normal; }
+  .recyclable-item { grid-template-columns: auto auto minmax(0, 1fr); align-items: start; }
+  .recyclable-thumb { width: 42px; height: 42px; }
+  .recyclable-item b { grid-column: 3; align-items: flex-start; white-space: normal; }
+  .recyclable-item em { grid-column: 3; }
   .submitted-summary { grid-template-columns: 1fr; }
   .history-list article { display: grid; grid-template-columns: 44px minmax(0, 1fr); }
   .history-points { grid-column: 2; justify-self: start; }
