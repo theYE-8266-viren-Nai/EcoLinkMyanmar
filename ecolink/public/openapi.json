@@ -297,29 +297,6 @@
         "parameters": [],
         "responses": {}
       }
-    },
-    "/api/reports/{id}/claim": {
-      "post": {
-        "operationId": "post-reports-{id}-claim",
-        "summary": "",
-        "description": "",
-        "tags": [
-          "Reports"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "example": "123",
-            "description": "Path parameter: id"
-          }
-        ],
-        "responses": {}
-      }
     }
   },
   "tags": [

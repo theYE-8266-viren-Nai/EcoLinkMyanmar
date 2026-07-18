@@ -53,8 +53,8 @@ describe("generated OpenAPI document", () => {
       "/api/faq-assistant/feedback",
       "/api/map/waste",
       "/api/reports",
-      "/api/reports/{id}/claim",
     ]);
+    expect(document.paths).not.toHaveProperty("/api/reports/{id}/claim");
     expect(operation.summary).toBe("Analyze a recyclable-items image");
     expect(requestBody.content["multipart/form-data"].schema.$ref).toContain(
       "AiScanRequestBodySchema",

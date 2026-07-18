@@ -1,7 +1,7 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/database.types";
-import type { AdminPendingReport, MemberReport, ReportClaimResult } from "@/features/reports/types";
+import type { AdminPendingReport, MemberReport } from "@/features/reports/types";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 type ReportRow = Database["public"]["Tables"]["environment_reports"]["Row"];
@@ -17,12 +17,6 @@ type SubmitReportRpcRow = {
   report_id: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   created_at: string;
-};
-
-type ClaimReportRpcRow = {
-  report_id: string;
-  points_awarded: number;
-  claimed_at: string;
 };
 
 function readDisplayName(user: User) {
@@ -62,8 +56,6 @@ function toMemberReport(row: ReportRow, photoUrl: string | null): MemberReport {
     approvedAt: row.approved_at,
     reviewedAt: row.reviewed_at,
     rejectionReason: row.rejection_reason,
-    isClaimed: row.is_claimed,
-    claimedAt: row.claimed_at,
     pointsAwarded: row.points_awarded,
   };
 }
@@ -201,19 +193,5 @@ export class ReportRepository {
     ) => RpcResult<string>;
     const { error } = await rpc("reject_environment_report", { target_report_id: reportId, reason: reason ?? null });
     if (error) throw new Error(error.message);
-  }
-
-  async claimReportPoints(reportId: string): Promise<ReportClaimResult> {
-    const rpc = this.supabase.rpc.bind(this.supabase) as unknown as (
-      name: "claim_environment_report_points",
-      args: { target_report_id: string },
-    ) => RpcResult<ClaimReportRpcRow[]>;
-    const { data, error } = await rpc("claim_environment_report_points", { target_report_id: reportId });
-    if (error || !data?.[0]) throw new Error(error?.message ?? "Report points could not be claimed.");
-    return {
-      reportId: data[0].report_id,
-      pointsAwarded: data[0].points_awarded,
-      claimedAt: data[0].claimed_at,
-    };
   }
 }

@@ -10,11 +10,11 @@ import { EcoLinkUserButton } from "@/components/auth/user-button";
 import { useSupabaseUser } from "@/hooks/use-supabase-user";
 import { useEcoLink } from "@/providers/ecolink-context";
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_ECOLINK_DEMO_MODE !== "false";
+const DEMO_MODE = process.env.NEXT_PUBLIC_ECOLINK_DEMO_MODE === "true";
 
 const NAV_ITEMS = [
   { href: "/", label: "Home", Icon: House },
-  { href: "/impact", label: "Impact", Icon: CircleGauge },
+  { href: "/dashboard", label: "Impact", Icon: CircleGauge },
   { href: "/recycle", label: "Recycle", Icon: MapPinned },
   { href: "/assistant", label: "Guide", Icon: Bot },
   { href: "/report", label: "Report", Icon: Recycle },
