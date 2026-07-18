@@ -6,6 +6,14 @@ const migration = readFileSync(
   fileURLToPath(new URL("../../supabase/migrations/20260718173000_yangon_live_waste_map.sql", import.meta.url)),
   "utf8",
 ).toLowerCase();
+const postgisOperatorRepairMigration = readFileSync(
+  fileURLToPath(new URL("../../supabase/migrations/20260718071259_repair_public_waste_map_postgis_operator.sql", import.meta.url)),
+  "utf8",
+).toLowerCase();
+const reportStatusRepairMigration = readFileSync(
+  fileURLToPath(new URL("../../supabase/migrations/20260718071726_repair_public_waste_map_report_status.sql", import.meta.url)),
+  "utf8",
+).toLowerCase();
 
 describe("live map migration security", () => {
   it("enables RLS and restricts vehicle writes to assigned staff", () => {
@@ -25,5 +33,15 @@ describe("live map migration security", () => {
   it("adds spatial indexes and realtime replication", () => {
     expect(migration).toContain("using gist (location)");
     expect(migration).toContain("alter publication supabase_realtime add table public.collector_vehicle_locations");
+  });
+
+  it("qualifies postgis operators used with an empty search path", () => {
+    expect(postgisOperatorRepairMigration).toContain("set search_path = ''");
+    expect(postgisOperatorRepairMigration).toContain("operator(extensions.&&)");
+  });
+
+  it("filters public map reports with the current report status enum", () => {
+    expect(reportStatusRepairMigration).toContain("'rejected'::public.report_status");
+    expect(reportStatusRepairMigration).not.toContain("'resolved'");
   });
 });
