@@ -144,7 +144,12 @@ export function AdminRecyclingPage({
       setMessage({ kind: "error", text: body?.error ?? "Pickup request could not be saved." });
       return;
     }
-    setMessage({ kind: body?.warning ? "error" : "success", text: body?.warning ?? "Pickup request saved and draft loops refreshed." });
+    setMessage({
+      kind: body?.warning ? "error" : "success",
+      text: body?.warning ?? (request.status === "COMPLETED"
+        ? `Pickup completed and ${request.estimatedPoints} calculated points synced to the member's rewards.`
+        : "Pickup request saved and draft loops refreshed."),
+    });
     await loadRequests();
   }
 
@@ -169,7 +174,12 @@ export function AdminRecyclingPage({
       setMessage({ kind: "error", text: body?.error ?? "Center request could not be saved." });
       return;
     }
-    setMessage({ kind: "success", text: "Center request saved." });
+    setMessage({
+      kind: "success",
+      text: request.status === "COMPLETED"
+        ? `Drop-off completed and ${request.estimatedPoints} calculated points synced to the member's rewards.`
+        : "Center request saved.",
+    });
   }
 
   async function deleteRequest(kind: "pickup" | "center", requestId: string) {
@@ -321,7 +331,7 @@ export function AdminRecyclingPage({
                 <div className="admin-record-body">
                   <RouteDetails request={request} routeLabel={`${request.routeWindow} · ${request.routeArea}`} />
                   <div className="admin-review-actions">
-                    <Box sx={{ mb: 2 }}><Typography sx={{ fontWeight: 800 }}>Edit pickup</Typography><Typography color="text.secondary" variant="body2">Update the fulfillment status and route information.</Typography></Box>
+                    <Box sx={{ mb: 2 }}><Typography sx={{ fontWeight: 800 }}>Edit pickup</Typography><Typography color="text.secondary" variant="body2">Completing the pickup grants the calculated reward once. You can also update its route information.</Typography></Box>
                     <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" } }}>
                       <TextField label="Status" select value={request.status} onChange={(event) => updatePickup(request.requestId, { status: event.target.value as AdminPickupRouteRequest["status"] })} variant="outlined">{RECYCLING_ROUTE_STATUSES.map((status) => <MenuItem key={status} value={status}>{status}</MenuItem>)}</TextField>
                       <TextField label="Route window" value={request.routeWindow} slotProps={{ input: { readOnly: true } }} variant="outlined" />
@@ -357,7 +367,7 @@ export function AdminRecyclingPage({
                 <div className="admin-record-body">
                   <RouteDetails request={request} routeLabel={`${request.centerAddress} · ${request.centerHours}`} />
                   <div className="admin-review-actions">
-                    <Box sx={{ mb: 2 }}><Typography sx={{ fontWeight: 800 }}>Edit drop-off</Typography><Typography color="text.secondary" variant="body2">Keep center details accurate for the member.</Typography></Box>
+                    <Box sx={{ mb: 2 }}><Typography sx={{ fontWeight: 800 }}>Edit drop-off</Typography><Typography color="text.secondary" variant="body2">Completing the drop-off grants the calculated reward once. Keep center details accurate for the member.</Typography></Box>
                     <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" } }}>
                       <TextField label="Status" select value={request.status} onChange={(event) => updateCenter(request.requestId, { status: event.target.value as AdminCenterDropoffRouteRequest["status"] })} variant="outlined">{RECYCLING_ROUTE_STATUSES.map((status) => <MenuItem key={status} value={status}>{status}</MenuItem>)}</TextField>
                       <TextField label="Center name" value={request.centerName} onChange={(event) => updateCenter(request.requestId, { centerName: event.target.value })} slotProps={{ htmlInput: { maxLength: 180 } }} variant="outlined" />

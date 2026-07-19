@@ -149,6 +149,8 @@ export type Database = {
           center_id: string | null;
           drop_off_id: string | null;
           report_id: string | null;
+          recycling_pickup_request_id: string | null;
+          recycling_center_dropoff_request_id: string | null;
           points: number;
           entry_type: "earned" | "redeemed" | "adjusted" | "refunded";
           description: string;
@@ -160,6 +162,8 @@ export type Database = {
           center_id?: string | null;
           drop_off_id?: string | null;
           report_id?: string | null;
+          recycling_pickup_request_id?: string | null;
+          recycling_center_dropoff_request_id?: string | null;
           points: number;
           entry_type: "earned" | "redeemed" | "adjusted" | "refunded";
           description: string;
@@ -170,6 +174,8 @@ export type Database = {
           center_id?: string | null;
           drop_off_id?: string | null;
           report_id?: string | null;
+          recycling_pickup_request_id?: string | null;
+          recycling_center_dropoff_request_id?: string | null;
           points?: number;
           entry_type?: "earned" | "redeemed" | "adjusted" | "refunded";
           description?: string;
@@ -711,6 +717,10 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      calculate_recycling_route_points: {
+        Args: { selected_items: Json };
+        Returns: number;
+      };
       ensure_current_profile: {
         Args: { profile_display_name: string; profile_email: string };
         Returns: Array<{ profile_id: string; member_code: string; display_name: string }>;

@@ -1,5 +1,4 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { RecyclingRouteRepository } from "@/features/recycling-routes/data/recycling-route-repository";
 import type { SubmitRouteRequestInput, UpdateCenterDropoffRouteRequestInput, UpdatePickupRouteRequestInput } from "@/features/recycling-routes/schemas/recycling-route";
 import type { AdminRouteRequestList, MemberRouteSubmission, RouteSubmitResult } from "@/features/recycling-routes/types";
@@ -35,21 +34,11 @@ async function createDefaultRepository() {
   return new RecyclingRouteRepository(await createSupabaseServerClient());
 }
 
-function createAdminRepository() {
-  return new RecyclingRouteRepository(createSupabaseAdminClient());
-}
-
 export async function createRecyclingRouteWorkflowService(
   routingProvider: RoadRoutingProvider = mapboxRoadRoutingProvider,
 ): Promise<RecyclingRouteWorkflowService> {
   const repository = await createDefaultRepository();
-  let adminRepository: RecyclingRouteRepository | undefined;
   let profilePromise: ReturnType<RecyclingRouteRepository["ensureCurrentProfile"]> | undefined;
-
-  function getAdminRepository() {
-    adminRepository ??= createAdminRepository();
-    return adminRepository;
-  }
 
   async function requireUser() {
     const user = await repository.getCurrentUser();
@@ -71,15 +60,14 @@ export async function createRecyclingRouteWorkflowService(
 
   async function replan(schedule: PickupSchedule) {
     if (schedule.status === "DISPATCHED") return { warning: "Routes are dispatched and locked. Unlock them before replanning." };
-    const routeRepository = getAdminRepository();
     try {
-      const pickups = await routeRepository.listAcceptedRoutablePickups(schedule.id);
+      const pickups = await repository.listAcceptedRoutablePickups(schedule.id);
       const loops = await generateTwoPickupLoops(pickups, routingProvider);
-      await routeRepository.saveDraftLoops(schedule, loops);
+      await repository.saveDraftLoops(schedule, loops);
       return {};
     } catch (error) {
       const message = error instanceof Error ? error.message : "The pickup routes could not be generated.";
-      await routeRepository.markRouteGenerationError(schedule.id, message);
+      await repository.markRouteGenerationError(schedule.id, message);
       return { warning: `Pickup saved, but route generation needs attention: ${message}` };
     }
   }
@@ -130,11 +118,10 @@ export async function createRecyclingRouteWorkflowService(
     async getAdminRoutingDashboard() {
       await requireAdmin();
       const schedule = await repository.getUpcomingSchedule();
-      const routeRepository = getAdminRepository();
-      let dashboard = await routeRepository.getAdminRoutingDashboard(schedule);
+      let dashboard = await repository.getAdminRoutingDashboard(schedule);
       if (dashboard.routes.length === 0 && schedule.status !== "DISPATCHED") {
         await replan(schedule);
-        dashboard = await routeRepository.getAdminRoutingDashboard(schedule);
+        dashboard = await repository.getAdminRoutingDashboard(schedule);
       }
       return dashboard;
     },
@@ -145,17 +132,16 @@ export async function createRecyclingRouteWorkflowService(
     async dispatchPickupRoutes() {
       await requireAdmin();
       const schedule = await repository.getUpcomingSchedule();
-      const routeRepository = getAdminRepository();
-      const dashboard = await routeRepository.getAdminRoutingDashboard(schedule);
+      const dashboard = await repository.getAdminRoutingDashboard(schedule);
       if (dashboard.routes.length !== 2 || dashboard.routes.some((route) => route.status === "ERROR")) {
         throw new RecyclingRouteWorkflowError("Generate both pickup loops successfully before dispatching.", 409);
       }
-      await routeRepository.setRouteDispatchState(schedule.id, true);
+      await repository.setRouteDispatchState(schedule.id, true);
     },
     async unlockPickupRoutes() {
       await requireAdmin();
       const schedule = await repository.getUpcomingSchedule();
-      await getAdminRepository().setRouteDispatchState(schedule.id, false);
+      await repository.setRouteDispatchState(schedule.id, false);
       return replan({ ...schedule, status: "OPEN" });
     },
   };
