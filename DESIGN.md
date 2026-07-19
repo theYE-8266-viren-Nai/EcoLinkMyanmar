@@ -2,6 +2,7 @@
 
 ## Purpose
 
+
 This document defines the visual and interaction language for EcoLink. The design system should help citizens, recycling organizations, NGOs, and businesses feel that recycling is trustworthy, rewarding, and easy to understand. The experience should feel refined, calm, modern, and optimistic, inspired by the clarity of Apple, the operational precision of Linear, the trust-building polish of Stripe, and the restraint of Vercel, without copying any of them.
 
 The visual identity must support EcoLink's tagline: "Turn Waste into Worth." The product should make waste feel measurable, manageable, and valuable, while avoiding guilt-heavy environmental messaging.
