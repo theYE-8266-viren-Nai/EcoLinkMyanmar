@@ -319,6 +319,9 @@ export type Database = {
           claimed_at: string | null;
           points_awarded: number | null;
           is_claimed: boolean;
+          ai_confidence: number | null;
+          ai_reasoning: string | null;
+          ai_warnings: string[] | null;
           observed_at: string;
           created_at: string;
         };
@@ -355,6 +358,9 @@ export type Database = {
           claimed_at?: string | null;
           points_awarded?: number | null;
           is_claimed?: boolean;
+          ai_confidence?: number | null;
+          ai_reasoning?: string | null;
+          ai_warnings?: string[] | null;
           observed_at?: string;
           created_at?: string;
         };
@@ -390,6 +396,9 @@ export type Database = {
           claimed_at?: string | null;
           points_awarded?: number | null;
           is_claimed?: boolean;
+          ai_confidence?: number | null;
+          ai_reasoning?: string | null;
+          ai_warnings?: string[] | null;
           observed_at?: string;
           created_at?: string;
         };

@@ -9,11 +9,13 @@ import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
+import LinearProgress from "@mui/material/LinearProgress";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import { CheckCircle2, ChevronDown, ImageIcon, MapPin, Search, UserRound, XCircle } from "lucide-react";
+import { AlertTriangle, Brain, CheckCircle2, ChevronDown, ImageIcon, MapPin, Search, UserRound, XCircle } from "lucide-react";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -38,6 +40,135 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
   timeZone: "Asia/Yangon",
 });
+
+const SCORE_FORMATTER = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
+/** Returns a MUI color name based on a dirtiness score 1–10. */
+function dirtinessColor(score: number): "success" | "warning" | "error" {
+  if (score <= 3) return "success";
+  if (score <= 6) return "warning";
+  return "error";
+}
+
+/** Human-readable severity label for the dirtiness score. */
+function dirtinessLabel(score: number): string {
+  if (score <= 3) return "Clean";
+  if (score <= 6) return "Moderate";
+  if (score <= 8) return "Dirty";
+  return "Very Dirty";
+}
+
+function AiRatingSection({ report }: { report: AdminPendingReport }) {
+  const hasAi = report.aiDirtinessScore !== null;
+
+  if (!hasAi) {
+    return (
+      <Box sx={{ alignItems: "center", bgcolor: "action.hover", borderRadius: 1.5, color: "text.secondary", display: "flex", gap: 1, p: 2 }}>
+        <Brain size={17} aria-hidden="true" />
+        <Typography variant="body2">AI environment scan not available for this report.</Typography>
+      </Box>
+    );
+  }
+
+  const score = report.aiDirtinessScore!;
+  const color = dirtinessColor(score);
+  const progressValue = ((score - 1) / 9) * 100;
+
+  return (
+    <Box sx={{ bgcolor: "background.default", border: 1, borderColor: "divider", borderRadius: 1.5, p: 2 }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1.5 }}>
+        <Brain size={16} aria-hidden="true" style={{ color: "inherit", opacity: 0.7 }} />
+        <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase" }}>
+          AI Environment Rating
+        </Typography>
+      </Stack>
+
+      {/* Score + bar */}
+      <Stack direction="row" spacing={2} sx={{ alignItems: "center", mb: 1.5 }}>
+        <Box sx={{ flex: 1 }}>
+          <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", mb: 0.5 }}>
+            <Typography variant="body2" sx={{ fontWeight: 800 }}>
+              Dirtiness Score
+            </Typography>
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <Chip
+                color={color}
+                label={dirtinessLabel(score)}
+                size="small"
+                variant="outlined"
+                sx={{ fontWeight: 700, fontSize: 11 }}
+              />
+              <Typography sx={{ color: `${color}.main`, fontVariantNumeric: "tabular-nums", fontWeight: 800 }}>
+                {score}<Typography component="span" variant="caption" sx={{ color: "text.secondary", fontWeight: 500 }}>/10</Typography>
+              </Typography>
+            </Stack>
+          </Stack>
+          <LinearProgress
+            aria-label={`Dirtiness score ${score} out of 10`}
+            color={color}
+            value={progressValue}
+            variant="determinate"
+            sx={{ borderRadius: 1, height: 8 }}
+          />
+        </Box>
+      </Stack>
+
+      {/* Confidence */}
+      {report.aiConfidence !== null && (
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1.25 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, minWidth: 80 }}>
+            Confidence
+          </Typography>
+          <Tooltip title={`Raw value: ${report.aiConfidence.toFixed(3)}`} placement="top">
+            <Chip
+              label={`${Math.round(report.aiConfidence * 100)}%`}
+              size="small"
+              variant="outlined"
+              sx={{ fontWeight: 700, fontSize: 11 }}
+            />
+          </Tooltip>
+        </Stack>
+      )}
+
+      {/* Reasoning */}
+      {report.aiReasoning && (
+        <Box sx={{ mb: 1.25 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontWeight: 700, mb: 0.25 }}>
+            AI Reasoning
+          </Typography>
+          <Typography variant="body2" sx={{ fontStyle: "italic", lineHeight: 1.6 }}>
+            &ldquo;{report.aiReasoning}&rdquo;
+          </Typography>
+        </Box>
+      )}
+
+      {/* Warnings */}
+      {report.aiWarnings.length > 0 && (
+        <Box>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontWeight: 700, mb: 0.5 }}>
+            Warnings
+          </Typography>
+          <Stack direction="row" sx={{ flexWrap: "wrap", gap: 0.75 }}>
+            {report.aiWarnings.map((warning) => (
+              <Chip
+                icon={<AlertTriangle size={13} aria-hidden="true" />}
+                key={warning}
+                label={warning}
+                size="small"
+                color="warning"
+                variant="outlined"
+                sx={{ fontSize: 11, fontWeight: 600 }}
+              />
+            ))}
+          </Stack>
+        </Box>
+      )}
+    </Box>
+  );
+}
 
 export function AdminReportsPage({
   initialReports,
@@ -67,6 +198,10 @@ export function AdminReportsPage({
 
   const highPriorityCount = reports.filter((report) => /high|critical|severe/i.test(report.severity)).length;
   const evidenceCount = reports.filter((report) => Boolean(report.photoUrl)).length;
+  const aiRatedCount = reports.filter((report) => report.aiDirtinessScore !== null).length;
+  const avgDirtiness = aiRatedCount > 0
+    ? reports.filter((r) => r.aiDirtinessScore !== null).reduce((sum, r) => sum + r.aiDirtinessScore!, 0) / aiRatedCount
+    : null;
 
   async function loadReports() {
     setRefreshing(true);
@@ -110,6 +245,11 @@ export function AdminReportsPage({
         <AdminMetric label={t("admin.pending")} value={reports.length} detail={t("admin.awaitingDecision")} />
         <AdminMetric label={t("admin.highPriority")} value={highPriorityCount} detail={t("admin.highPriorityDetail")} />
         <AdminMetric label={t("admin.withEvidence")} value={evidenceCount} detail={t("admin.photoAttached")} />
+        <AdminMetric
+          label="AI Rated"
+          value={aiRatedCount}
+          detail={avgDirtiness !== null ? `Avg score: ${SCORE_FORMATTER.format(avgDirtiness)}/10` : "No AI data yet"}
+        />
       </AdminMetrics>
       {message ? <Alert severity={message.kind} role="status" variant="outlined">{message.text}</Alert> : null}
       <Paper component="section" aria-label={t("admin.queue")} variant="outlined" sx={{ overflow: "hidden" }}>
@@ -143,6 +283,15 @@ export function AdminReportsPage({
                     <Stack direction={{ xs: "column", md: "row" }} spacing={{ xs: 1, md: 3 }} sx={{ justifyContent: "space-between", minWidth: 0, width: "100%" }}>
                       <Stack direction="row" spacing={1.5} sx={{ alignItems: "flex-start", minWidth: 0 }}>
                         <Chip color="warning" label={t("admin.pending")} size="small" variant="outlined" />
+                        {report.aiDirtinessScore !== null && (
+                          <Chip
+                            color={dirtinessColor(report.aiDirtinessScore)}
+                            label={`AI: ${report.aiDirtinessScore}/10`}
+                            size="small"
+                            variant="filled"
+                            sx={{ fontWeight: 700, fontSize: 11 }}
+                          />
+                        )}
                         <Box sx={{ minWidth: 0 }}>
                           <Typography sx={{ fontWeight: 750 }} noWrap>{report.title}</Typography>
                           <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", color: "text.secondary" }}><MapPin size={14} aria-hidden="true" /><Typography variant="caption" noWrap>{report.locationText}</Typography></Stack>
@@ -168,6 +317,9 @@ export function AdminReportsPage({
                           <Detail label={t("admin.image")} value={report.photoStoragePath ? report.photoStoragePath.split("/").pop() ?? t("admin.noImage") : t("admin.noImage")} />
                           <Box sx={{ gridColumn: { sm: "1 / -1" } }}><Detail label={t("admin.details")} value={report.details ?? t("admin.noDetails")} /></Box>
                         </Box>
+
+                        {/* AI Environment Measurement */}
+                        <AiRatingSection report={report} />
                       </Stack>
                       <Divider flexItem orientation="vertical" sx={{ display: { xs: "none", lg: "block" } }} />
                       <Stack spacing={2} sx={{ flex: "0 1 360px" }}>

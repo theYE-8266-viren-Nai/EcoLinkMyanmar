@@ -15,6 +15,14 @@ export type MemberReport = {
   reviewedAt: string | null;
   rejectionReason: string | null;
   pointsAwarded: number | null;
+  /** AI environment dirtiness score (1 = clean, 10 = very dirty). Null if AI was unavailable at submission time. */
+  aiDirtinessScore: number | null;
+  /** AI confidence in the dirtiness score (0–1). Null if AI was unavailable. */
+  aiConfidence: number | null;
+  /** AI reasoning sentence for the dirtiness score. Null if AI was unavailable. */
+  aiReasoning: string | null;
+  /** AI-detected warnings about the image quality or content. Empty when AI was unavailable. */
+  aiWarnings: string[];
 };
 
 export type AdminPendingReport = MemberReport & {
@@ -23,3 +31,4 @@ export type AdminPendingReport = MemberReport & {
     email: string;
   };
 };
+

@@ -119,7 +119,11 @@ export async function createRecyclingRouteWorkflowService(
       await requireAdmin();
       const schedule = await repository.getUpcomingSchedule();
       let dashboard = await repository.getAdminRoutingDashboard(schedule);
-      if (dashboard.routes.length === 0 && schedule.status !== "DISPATCHED") {
+      const shouldAutoReplan = schedule.status !== "DISPATCHED" && (
+        dashboard.routes.length === 0
+        || dashboard.routes.every((route) => route.status === "ERROR")
+      );
+      if (shouldAutoReplan) {
         await replan(schedule);
         dashboard = await repository.getAdminRoutingDashboard(schedule);
       }

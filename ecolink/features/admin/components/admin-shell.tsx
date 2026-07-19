@@ -184,7 +184,7 @@ export function AdminShell({
 
 export function AdminMetrics({ children, label }: { children: ReactNode; label: string }) {
   return (
-    <Paper aria-label={label} variant="outlined" sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, minmax(0, 1fr))" }, overflow: "hidden" }}>
+    <Paper aria-label={label} variant="outlined" sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(auto-fill, minmax(180px, 1fr))" }, overflow: "hidden" }}>
       {children}
     </Paper>
   );

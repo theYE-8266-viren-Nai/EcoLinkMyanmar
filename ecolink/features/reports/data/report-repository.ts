@@ -33,6 +33,14 @@ type PersistReportInput = {
   longitude: number;
   details?: string;
   photoStoragePath: string;
+  /** AI dirtiness score (1–10). Omit when AI was unavailable. */
+  aiDirtinessScore?: number;
+  /** AI confidence (0–1). Omit when AI was unavailable. */
+  aiConfidence?: number;
+  /** AI reasoning sentence. Omit when AI was unavailable. */
+  aiReasoning?: string;
+  /** AI warning strings. Omit when AI was unavailable. */
+  aiWarnings?: string[];
 };
 
 function readPhotoExtension(file: File) {
@@ -57,6 +65,10 @@ function toMemberReport(row: ReportRow, photoUrl: string | null): MemberReport {
     reviewedAt: row.reviewed_at,
     rejectionReason: row.rejection_reason,
     pointsAwarded: row.points_awarded,
+    aiDirtinessScore: row.dirtiness_score,
+    aiConfidence: row.ai_confidence,
+    aiReasoning: row.ai_reasoning,
+    aiWarnings: row.ai_warnings ?? [],
   };
 }
 
@@ -120,6 +132,10 @@ export class ReportRepository {
         report_longitude: number;
         report_photo_storage_path: string;
         report_details?: string | null;
+        report_dirtiness_score?: number | null;
+        report_ai_confidence?: number | null;
+        report_ai_reasoning?: string | null;
+        report_ai_warnings?: string[] | null;
       },
     ) => RpcResult<SubmitReportRpcRow[]>;
     const { data, error } = await rpc("submit_environment_report", {
@@ -131,6 +147,10 @@ export class ReportRepository {
       report_longitude: input.longitude,
       report_photo_storage_path: input.photoStoragePath,
       report_details: input.details ?? null,
+      report_dirtiness_score: input.aiDirtinessScore ?? null,
+      report_ai_confidence: input.aiConfidence ?? null,
+      report_ai_reasoning: input.aiReasoning ?? null,
+      report_ai_warnings: input.aiWarnings ?? null,
     });
     if (error || !data?.[0]) throw new Error(error?.message ?? "The report could not be submitted.");
     return data[0];

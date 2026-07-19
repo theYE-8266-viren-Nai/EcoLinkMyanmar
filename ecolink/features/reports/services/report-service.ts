@@ -1,6 +1,8 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { ReportRepository } from "@/features/reports/data/report-repository";
 import type { SubmitReportInput } from "@/features/reports/schemas/report";
+import { getAiScannerConfig } from "@/lib/services/ai-scanner-config";
+import type { EnvironmentReportRating } from "@/schemas/environment-report-rating";
 
 export class ReportWorkflowError extends Error {
   constructor(
@@ -29,6 +31,30 @@ function readPhotoExtension(file: File) {
   return "jpg";
 }
 
+/**
+ * Attempts to run an AI environment rating on the submitted photo.
+ * Returns null (does NOT throw) if the AI service is unavailable or misconfigured,
+ * so the report submission always succeeds regardless of AI health.
+ */
+async function tryRateEnvironmentImage(file: File): Promise<EnvironmentReportRating | null> {
+  try {
+    const config = getAiScannerConfig();
+    if (!config.openRouterApiKey) return null;
+
+    const { rateEnvironmentImageWithOpenRouter } = await import(
+      "@/lib/services/environment-report-rating"
+    );
+    return await rateEnvironmentImageWithOpenRouter(file, {
+      ...config,
+      model: process.env.AI_ENVIRONMENT_REPORT_MODEL ?? config.model,
+      maxUploadMb: Number(process.env.AI_ENVIRONMENT_REPORT_MAX_UPLOAD_MB ?? config.maxUploadMb),
+    });
+  } catch (error) {
+    console.warn("AI environment rating skipped during report submission:", error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
 export async function createReportWorkflowService(): Promise<ReportWorkflowService> {
   const repository = await createDefaultRepository();
 
@@ -54,6 +80,7 @@ export async function createReportWorkflowService(): Promise<ReportWorkflowServi
     async submitReport(input) {
       const profile = await requireProfile();
       const user = await requireUser();
+
       let photoStoragePath: string;
       let photoStorageStatus = "stored in Supabase Storage";
       try {
@@ -63,6 +90,10 @@ export async function createReportWorkflowService(): Promise<ReportWorkflowServi
         photoStorageStatus = "pending storage retry";
         photoStoragePath = `pending-report-photos/${user.id}/${crypto.randomUUID()}.${readPhotoExtension(input.image)}`;
       }
+
+      // Run AI measurement non-blocking — a failure never prevents report submission.
+      const aiRating = await tryRateEnvironmentImage(input.image);
+
       const locationText = `${input.latitude.toFixed(6)}, ${input.longitude.toFixed(6)}`;
       const sizeKb = Math.max(1, Math.round(input.image.size / 1024));
       return repository.submitReport({
@@ -74,6 +105,11 @@ export async function createReportWorkflowService(): Promise<ReportWorkflowServi
         longitude: input.longitude,
         photoStoragePath,
         details: `Photo evidence submitted by ${profile.display_name}: ${input.image.name || "report image"} (${input.image.type}, ${sizeKb} KB, ${photoStorageStatus}).`,
+        // AI enrichment fields — null when AI was unavailable.
+        aiDirtinessScore: aiRating?.dirtinessScore ?? undefined,
+        aiConfidence: aiRating?.confidence ?? undefined,
+        aiReasoning: aiRating?.reasoning ?? undefined,
+        aiWarnings: aiRating?.warnings ?? undefined,
       });
     },
     async listMemberReports() {
@@ -94,3 +130,4 @@ export async function createReportWorkflowService(): Promise<ReportWorkflowServi
     },
   };
 }
+
